@@ -30,3 +30,15 @@ Thumbs.db
 
 # Local
 .local
+
+# Local browser test artifacts
+.chromium-cache-*
+.chromium-profile-*
+.screenshots/
+
+# Local imported/browser files
+Hostinger _ Agents_files/
+Hostinger _ Agents.html
+
+# Heavy local image exports
+89739a58-ce0c-4a33-838c-57d2bc6db367.png
