@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+*.sqlite3
+*.db
+staticfiles/
+media/
+*.egg-info/
+build/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Node / Nuxt
+node_modules/
+.nuxt/
+.output/
+dist/
+.npm/
+.cache/
+.nitro/
+.vercel/
+.firebase/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

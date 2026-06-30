@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pixelprowlers-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pixelprowlers
+      POSTGRES_USER: pixelprowlers
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pixelprowlers}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pixelprowlers -d pixelprowlers"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  django:
+    build:
+      context: ./backend
+    container_name: pixelprowlers-django
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${SECRET_KEY:-change-me}
+      DJANGO_DEBUG: ${DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1},django
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8080
+      POSTGRES_DB: pixelprowlers
+      POSTGRES_USER: pixelprowlers
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pixelprowlers}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
+
+  nuxt:
+    build:
+      context: ./frontend
+    container_name: pixelprowlers-nuxt
+    restart: unless-stopped
+    environment:
+      NUXT_PUBLIC_API_URL: http://localhost:8001
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+    depends_on:
+      - django
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pixelprowlers-nginx
+    restart: unless-stopped
+    depends_on:
+      - django
+      - nuxt
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  postgres_data:
