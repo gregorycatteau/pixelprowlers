@@ -89,9 +89,14 @@
         <p>
           Décrivez la situation : URL, CMS, hébergeur, urgence, sauvegardes connues et accès disponibles.
         </p>
-        <NuxtLink to="/contact" class="cta-primary mt-8 px-7 py-3">
-          Planifier un premier échange
-        </NuxtLink>
+        <div class="final-actions">
+          <NuxtLink to="/contact" class="cta-primary px-7 py-3">
+            Planifier un premier échange
+          </NuxtLink>
+          <NuxtLink to="/diagnostic-site-passoire" class="cta-secondary-local">
+            Lancer le diagnostic
+          </NuxtLink>
+        </div>
       </div>
     </section>
   </main>
@@ -296,5 +301,9 @@ const steps = [
 
 .final-cta p {
   @apply mx-auto mt-4 max-w-2xl leading-7 text-muted;
+}
+
+.final-actions {
+  @apply mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row;
 }
 </style>

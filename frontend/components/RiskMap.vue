@@ -60,7 +60,10 @@
 
       <div class="risk-cta">
         <p>Vous reconnaissez deux ou trois angles morts ? Il est temps de vérifier avant que l’urgence décide pour vous.</p>
-        <NuxtLink to="/audit-site-web">Faire vérifier mon site</NuxtLink>
+        <div class="risk-actions">
+          <NuxtLink to="/diagnostic-site-passoire">Lancer le diagnostic</NuxtLink>
+          <NuxtLink to="/audit-site-web" class="secondary-risk-link">Faire vérifier mon site</NuxtLink>
+        </div>
       </div>
     </div>
   </section>
@@ -296,15 +299,23 @@ const riskAriaLabel = (risk: BlindSpot) => (
 }
 
 .risk-cta {
-  @apply mt-8 grid gap-4 rounded-lg border border-forest/15 bg-sand p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-center;
+  @apply mt-8 grid gap-4 rounded-lg border border-forest/15 bg-sand p-6 shadow-sm lg:grid-cols-[1fr_auto] lg:items-center;
 }
 
 .risk-cta p {
   @apply leading-7 text-muted;
 }
 
-.risk-cta a {
+.risk-actions {
+  @apply flex flex-col gap-3 sm:flex-row;
+}
+
+.risk-actions a {
   @apply inline-flex min-h-12 items-center justify-center rounded-lg bg-action px-6 py-3 text-center font-extrabold text-white shadow-orange outline-none transition hover:bg-[#FF9F2D] focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-paper;
+}
+
+.risk-actions .secondary-risk-link {
+  @apply border-2 border-trust bg-transparent text-ink shadow-none hover:border-scan hover:bg-scan/10 hover:text-forest focus-visible:ring-scan;
 }
 
 .attention-1 .card-front {
