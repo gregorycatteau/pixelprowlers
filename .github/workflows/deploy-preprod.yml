@@ -38,10 +38,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           install -m 700 -d "${HOME}/.ssh"
+
           printf '%s\n' "${VPS_SSH_KEY}" > "${SSH_KEY_PATH}"
           chmod 600 "${SSH_KEY_PATH}"
-          ssh-keyscan -p "${VPS_PORT}" -H "${VPS_HOST}" >> "${HOME}/.ssh/known_hosts"
+          test -s "${SSH_KEY_PATH}"
+          echo "SSH key file prepared"
+
+          : > "${HOME}/.ssh/known_hosts"
+
+          for attempt in 1 2 3; do
+            echo "ssh-keyscan attempt ${attempt}/3"
+            if ssh-keyscan -T 20 -p "${VPS_PORT}" -H "${VPS_HOST}" >> "${HOME}/.ssh/known_hosts" 2>/dev/null; then
+              if test -s "${HOME}/.ssh/known_hosts"; then
+                echo "known_hosts prepared"
+                break
+              fi
+            fi
+            sleep 3
+          done
+
+          test -s "${HOME}/.ssh/known_hosts"
 
       - name: Test SSH connection
         shell: bash
