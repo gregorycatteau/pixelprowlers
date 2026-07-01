@@ -1,3 +1,8 @@
+import logging
+import time
+
+from django.conf import settings
+from django.core.mail import EmailMessage
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,6 +14,16 @@ from .serializers import (
     ContactSerializer, LeadSerializer, FormationSerializer,
     FormationRegistrationSerializer, ServiceSerializer
 )
+
+
+logger = logging.getLogger(__name__)
+
+# Rate limit mémoire volontairement simple : adapté à une petite instance/VPS unique.
+# En multi-instance ou en montée en charge, remplacer par Redis ou une protection reverse proxy.
+CONTACT_RATE_LIMIT = {}
+CONTACT_RATE_LIMIT_WINDOW_SECONDS = 10 * 60
+CONTACT_RATE_LIMIT_MAX_REQUESTS = 5
+CONTACT_MIN_FILL_SECONDS = 3
 
 
 class ContactViewSet(viewsets.ModelViewSet):
@@ -25,10 +40,39 @@ class ContactViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """Créer un contact via le formulaire de contact"""
+        if self._is_rate_limited(request):
+            return Response(
+                {'detail': 'Trop de demandes rapprochées. Réessayez plus tard.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        if request.data.get('website_company'):
+            return Response(
+                {'detail': 'Merci. Votre demande a bien été reçue.'},
+                status=status.HTTP_201_CREATED,
+            )
+
+        if self._is_too_fast(request.data.get('started_at')):
+            return Response(
+                {'detail': 'Merci. Votre demande a bien été reçue.'},
+                status=status.HTTP_201_CREATED,
+            )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        email_error = self._send_contact_email(serializer.validated_data.copy())
+        if email_error:
+            return Response(
+                {'detail': 'La demande n’a pas pu être envoyée pour le moment.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            {'detail': 'Merci. Votre demande a bien été reçue.'},
+            status=status.HTTP_201_CREATED,
+        )
     
     @action(detail=False, methods=['get'])
     def unread(self, request):
@@ -36,6 +80,125 @@ class ContactViewSet(viewsets.ModelViewSet):
         unread_contacts = self.get_queryset().filter(read=False)
         serializer = self.get_serializer(unread_contacts, many=True)
         return Response(serializer.data)
+
+    def _is_rate_limited(self, request):
+        now = time.time()
+        client_key = self._client_key(request)
+        recent_hits = [
+            hit
+            for hit in CONTACT_RATE_LIMIT.get(client_key, [])
+            if now - hit < CONTACT_RATE_LIMIT_WINDOW_SECONDS
+        ]
+        CONTACT_RATE_LIMIT[client_key] = recent_hits
+
+        if len(recent_hits) >= CONTACT_RATE_LIMIT_MAX_REQUESTS:
+            return True
+
+        recent_hits.append(now)
+        return False
+
+    @staticmethod
+    def _client_key(request):
+        forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        if forwarded_for:
+            return forwarded_for.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR', 'unknown')
+
+    @staticmethod
+    def _is_too_fast(started_at):
+        try:
+            started_at_seconds = int(started_at) / 1000
+        except (TypeError, ValueError):
+            return True
+        return time.time() - started_at_seconds < CONTACT_MIN_FILL_SECONDS
+
+    def _send_contact_email(self, data):
+        email_settings = [
+            settings.CONTACT_TO,
+            settings.CONTACT_FROM,
+            settings.EMAIL_HOST,
+            settings.EMAIL_PORT,
+        ]
+        if not all(email_settings):
+            logger.warning('Contact email configuration incomplete.')
+            return True
+
+        subject = (
+            f"[PixelProwlers] Nouvelle demande — "
+            f"{data.get('structure_type')} — {data.get('urgency')}"
+        )
+        body = self._build_email_body(data)
+
+        try:
+            EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=settings.CONTACT_FROM,
+                to=[settings.CONTACT_TO],
+                reply_to=[data.get('email')],
+            ).send(fail_silently=False)
+        except Exception:
+            logger.warning('Contact email delivery failed.', exc_info=False)
+            return True
+
+        return False
+
+    @staticmethod
+    def _build_email_body(data):
+        priority = ContactViewSet._estimate_priority(data)
+        lines = [
+            'Nouvelle demande PixelProwlers',
+            '',
+            f"Priorité estimée : {priority}",
+            f"Type de structure : {data.get('structure_type')}",
+            f"Nom : {data.get('name')}",
+            f"Email : {data.get('email')}",
+            f"Téléphone : {data.get('phone') or 'Non précisé'}",
+            f"Préférence de contact : {data.get('contact_preference')}",
+            f"URL du site : {data.get('website_url') or 'Non précisée'}",
+            f"CMS : {data.get('cms') or 'Non précisé'}",
+            f"Hébergeur : {data.get('hosting') or 'Non précisé'}",
+            f"Urgence : {data.get('urgency')}",
+            f"Besoin principal : {data.get('service_type')}",
+            f"Sauvegardes : {data.get('backups')}",
+            f"Accès disponibles : {data.get('access')}",
+            f"Budget indicatif : {data.get('budget') or 'Non précisé'}",
+            f"Origine déclarative : {data.get('found_us') or 'Non précisée'}",
+            '',
+            'Message :',
+            data.get('message', ''),
+            '',
+            'Rappel : ne jamais demander ni recevoir de mot de passe, token, clé privée, archive de site ou fichier sensible par email.',
+        ]
+        return '\n'.join(lines)
+
+    @staticmethod
+    def _estimate_priority(data):
+        high_signals = {
+            'Urgent : activité bloquée',
+            'Probablement aucune',
+            'Je ne sais pas qui les a',
+            'Non',
+        }
+        if (
+            data.get('urgency') in high_signals
+            or data.get('backups') in high_signals
+            or data.get('access') in high_signals
+            or data.get('service_type') == 'urgence'
+        ):
+            return 'haute'
+
+        qualified_structures = {'Association', 'TPE', 'Indépendant', 'École alternative', 'Collectif'}
+        qualified_needs = {'audit_site', 'site_maintenable', 'maintenance_documentation'}
+        if (
+            data.get('structure_type') in qualified_structures
+            and data.get('service_type') in qualified_needs
+            and data.get('budget')
+            and data.get('contact_preference')
+        ):
+            return 'normale'
+
+        return 'basse'
 
 
 class LeadViewSet(viewsets.ModelViewSet):

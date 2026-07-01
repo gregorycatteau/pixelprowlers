@@ -32,6 +32,13 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pixelprowlers}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      CONTACT_TO: ${CONTACT_TO:-}
+      CONTACT_FROM: ${CONTACT_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +54,7 @@ services:
     container_name: pixelprowlers-nuxt
     restart: unless-stopped
     environment:
-      NUXT_PUBLIC_API_URL: http://localhost:8001
+      NUXT_PUBLIC_API_URL: /api
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: 3000
     depends_on:

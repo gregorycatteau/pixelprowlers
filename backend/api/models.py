@@ -10,12 +10,20 @@ class TimeStampedModel(models.Model):
 
 
 class Contact(TimeStampedModel):
+    SERVICE_AUDIT_SITE = 'audit_site'
+    SERVICE_SITE_MAINTENABLE = 'site_maintenable'
+    SERVICE_MAINTENANCE_DOCUMENTATION = 'maintenance_documentation'
+    SERVICE_URGENCE = 'urgence'
     SERVICE_DEVELOPPEMENT = 'developpement'
     SERVICE_MATERIEL = 'materiel'
     SERVICE_FORMATION = 'formation'
     SERVICE_AUTRE = 'autre'
 
     SERVICE_CHOICES = [
+        (SERVICE_AUDIT_SITE, 'Audit sécurité de site web'),
+        (SERVICE_SITE_MAINTENABLE, 'Site sobre, sécurisé, maintenable'),
+        (SERVICE_MAINTENANCE_DOCUMENTATION, 'Maintenance, accès et documentation'),
+        (SERVICE_URGENCE, 'Urgence : site cassé, piraté ou inaccessible'),
         (SERVICE_DEVELOPPEMENT, 'Développement Web/Applicatif'),
         (SERVICE_MATERIEL, 'Réparation/Reconditionnement'),
         (SERVICE_FORMATION, 'Formation & Hygiène Numérique'),

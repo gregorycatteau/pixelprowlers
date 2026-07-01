@@ -20,6 +20,10 @@
             Le premier échange sert à clarifier le besoin, les accès, les risques et le niveau d’urgence.
             N’envoyez pas de mot de passe, clé privée, cookie, sauvegarde complète ou donnée sensible via ce formulaire.
           </p>
+          <p class="privacy-reminder">
+            Ce formulaire sert à qualifier une demande. Il ne doit pas être utilisé pour transmettre des secrets,
+            accès, mots de passe, tokens, clés privées ou archives de site.
+          </p>
 
           <div class="note-block">
             <h3>Ce qui aide vraiment</h3>
@@ -40,28 +44,82 @@
           </div>
         </aside>
 
-        <form class="contact-form" @submit.prevent="submitForm">
+        <form class="contact-form" novalidate @submit.prevent="submitForm">
+          <div
+            v-if="formErrors.length"
+            ref="errorSummary"
+            class="error-summary"
+            tabindex="-1"
+            role="alert"
+            aria-labelledby="error-summary-title"
+          >
+            <h2 id="error-summary-title">À corriger avant l’envoi</h2>
+            <ul>
+              <li v-for="error in formErrors" :key="error">{{ error }}</li>
+            </ul>
+          </div>
+
+          <div class="honeypot-field" aria-hidden="true">
+            <label>
+              <span>Site de votre entreprise</span>
+              <input
+                v-model="form.website_company"
+                type="text"
+                autocomplete="off"
+                tabindex="-1"
+              />
+            </label>
+          </div>
+
           <fieldset>
             <legend>Vous</legend>
             <div class="grid gap-6 md:grid-cols-2">
               <label class="block">
                 <span>Votre nom</span>
-                <input v-model="form.name" required type="text" autocomplete="name" placeholder="Jean Dupont" class="field" />
+                <input
+                  v-model="form.name"
+                  required
+                  type="text"
+                  autocomplete="name"
+                  maxlength="160"
+                  placeholder="Jean Dupont"
+                  class="field"
+                  :aria-invalid="Boolean(fieldErrors.name)"
+                  aria-describedby="name-help"
+                />
+                <small id="name-help">Au moins 2 caractères.</small>
               </label>
 
               <label class="block">
                 <span>Votre email</span>
-                <input v-model="form.email" required type="email" autocomplete="email" placeholder="jean@example.com" class="field" />
+                <input
+                  v-model="form.email"
+                  required
+                  type="email"
+                  autocomplete="email"
+                  maxlength="254"
+                  placeholder="jean@example.com"
+                  class="field"
+                  :aria-invalid="Boolean(fieldErrors.email)"
+                />
               </label>
 
               <label class="block">
                 <span>Structure</span>
-                <input v-model="form.company" type="text" autocomplete="organization" placeholder="Association, TPE, école..." class="field" />
+                <input v-model="form.company" type="text" autocomplete="organization" maxlength="180" placeholder="Association, TPE, école..." class="field" />
               </label>
 
               <label class="block">
                 <span>Téléphone</span>
-                <input v-model="form.phone" type="tel" autocomplete="tel" placeholder="+33 6 XX XX XX XX" class="field" />
+                <input
+                  v-model="form.phone"
+                  type="tel"
+                  autocomplete="tel"
+                  maxlength="30"
+                  placeholder="+33 6 XX XX XX XX"
+                  class="field"
+                  :aria-invalid="Boolean(fieldErrors.phone)"
+                />
               </label>
             </div>
           </fieldset>
@@ -71,7 +129,7 @@
             <div class="grid gap-6 md:grid-cols-2">
               <label class="block">
                 <span>Type de structure</span>
-                <select v-model="form.structure_type" required class="field">
+                <select v-model="form.structure_type" required class="field" :aria-invalid="Boolean(fieldErrors.structure_type)">
                   <option value="">Sélectionnez</option>
                   <option value="Association">Association</option>
                   <option value="TPE">TPE</option>
@@ -84,7 +142,7 @@
 
               <label class="block">
                 <span>Besoin principal</span>
-                <select v-model="form.service_type" required class="field">
+                <select v-model="form.service_type" required class="field" :aria-invalid="Boolean(fieldErrors.service_type)">
                   <option value="">Sélectionnez</option>
                   <option value="audit_site">Audit sécurité de site web</option>
                   <option value="site_maintenable">Site sobre, sécurisé, maintenable</option>
@@ -98,7 +156,7 @@
 
               <label class="block">
                 <span>Niveau d’urgence</span>
-                <select v-model="form.urgency" required class="field">
+                <select v-model="form.urgency" required class="field" :aria-invalid="Boolean(fieldErrors.urgency)">
                   <option value="">Sélectionnez</option>
                   <option value="Urgent : activité bloquée">Urgent : activité bloquée</option>
                   <option value="À traiter rapidement">À traiter rapidement</option>
@@ -109,7 +167,7 @@
 
               <label class="block">
                 <span>Préférence de contact</span>
-                <select v-model="form.contact_preference" required class="field">
+                <select v-model="form.contact_preference" required class="field" :aria-invalid="Boolean(fieldErrors.contact_preference)">
                   <option value="">Sélectionnez</option>
                   <option value="Email">Email</option>
                   <option value="Téléphone">Téléphone</option>
@@ -124,7 +182,16 @@
             <div class="grid gap-6 md:grid-cols-2">
               <label class="block">
                 <span>URL du site</span>
-                <input v-model="form.website_url" type="url" placeholder="https://example.org" class="field" />
+                <input
+                  v-model="form.website_url"
+                  type="url"
+                  maxlength="240"
+                  placeholder="https://example.org"
+                  class="field"
+                  :aria-invalid="Boolean(fieldErrors.website_url)"
+                  aria-describedby="website-url-help"
+                />
+                <small id="website-url-help">Optionnel. N’ajoutez pas d’identifiant, token ou URL d’administration privée.</small>
               </label>
 
               <label class="block">
@@ -142,12 +209,12 @@
 
               <label class="block">
                 <span>Hébergeur si connu</span>
-                <input v-model="form.hosting" type="text" placeholder="OVH, Infomaniak, o2switch..." class="field" />
+                <input v-model="form.hosting" type="text" maxlength="120" placeholder="OVH, Infomaniak, o2switch..." class="field" />
               </label>
 
               <label class="block">
                 <span>Sauvegardes connues ?</span>
-                <select v-model="form.backups" required class="field">
+                <select v-model="form.backups" required class="field" :aria-invalid="Boolean(fieldErrors.backups)">
                   <option value="">Sélectionnez</option>
                   <option value="Oui, restauration déjà testée">Oui, restauration déjà testée</option>
                   <option value="Oui, mais jamais testée">Oui, mais jamais testée</option>
@@ -158,7 +225,7 @@
 
               <label class="block">
                 <span>Accès disponibles ?</span>
-                <select v-model="form.access" required class="field">
+                <select v-model="form.access" required class="field" :aria-invalid="Boolean(fieldErrors.access)">
                   <option value="">Sélectionnez</option>
                   <option value="Oui, accès admin et hébergement">Oui, accès admin et hébergement</option>
                   <option value="Accès partiels">Accès partiels</option>
@@ -182,14 +249,33 @@
           </fieldset>
 
           <label class="mt-6 block">
+            <span>Comment avez-vous connu PixelProwlers ?</span>
+            <select v-model="form.found_us" class="field">
+              <option value="">Non précisé</option>
+              <option value="Recherche web">Recherche web</option>
+              <option value="Bouche-à-oreille">Bouche-à-oreille</option>
+              <option value="Réseau local">Réseau local</option>
+              <option value="Ressources PixelProwlers">Ressources PixelProwlers</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </label>
+
+          <label class="mt-6 block">
             <span>Décrivez votre situation</span>
             <textarea
               v-model="form.message"
               required
               rows="7"
+              maxlength="4000"
               placeholder="Ce qui bloque, ce qui inquiète, ce qui doit changer. Ne collez pas de mot de passe ni de secret technique."
               class="field resize-y"
+              :aria-invalid="Boolean(fieldErrors.message)"
+              aria-describedby="message-help"
             ></textarea>
+            <small id="message-help">
+              Vous pouvez coller ici le résumé non sensible de votre diagnostic si vous le souhaitez.
+              Si votre site est compromis, décrivez les symptômes sans envoyer d’identifiants ni de fichiers sensibles.
+            </small>
           </label>
 
           <label class="consent-row">
@@ -217,7 +303,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 
 const config = useRuntimeConfig();
 
@@ -242,9 +328,14 @@ type ContactForm = {
   backups: string;
   access: string;
   budget: string;
+  found_us: string;
   message: string;
   privacy_consent: boolean;
+  website_company: string;
+  started_at: number;
 };
+
+type FieldErrors = Partial<Record<keyof ContactForm, string>>;
 
 // Crée l’état initial du formulaire de contact qualifié.
 const createEmptyForm = (): ContactForm => ({
@@ -262,42 +353,160 @@ const createEmptyForm = (): ContactForm => ({
   backups: '',
   access: '',
   budget: '',
+  found_us: '',
   message: '',
   privacy_consent: false,
+  website_company: '',
+  started_at: Date.now(),
 });
 
 const form = ref<ContactForm>(createEmptyForm());
 const isSubmitting = ref(false);
 const statusMessage = ref('');
 const isSuccess = ref(false);
+const fieldErrors = ref<FieldErrors>({});
+const formErrors = ref<string[]>([]);
+const errorSummary = ref<HTMLElement | null>(null);
 
 // Réinitialise le formulaire après une soumission réussie.
 const resetForm = () => {
   form.value = createEmptyForm();
 };
 
-// Regroupe les champs de qualification dans un message compatible avec l’API de contact existante.
-const buildQualifiedMessage = () => {
-  const details = [
-    `Type de structure : ${form.value.structure_type || 'Non précisé'}`,
-    `Besoin principal : ${form.value.service_type || 'Non précisé'}`,
-    `Urgence : ${form.value.urgency || 'Non précisée'}`,
-    `Préférence de contact : ${form.value.contact_preference || 'Non précisée'}`,
-    `URL du site : ${form.value.website_url || 'Non précisée'}`,
-    `CMS : ${form.value.cms || 'Non précisé'}`,
-    `Hébergeur : ${form.value.hosting || 'Non précisé'}`,
-    `Sauvegardes : ${form.value.backups || 'Non précisé'}`,
-    `Accès disponibles : ${form.value.access || 'Non précisé'}`,
-    `Budget indicatif : ${form.value.budget || 'Non précisé'}`,
-  ];
+// Nettoie les champs texte avant validation et soumission.
+const normalizeForm = () => {
+  Object.entries(form.value).forEach(([key, value]) => {
+    if (typeof value === 'string') {
+      form.value[key as keyof ContactForm] = value.trim() as never;
+    }
+  });
+};
 
-  return `${details.join('\n')}\n\nSituation décrite :\n${form.value.message}`;
+// Vérifie localement les champs nécessaires pour éviter les demandes inexploitables.
+const validateForm = () => {
+  const errors: FieldErrors = {};
+
+  if (form.value.name.length < 2) {
+    errors.name = 'Indiquez votre nom avec au moins 2 caractères.';
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
+    errors.email = 'Indiquez une adresse email valide.';
+  }
+  if (!form.value.structure_type) {
+    errors.structure_type = 'Sélectionnez un type de structure.';
+  }
+  if (!form.value.service_type) {
+    errors.service_type = 'Sélectionnez le besoin principal.';
+  }
+  if (!form.value.urgency) {
+    errors.urgency = 'Sélectionnez un niveau d’urgence.';
+  }
+  if (!form.value.contact_preference) {
+    errors.contact_preference = 'Sélectionnez une préférence de contact.';
+  }
+  if (form.value.website_url && !isValidUrl(form.value.website_url)) {
+    errors.website_url = 'Indiquez une URL valide, ou laissez le champ vide.';
+  }
+  if (form.value.phone && !/^[0-9+().\s-]{6,30}$/.test(form.value.phone)) {
+    errors.phone = 'Indiquez un numéro de téléphone valide, ou laissez le champ vide.';
+  }
+  if (!form.value.backups) {
+    errors.backups = 'Précisez l’état connu des sauvegardes.';
+  }
+  if (!form.value.access) {
+    errors.access = 'Précisez si les accès sont disponibles.';
+  }
+  if (form.value.message.length < 20) {
+    errors.message = 'Décrivez la situation en au moins 20 caractères.';
+  }
+  if (form.value.message.length > 4000) {
+    errors.message = 'Le message est trop long.';
+  }
+  if (!form.value.privacy_consent) {
+    errors.privacy_consent = 'Le consentement confidentialité est requis.';
+  }
+
+  fieldErrors.value = errors;
+  formErrors.value = Object.values(errors);
+
+  return formErrors.value.length === 0;
+};
+
+// Vérifie qu’une URL optionnelle est syntaxiquement exploitable.
+const isValidUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch {
+    return false;
+  }
+};
+
+// Place le focus sur le résumé des erreurs pour les utilisateurs clavier et lecteurs d’écran.
+const focusErrors = async () => {
+  await nextTick();
+  errorSummary.value?.focus();
+};
+
+// Construit le payload attendu par l’API sans ajouter de champ sensible.
+const buildPayload = () => {
+  const {
+    name,
+    email,
+    company,
+    phone,
+    structure_type,
+    service_type,
+    urgency,
+    contact_preference,
+    website_url,
+    cms,
+    hosting,
+    backups,
+    access,
+    budget,
+    found_us,
+    message,
+    privacy_consent,
+    website_company,
+    started_at,
+  } = form.value;
+
+  return {
+    name,
+    email,
+    company,
+    phone,
+    structure_type,
+    service_type,
+    urgency,
+    contact_preference,
+    website_url,
+    cms,
+    hosting,
+    backups,
+    access,
+    budget,
+    found_us,
+    message,
+    privacy_consent,
+    website_company,
+    started_at,
+  };
 };
 
 // Envoie la demande de contact à l’API Django et affiche le retour utilisateur.
 const submitForm = async () => {
-  isSubmitting.value = true;
+  normalizeForm();
   statusMessage.value = '';
+  isSuccess.value = false;
+
+  if (!validateForm()) {
+    await focusErrors();
+    return;
+  }
+
+  isSubmitting.value = true;
 
   try {
     const response = await fetch(`${config.public.apiBase}/api/contacts/`, {
@@ -305,23 +514,20 @@ const submitForm = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        name: form.value.name,
-        email: form.value.email,
-        company: form.value.company,
-        phone: form.value.phone,
-        service_type: form.value.service_type,
-        message: buildQualifiedMessage(),
-      }),
+      body: JSON.stringify(buildPayload()),
     });
 
     if (response.ok) {
       isSuccess.value = true;
       statusMessage.value = 'Merci. Nous vous recontacterons avec une première lecture claire.';
+      fieldErrors.value = {};
+      formErrors.value = [];
       resetForm();
     } else {
       isSuccess.value = false;
-      statusMessage.value = 'Une erreur s’est produite. Veuillez réessayer.';
+      statusMessage.value = response.status === 429
+        ? 'Trop de demandes rapprochées. Réessayez un peu plus tard.'
+        : 'La demande n’a pas pu être envoyée pour le moment. Vous pouvez réessayer plus tard.';
     }
   } catch (error) {
     isSuccess.value = false;
@@ -369,6 +575,10 @@ const submitForm = async () => {
   @apply mt-4 leading-7 text-muted;
 }
 
+.diagnostic-note .privacy-reminder {
+  @apply rounded-lg border border-action/25 bg-action/10 px-4 py-3 text-sm font-bold leading-6 text-ink;
+}
+
 .note-block {
   @apply mt-6 rounded-lg border border-trust/15 bg-sand p-5;
 }
@@ -389,6 +599,30 @@ const submitForm = async () => {
   @apply rounded-lg border border-forest/15 bg-paper p-6 shadow-soft md:p-10;
 }
 
+.error-summary {
+  @apply mb-8 rounded-lg border border-action/35 bg-action/10 p-5 outline-none;
+}
+
+.error-summary:focus {
+  @apply ring-2 ring-action ring-offset-2 ring-offset-paper;
+}
+
+.error-summary h2 {
+  @apply font-heading text-2xl font-black text-ink;
+}
+
+.error-summary ul {
+  @apply mt-4 grid gap-2;
+}
+
+.error-summary li {
+  @apply text-sm font-semibold leading-6 text-ink;
+}
+
+.honeypot-field {
+  @apply pointer-events-none absolute h-px w-px overflow-hidden opacity-0;
+}
+
 fieldset {
   @apply mt-8 border-0 p-0 first:mt-0;
 }
@@ -399,6 +633,10 @@ legend {
 
 label span {
   @apply text-sm font-bold text-ink;
+}
+
+label small {
+  @apply mt-2 block text-xs font-semibold leading-5 text-muted;
 }
 
 .field {
@@ -412,6 +650,10 @@ label span {
 .field:focus {
   @apply border-trust bg-white;
   box-shadow: 0 0 0 4px rgba(44, 125, 160, 0.14);
+}
+
+.field[aria-invalid='true'] {
+  @apply border-action bg-action/5;
 }
 
 .consent-row {

@@ -99,3 +99,14 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
 }
+
+CONTACT_TO = os.getenv('CONTACT_TO', '')
+CONTACT_FROM = os.getenv('CONTACT_FROM', '')
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('SMTP_HOST', '')
+EMAIL_PORT = int(os.getenv('SMTP_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('SMTP_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASS', '')
+EMAIL_USE_TLS = os.getenv('SMTP_SECURE', 'false').lower() != 'true'
+EMAIL_USE_SSL = os.getenv('SMTP_SECURE', 'false').lower() == 'true'

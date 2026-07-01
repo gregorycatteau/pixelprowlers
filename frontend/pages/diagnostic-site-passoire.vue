@@ -88,10 +88,14 @@
 
             <div class="result-actions">
               <NuxtLink :to="result.cta.href" class="primary-result-action">{{ result.cta.label }}</NuxtLink>
+              <button type="button" class="secondary-result-action" @click="copySafeSummary">
+                Copier mon résumé non sensible
+              </button>
               <button type="button" class="secondary-result-action" @click="resetAnswers">
                 Refaire le diagnostic
               </button>
             </div>
+            <p v-if="copyMessage" class="copy-feedback">{{ copyMessage }}</p>
           </template>
 
           <div v-else class="empty-result">
@@ -116,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 usePixelSeo({
   title: 'Diagnostic site passoire | PixelProwlers',
@@ -253,6 +257,7 @@ const axes: Axis[] = [
 const answers = reactive<Record<string, AnswerValue | ''>>(
   Object.fromEntries(axes.flatMap((axis) => axis.questions.map((question) => [question.id, ''])))
 );
+const copyMessage = ref('');
 
 const totalQuestions = axes.reduce((count, axis) => count + axis.questions.length, 0);
 
@@ -370,11 +375,54 @@ const recommendedLinks = computed(() => {
   return Array.from(uniqueLinks.values()).slice(0, 5);
 });
 
+// Identifie les axes les plus fragiles sans exposer de réponse détaillée ni information interne.
+const weakAxes = computed(() => axes
+  .map((axis) => ({
+    title: axis.title,
+    score: axis.questions.reduce((total, question) => total + scoreQuestion(question), 0),
+  }))
+  .filter((axis) => axis.score > 0)
+  .sort((first, second) => second.score - first.score)
+  .slice(0, 3)
+  .map((axis) => axis.title)
+);
+
+// Produit un résumé volontairement non sensible à coller manuellement dans le formulaire de contact.
+const buildSafeSummary = () => {
+  const axesText = weakAxes.value.length ? weakAxes.value.join(', ') : 'Aucun axe majeur identifié';
+
+  return [
+    'Résumé non sensible du diagnostic PixelProwlers',
+    `Niveau : ${result.value.level}`,
+    `Axes à regarder en priorité : ${axesText}`,
+    `Priorités : ${result.value.priorities.join(' / ')}`,
+    'Aucun domaine, accès, token, mot de passe ou détail interne n’est inclus dans ce résumé.',
+  ].join('\n');
+};
+
+// Copie le résumé non sensible si l’API Clipboard est disponible, sinon affiche une consigne claire.
+const copySafeSummary = async () => {
+  copyMessage.value = '';
+
+  if (!navigator.clipboard?.writeText) {
+    copyMessage.value = 'Copie automatique indisponible. Vous pouvez résumer le niveau et les priorités dans le formulaire de contact.';
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(buildSafeSummary());
+    copyMessage.value = 'Résumé non sensible copié. Vous pouvez le coller dans le message du formulaire de contact.';
+  } catch {
+    copyMessage.value = 'Copie impossible. Vous pouvez résumer manuellement le niveau et les priorités dans le formulaire de contact.';
+  }
+};
+
 // Réinitialise les réponses locales sans contacter de service externe.
 const resetAnswers = () => {
   Object.keys(answers).forEach((key) => {
     answers[key] = '';
   });
+  copyMessage.value = '';
 };
 </script>
 
@@ -611,6 +659,10 @@ const resetAnswers = () => {
 
 .secondary-result-action {
   @apply inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-scan px-6 py-3 text-center font-extrabold text-white outline-none transition hover:bg-scan/10 focus-visible:ring-2 focus-visible:ring-scan focus-visible:ring-offset-2 focus-visible:ring-offset-night;
+}
+
+.copy-feedback {
+  @apply mt-5 rounded-lg border border-scan/20 bg-scan/10 px-4 py-3 text-sm font-bold leading-6 text-white;
 }
 
 .link-panel {
