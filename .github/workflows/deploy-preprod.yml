@@ -128,7 +128,7 @@ jobs:
              docker compose ps
              docker compose exec -T django python manage.py check
              docker compose exec -T django python manage.py migrate
-             curl -fsS http://127.0.0.1:8080/api/health/"
+             curl -fsS -H 'Host: pixelprowlers.io' http://127.0.0.1:8080/api/health/"
 
       - name: Verify Caddy and public HTTPS
         shell: bash
