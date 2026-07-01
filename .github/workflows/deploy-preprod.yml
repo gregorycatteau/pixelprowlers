@@ -19,7 +19,7 @@ jobs:
       VPS_PORT: ${{ secrets.VPS_PORT }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
       REMOTE_DIR: /opt/pixelprowlers
-      SSH_KEY_PATH: ${{ runner.temp }}/pixelprowlers_vps_key
+      SSH_KEY_PATH: /tmp/pixelprowlers_vps_key
 
     steps:
       - name: Checkout repository
