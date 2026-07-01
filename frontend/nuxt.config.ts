@@ -41,8 +41,8 @@ export default defineNuxtConfig({
           property: 'og:description',
           content: 'Audit sécurité, sites maintenables, documentation et accompagnement numérique pour associations, TPE, indépendants et collectifs.' 
         },
-        { property: 'og:url', content: 'https://pixelprowlers.fr/' },
-        { property: 'og:image', content: 'https://pixelprowlers.fr/og-pixelprowlers.png' },
+        { property: 'og:url', content: 'https://pixelprowlers.io/' },
+        { property: 'og:image', content: 'https://pixelprowlers.io/og-pixelprowlers.png' },
         { property: 'og:site_name', content: 'PixelProwlers' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: 'PixelProwlers | Sites sobres, sécurité concrète et autonomie numérique' },
@@ -50,7 +50,7 @@ export default defineNuxtConfig({
           name: 'twitter:description',
           content: 'Audit sécurité, sites maintenables, documentation et accompagnement numérique pour associations, TPE, indépendants et collectifs.'
         },
-        { name: 'twitter:image', content: 'https://pixelprowlers.fr/og-pixelprowlers.png' },
+        { name: 'twitter:image', content: 'https://pixelprowlers.io/og-pixelprowlers.png' },
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/logo-nav.png' },

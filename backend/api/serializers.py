@@ -106,6 +106,7 @@ class ContactSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = self._strip_values(attrs)
+        self._validate_single_line_fields(attrs)
         self._validate_choice('structure_type', attrs.get('structure_type'), self.STRUCTURE_TYPES)
         self._validate_choice('service_type', attrs.get('service_type'), self.SERVICE_TYPES)
         self._validate_choice('urgency', attrs.get('urgency'), self.URGENCY_LEVELS)
@@ -170,6 +171,30 @@ class ContactSerializer(serializers.ModelSerializer):
     def _validate_choice(field_name, value, choices):
         if value not in choices:
             raise serializers.ValidationError({field_name: 'Valeur non reconnue.'})
+
+    @staticmethod
+    def _validate_single_line_fields(attrs):
+        single_line_fields = {
+            'name',
+            'email',
+            'company',
+            'phone',
+            'structure_type',
+            'service_type',
+            'urgency',
+            'contact_preference',
+            'website_url',
+            'cms',
+            'hosting',
+            'backups',
+            'access',
+            'budget',
+            'found_us',
+        }
+        for field in single_line_fields:
+            value = attrs.get(field)
+            if isinstance(value, str) and any(char in value for char in ('\r', '\n')):
+                raise serializers.ValidationError({field: 'Valeur invalide.'})
 
     @staticmethod
     def _build_stored_message(message, fields):

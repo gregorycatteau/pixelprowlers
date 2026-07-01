@@ -4,7 +4,7 @@ import time
 from django.conf import settings
 from django.core.mail import EmailMessage
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
@@ -18,12 +18,19 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
-# Rate limit mémoire volontairement simple : adapté à une petite instance/VPS unique.
-# En multi-instance ou en montée en charge, remplacer par Redis ou une protection reverse proxy.
+# Rate limit mémoire volontairement simple : filet applicatif pour petite instance.
+# Avec plusieurs workers Gunicorn, plusieurs instances ou montée en charge, s'appuyer sur
+# la protection reverse proxy Nginx configurée sur /api/contacts/ ou remplacer par Redis.
 CONTACT_RATE_LIMIT = {}
 CONTACT_RATE_LIMIT_WINDOW_SECONDS = 10 * 60
 CONTACT_RATE_LIMIT_MAX_REQUESTS = 5
 CONTACT_MIN_FILL_SECONDS = 3
+
+
+@api_view(['GET'])
+def health_check(request):
+    """Retourne un état minimal pour les sondes de disponibilité."""
+    return Response({'status': 'ok'})
 
 
 class ContactViewSet(viewsets.ModelViewSet):

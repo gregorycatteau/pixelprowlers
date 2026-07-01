@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     ContactViewSet, LeadViewSet, FormationViewSet,
-    FormationRegistrationViewSet, ServiceViewSet
+    FormationRegistrationViewSet, ServiceViewSet, health_check
 )
 
 router = DefaultRouter()
@@ -13,5 +13,6 @@ router.register(r'registrations', FormationRegistrationViewSet, basename='regist
 router.register(r'services', ServiceViewSet, basename='service')
 
 urlpatterns = [
+    path('health/', health_check),
     path('', include(router.urls)),
 ]

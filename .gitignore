@@ -1,9 +1,12 @@
 # Dependencies
 node_modules
+frontend/node_modules
 
 # Nuxt
 .nuxt
 .output
+frontend/.nuxt
+frontend/.output
 dist
 
 # Logs
@@ -16,6 +19,8 @@ pnpm-debug.log*
 # Environment
 .env
 .env.*
+backend/.env
+frontend/.env
 !.env.example
 
 # OS / editor
@@ -27,6 +32,10 @@ Thumbs.db
 # Build caches
 .cache
 .parcel-cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.sqlite3
 
 # Local
 .local
@@ -35,6 +44,7 @@ Thumbs.db
 .chromium-cache-*
 .chromium-profile-*
 .screenshots/
+frontend/.screenshots/
 
 # Local imported/browser files
 Hostinger _ Agents_files/

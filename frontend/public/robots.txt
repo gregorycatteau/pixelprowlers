@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://pixelprowlers.fr/sitemap.xml
+Sitemap: https://pixelprowlers.io/sitemap.xml

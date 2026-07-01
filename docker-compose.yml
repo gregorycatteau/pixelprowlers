@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -6,9 +12,9 @@ services:
     environment:
       POSTGRES_DB: pixelprowlers
       POSTGRES_USER: pixelprowlers
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-pixelprowlers}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +22,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
 
   django:
     build:
@@ -23,13 +30,20 @@ services:
     container_name: pixelprowlers-django
     restart: unless-stopped
     environment:
-      DJANGO_SECRET_KEY: ${SECRET_KEY:-change-me}
-      DJANGO_DEBUG: ${DEBUG:-True}
-      DJANGO_ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1},django
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8080
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,django}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
+      DJANGO_SESSION_COOKIE_SECURE: ${DJANGO_SESSION_COOKIE_SECURE:-false}
+      DJANGO_CSRF_COOKIE_SECURE: ${DJANGO_CSRF_COOKIE_SECURE:-false}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-0}
+      DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: ${DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS:-false}
+      DJANGO_SECURE_HSTS_PRELOAD: ${DJANGO_SECURE_HSTS_PRELOAD:-false}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
       POSTGRES_DB: pixelprowlers
       POSTGRES_USER: pixelprowlers
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-pixelprowlers}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       CONTACT_TO: ${CONTACT_TO:-}
@@ -43,10 +57,11 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     command: >
       sh -c "python manage.py migrate &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
+    logging: *default-logging
 
   nuxt:
     build:
@@ -60,7 +75,8 @@ services:
     depends_on:
       - django
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    logging: *default-logging
 
   nginx:
     image: nginx:1.27-alpine
@@ -70,9 +86,10 @@ services:
       - django
       - nuxt
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    logging: *default-logging
 
 volumes:
   postgres_data:

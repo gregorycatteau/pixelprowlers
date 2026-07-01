@@ -5,7 +5,7 @@ type PixelSeoOptions = {
   type?: 'website' | 'article';
 };
 
-const siteUrl = 'https://pixelprowlers.fr';
+const siteUrl = 'https://pixelprowlers.io';
 const defaultImage = `${siteUrl}/og-pixelprowlers.png`;
 
 // Applique les métadonnées SEO, Open Graph, Twitter et canonical pour une page publique.

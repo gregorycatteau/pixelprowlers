@@ -44,7 +44,7 @@
           </div>
         </aside>
 
-        <form class="contact-form" novalidate @submit.prevent="submitForm">
+        <form class="contact-form" novalidate :aria-busy="isSubmitting" @submit.prevent="submitForm">
           <div
             v-if="formErrors.length"
             ref="errorSummary"
@@ -289,7 +289,7 @@
           <div v-if="statusMessage" :class="[
             'mt-6 rounded-lg border p-4 text-sm font-semibold',
             isSuccess ? 'border-forest/25 bg-forest/10 text-forest' : 'border-action/40 bg-action/10 text-ink'
-          ]">
+          ]" role="status" aria-live="polite">
             {{ statusMessage }}
           </div>
 
@@ -548,11 +548,11 @@ const submitForm = async () => {
 }
 
 .page-hero h1 {
-  @apply mx-auto mt-5 max-w-4xl font-heading text-4xl font-black leading-[1.04] text-ink sm:text-5xl md:text-6xl;
+  @apply mx-auto mt-5 max-w-[19rem] text-balance font-heading text-3xl font-black leading-tight text-ink sm:max-w-4xl sm:text-5xl md:text-6xl md:leading-[1.04];
 }
 
 .page-hero p:not(.eyebrow) {
-  @apply mx-auto mt-6 max-w-[21rem] text-base leading-8 text-muted md:max-w-3xl md:text-lg;
+  @apply mx-auto mt-6 max-w-[19rem] text-base leading-8 text-muted md:max-w-3xl md:text-lg;
 }
 
 .contact-section {
