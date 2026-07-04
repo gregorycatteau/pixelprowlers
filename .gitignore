@@ -9,6 +9,10 @@ dist
 # Node dependencies
 node_modules
 
+# Python generated files
+__pycache__/
+*.py[cod]
+
 # Logs
 logs
 *.log
@@ -22,3 +26,10 @@ logs
 .env
 .env.*
 !.env.example
+
+# Local work backups
+*.bak.*
+frontend.junk.*/
+.agents/
+.codex/
+assets/
