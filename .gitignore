@@ -12,6 +12,7 @@ node_modules
 # Python generated files
 __pycache__/
 *.py[cod]
+*.sqlite3
 
 # Logs
 logs
@@ -32,4 +33,7 @@ logs
 frontend.junk.*/
 .agents/
 .codex/
-assets/
+
+# Résidu structure legacy racine (pré-migration vers app/)
+/app.vue
+/assets/
