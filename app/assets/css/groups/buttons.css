@@ -1,0 +1,61 @@
+@layer components {
+  .ButtonBase,
+  .ButtonPrimary,
+  .ButtonSecondary,
+  .ButtonValidate,
+  .ButtonGhost,
+  .ButtonNav,
+  .ButtonDanger {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-4 py-2 text-center font-medium leading-tight no-underline transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .ButtonBase[aria-disabled="true"],
+  .ButtonPrimary[aria-disabled="true"],
+  .ButtonSecondary[aria-disabled="true"],
+  .ButtonValidate[aria-disabled="true"],
+  .ButtonGhost[aria-disabled="true"],
+  .ButtonNav[aria-disabled="true"],
+  .ButtonDanger[aria-disabled="true"] {
+    @apply pointer-events-none opacity-50;
+  }
+
+  .ButtonPrimary {
+    @apply bg-primary-600 text-white shadow-[0_12px_28px_rgba(16,185,129,0.22)] hover:bg-primary-700 focus-visible:ring-primary-600;
+  }
+
+  .ButtonSecondary {
+    @apply border border-secondary-200 bg-secondary-100 text-primary-900 hover:bg-secondary-200 focus-visible:ring-secondary-200;
+  }
+
+  .ButtonValidate {
+    @apply border-2 border-primary-600 bg-white text-primary-700 hover:bg-primary-50 focus-visible:ring-primary-600;
+  }
+
+  .ButtonGhost {
+    @apply bg-transparent text-primary-700 hover:bg-primary-50 focus-visible:ring-primary-600;
+  }
+
+  .ButtonNav {
+    @apply min-h-10 bg-transparent px-3 py-2 text-primary-900 shadow-none hover:text-[#111827] focus-visible:ring-primary-600;
+  }
+
+  .ButtonDanger {
+    @apply bg-red-500 text-white hover:bg-red-600 focus-visible:ring-red-500;
+  }
+
+  .ButtonSmall {
+    @apply min-h-9 px-3 py-1.5 text-sm;
+  }
+
+  .ButtonLarge {
+    @apply min-h-12 px-5 py-3 text-base;
+  }
+
+  .ButtonIcon {
+    @apply inline-flex h-4 w-4 items-center justify-center;
+  }
+
+  .ButtonBase.is-loading {
+    @apply cursor-wait;
+  }
+}

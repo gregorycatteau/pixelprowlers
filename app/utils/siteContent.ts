@@ -24,7 +24,7 @@ export const offers = [
       'Rapide pour vos visiteurs, léger pour vos machines',
       "Documenté : l'équipe sait comment ça marche",
     ],
-    href: '/refonte-site',
+    href: '/audit-refonte',
     cta: 'Reconstruire mon site',
   },
   {
@@ -127,8 +127,8 @@ export const landings: Record<string, Landing> = {
     subtitle: 'Audit complet de votre site : infra, sécu, accès, sauvegardes. Rapport lisible. Priorités claires. Actions réalistes.',
     heroCta: "Lancer l'audit",
     secondaryCta: "Parlons d'abord",
-    primaryHref: '/contact',
-    secondaryHref: '/contact',
+    primaryHref: '#audit-parcours',
+    secondaryHref: '/rendez-vous',
     finalTitle: 'Vous voulez savoir ce qui tient vraiment ?',
     finalText: "On vérifie, on classe les risques, puis on vous dit ce qui mérite d'être traité maintenant.",
     finalCta: "Lancer l'audit",
@@ -157,8 +157,8 @@ export const landings: Record<string, Landing> = {
     subtitle: "Votre site ralentit l'équipe ? On le remplace par quelque chose de simple, qui tient la route, et que vos gens peuvent vraiment maintenir.",
     heroCta: 'Parlons refonte',
     secondaryCta: 'Premier échange',
-    primaryHref: '/contact',
-    secondaryHref: '/contact',
+    primaryHref: '/audit-refonte',
+    secondaryHref: '/rendez-vous',
     finalTitle: 'Avant de refondre, on vérifie que ça vaut le coup.',
     finalText: "Un audit seul peut suffire. Une refonte légère peut suffire. Si PixelProwlers n'est pas la bonne option, on vous le dit.",
     finalCta: 'Parlons refonte',
@@ -186,8 +186,8 @@ export const landings: Record<string, Landing> = {
     subtitle: 'Tout repose sur une personne ? On remet ça à plat : accès clair, procédures écrites, formation rapide. Après, vous savez.',
     heroCta: 'Reprendre la main',
     secondaryCta: 'Consultation rapide',
-    primaryHref: '/contact',
-    secondaryHref: '/contact',
+    primaryHref: '/rendez-vous',
+    secondaryHref: '/rendez-vous',
     finalTitle: "C'est l'offre la plus ignorée, et la plus utile.",
     finalText: 'Une documentation + deux personnes formées = tranquillité pendant des années. Ne la négligez pas.',
     finalCta: 'Reprendre la main',
@@ -212,6 +212,36 @@ export const landings: Record<string, Landing> = {
       },
     ],
   },
+};
+
+export const auditRefonteLanding: Landing = {
+  kicker: 'Audit refonte',
+  title: 'Avant de reconstruire, on cadre vraiment.',
+  subtitle: "Un parcours pour comprendre votre site actuel, vos objectifs, vos contraintes et les signaux techniques qui doivent guider la refonte.",
+  heroCta: "Démarrer l'audit refonte",
+  secondaryCta: "Parlons d'abord",
+  primaryHref: '#audit-refonte-parcours',
+  secondaryHref: '/rendez-vous',
+  finalTitle: 'Vous repartez avec une base claire.',
+  finalText: "Le questionnaire donne le contexte. L'analyse technique donne les premiers signaux. L'échange humain fait le tri.",
+  finalCta: "Démarrer l'audit refonte",
+  sections: [
+    {
+      id: 'audit-refonte-cadre',
+      title: 'Ce que le parcours vérifie',
+      blocks: [
+        { title: 'Objectifs', items: ['Pourquoi changer maintenant', 'Décisionnaires impliqués', 'Délai souhaité'] },
+        { title: 'Existant', items: ['Ce qui fonctionne déjà', 'Ce qui freine', 'Contenus à conserver'] },
+        { title: 'Technique', items: ['Balises essentielles', 'HTTPS', 'Ressources lentes ou en erreur'] },
+      ],
+    },
+    {
+      id: 'audit-refonte-resultat',
+      title: 'Le résultat attendu',
+      alt: true,
+      items: ['Une référence de dossier', 'Un statut de traitement visible', 'Un rapport technique initial', 'Une grille Nielsen pour orienter la discussion'],
+    },
+  ],
 };
 
 export const values = [

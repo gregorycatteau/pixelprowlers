@@ -17,7 +17,7 @@
           Ne transmettez aucun mot de passe, token, clé privée ou accès administrateur. Les modalités
           d’intervention seront vues après un premier échange humain.
         </p>
-        <AppButton variant="secondary" href="/urgence" @click.prevent="reset">Déclarer une autre urgence</AppButton>
+        <AppButton variant="secondary" type="button" @click="reset">Déclarer une autre urgence</AppButton>
       </div>
 
       <form v-else class="urgency-form" @submit.prevent="submit">

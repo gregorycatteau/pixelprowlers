@@ -1,82 +1,79 @@
 <template>
-  <SiteShell>
-    <main class="result-page">
-      <section class="diagnostic-hero" aria-labelledby="result-title">
-        <div class="form-container">
-          <p class="eyebrow">Diagnostic personnalisé</p>
-          <h1 id="result-title">Voici ce qu'on voit.</h1>
-          <p>Basé sur vos réponses, voici notre analyse honnête.</p>
-          <p v-if="ticket" class="ticket-pill">Ticket de suivi : {{ ticket.id }}</p>
+  <main class="result-page">
+    <section class="diagnostic-hero" aria-labelledby="result-title">
+      <div class="form-container">
+        <p class="eyebrow">Diagnostic personnalisé</p>
+        <h1 id="result-title">Voici ce qu'on voit.</h1>
+        <p>Basé sur vos réponses, voici notre analyse honnête.</p>
+        <p v-if="ticket" class="ticket-pill">Ticket de suivi : {{ ticket.id }}</p>
+      </div>
+    </section>
+
+    <section class="result-section" aria-labelledby="result-analysis-title">
+      <div class="form-container">
+        <div v-if="isLoading" class="result-panel">
+          <p class="result-kicker">Chargement</p>
+          <h2 id="result-analysis-title">On récupère votre diagnostic.</h2>
         </div>
-      </section>
 
-      <section class="result-section" aria-labelledby="result-analysis-title">
-        <div class="form-container">
-          <div v-if="isLoading" class="result-panel">
-            <p class="result-kicker">Chargement</p>
-            <h2 id="result-analysis-title">On récupère votre diagnostic.</h2>
+        <div v-else-if="error" class="result-panel">
+          <p class="result-kicker">Ticket introuvable</p>
+          <h2 id="result-analysis-title">On ne trouve pas cette réponse.</h2>
+          <p>{{ error }}</p>
+          <AppButton href="/diagnostic-situation">Relancer le diagnostic</AppButton>
+        </div>
+
+        <article v-else-if="content && ticket" class="result-panel">
+          <p class="result-kicker">{{ content.kicker }}</p>
+          <h2 id="result-analysis-title">{{ content.title }}</h2>
+          <p class="context-copy">{{ content.context }}</p>
+
+          <div class="advice-block">
+            <h3>Notre conseil</h3>
+            <p><strong>{{ content.advice }}</strong></p>
+            <ul class="plain-list good-list">
+              <li v-for="reason in content.reasons" :key="reason">{{ reason }}</li>
+            </ul>
           </div>
 
-          <div v-else-if="error" class="result-panel">
-            <p class="result-kicker">Ticket introuvable</p>
-            <h2 id="result-analysis-title">On ne trouve pas cette réponse.</h2>
-            <p>{{ error }}</p>
-            <AppButton href="/diagnostic-situation">Relancer le diagnostic</AppButton>
-          </div>
-
-          <article v-else-if="content && ticket" class="result-panel">
-            <p class="result-kicker">{{ content.kicker }}</p>
-            <h2 id="result-analysis-title">{{ content.title }}</h2>
-            <p class="context-copy">{{ content.context }}</p>
-
-            <div class="advice-block">
-              <h3>Notre conseil</h3>
-              <p><strong>{{ content.advice }}</strong></p>
-              <ul class="plain-list good-list">
-                <li v-for="reason in content.reasons" :key="reason">{{ reason }}</li>
+          <div class="option-grid">
+            <section class="option-box">
+              <h3>Option A : {{ content.pixelTitle }}</h3>
+              <ul>
+                <li v-for="item in content.pixelItems" :key="item">{{ item }}</li>
               </ul>
+              <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
+            </section>
+
+            <section class="option-box muted">
+              <h3>Option B : Vous pouvez aussi</h3>
+              <ul>
+                <li v-for="item in content.alternativeItems" :key="item">{{ item }}</li>
+              </ul>
+              <p><strong>Notre conseil honnête :</strong> {{ content.honestAdvice }}</p>
+            </section>
+          </div>
+
+          <footer class="result-footer">
+            <h2>Vous voulez avancer ?</h2>
+            <div class="result-actions">
+              <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
+              <AppButton variant="secondary" href="/contact">Parlez-nous de votre situation</AppButton>
             </div>
-
-            <div class="option-grid">
-              <section class="option-box">
-                <h3>Option A : {{ content.pixelTitle }}</h3>
-                <ul>
-                  <li v-for="item in content.pixelItems" :key="item">{{ item }}</li>
-                </ul>
-                <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
-              </section>
-
-              <section class="option-box muted">
-                <h3>Option B : Vous pouvez aussi</h3>
-                <ul>
-                  <li v-for="item in content.alternativeItems" :key="item">{{ item }}</li>
-                </ul>
-                <p><strong>Notre conseil honnête :</strong> {{ content.honestAdvice }}</p>
-              </section>
-            </div>
-
-            <footer class="result-footer">
-              <h2>Vous voulez avancer ?</h2>
-              <div class="result-actions">
-                <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
-                <AppButton variant="secondary" href="/contact">Parlez-nous de votre situation</AppButton>
-              </div>
-              <p>
-                Ticket de suivi : <strong>{{ ticket.id }}</strong><br>
-                {{ emailConfirmationLabel(ticket) }} : {{ maskedEmail }}<br>
-                Vous pouvez revenir à cette page quand vous voulez.
-              </p>
-            </footer>
-          </article>
-        </div>
-      </section>
-    </main>
-  </SiteShell>
+            <p>
+              Ticket de suivi : <strong>{{ ticket.id }}</strong><br>
+              {{ emailConfirmationLabel(ticket) }} : {{ maskedEmail }}<br>
+              Vous pouvez revenir à cette page quand vous voulez.
+            </p>
+          </footer>
+        </article>
+      </div>
+    </section>
+  </main>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import SiteShell from '~/components/layout/SiteShell.vue';
 import AppButton from '~/components/ui/AppButton.vue';
 import { emailConfirmationLabel, useDiagnosticResult } from '~/composables/useDiagnostic';
 
