@@ -1,0 +1,27 @@
+# Environnements virtuels
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.DS_Store
+
+# Fichiers d'import ponctuels (déjà intégrés en base)
+lot_citations_*.json

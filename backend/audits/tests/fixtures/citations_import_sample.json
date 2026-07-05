@@ -1,0 +1,32 @@
+[
+  {
+    "texte": "La joie est en tout, il faut savoir l'extraire.",
+    "auteur": "Confucius",
+    "source": "Pensées",
+    "langue": "fr",
+    "theme": "joie de vivre",
+    "actif": true,
+    "verifie": true
+  },
+  {
+    "texte": " Chaque renouveau commence par un pas. ",
+    "auteur": "PixelProwlers",
+    "source": "Fixture",
+    "langue": "fr",
+    "theme": "renouveau"
+  },
+  {
+    "texte": "la joie est en tout, il faut savoir l'extraire.",
+    "auteur": "Confucius",
+    "source": "Pensées",
+    "langue": "fr",
+    "theme": "joie de vivre"
+  },
+  {
+    "texte": "",
+    "auteur": "Anonyme",
+    "source": "Fixture",
+    "langue": "fr",
+    "theme": "espoir"
+  }
+]

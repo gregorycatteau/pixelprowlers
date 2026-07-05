@@ -37,3 +37,7 @@ frontend.junk.*/
 # Résidu structure legacy racine (pré-migration vers app/)
 /app.vue
 /assets/
+
+# Config perso / fichiers temporaires
+.vscode/
+tmp/
