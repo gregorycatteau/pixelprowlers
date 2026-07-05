@@ -7,13 +7,20 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "test": "vitest run",
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.2",
     "nuxt": "4.4.8",
     "tailwindcss": "4.3.1",
+    "vitest": "^4.1.9",
     "vue": "^3.5.0",
     "vue-router": "^4.5.0"
+  },
+  "dependencies": {
+    "@vee-validate/zod": "^4.15.1",
+    "vee-validate": "^4.15.1",
+    "zod": "^3.25.76"
   }
 }
