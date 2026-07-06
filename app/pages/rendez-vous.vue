@@ -42,6 +42,7 @@
       </section>
 
       <section class="BookingPanel" aria-labelledby="booking-title">
+        <p v-if="loadError" class="BookingError" role="alert">{{ loadError }}</p>
         <div v-if="confirmation" class="BookingConfirmation" role="status" aria-live="polite">
           <span class="ConfirmationBadge" aria-hidden="true"></span>
           <h2 id="booking-title" class="BookingTitle">Créneau réservé.</h2>
@@ -136,6 +137,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
+import {
+  CALENDRIER_MOIS_QUERY,
+  CREATE_RDV_RESERVATION_MUTATION,
+  CRENEAUX_DISPONIBLES_QUERY,
+  MOTIFS_QUERY,
+  RAISONS_APPPEL_QUERY,
+  graphqlErrorMessage,
+  graphqlRequest,
+} from '~/utils/graphql';
 
 type Motif = { id: number; nom: string; duree_minutes: number; creneau_type: string };
 type Raison = { id: number; nom: string };
@@ -144,6 +154,42 @@ type Slot = { date: string; heure_debut: string; heure_fin: string; label: strin
 type BookingResponse = {
   motif: Motif;
   creneaux: Array<{ date: string; heure_debut: string; heure_fin: string }>;
+};
+
+type GraphQLMotif = {
+  id: string;
+  nom: string;
+  duree_minutes: number;
+  creneau_type: string;
+};
+
+type GraphQLRaison = {
+  id: string;
+  nom: string;
+};
+
+type GraphQLDayState = {
+  date: string | null;
+  statut: string | null;
+};
+
+type GraphQLSlot = {
+  date: string | null;
+  heure_debut: string | null;
+  heure_fin: string | null;
+};
+
+type GraphQLBookingResponse = {
+  createRdvReservation: {
+    rdv: {
+      motif: GraphQLMotif;
+      creneaux: Array<{
+        date: string;
+        heure_debut: string;
+        heure_fin: string;
+      }>;
+    };
+  };
 };
 
 const weekdays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -160,6 +206,7 @@ const slots = ref<Slot[]>([]);
 const isLoadingSlots = ref(false);
 const isSubmitting = ref(false);
 const bookingError = ref('');
+const loadError = ref('');
 const confirmation = ref<BookingResponse | null>(null);
 const form = reactive({
   prenom: '',
@@ -175,8 +222,12 @@ const selectedDateLabel = computed(() => new Intl.DateTimeFormat('fr-FR', { day:
 const selectedMotif = computed(() => motifs.value.find((motif) => motif.id === Number(selectedMotifId.value)));
 const daySlots = computed(() => slots.value.filter((slot) => slot.date === selectedDate.value));
 const canSubmit = computed(() => Boolean(selectedMotif.value && selectedSlot.value && form.prenom && form.nom && form.email && form.telephone));
-const confirmationDate = computed(() => confirmation.value?.creneaux[0] ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(confirmation.value.creneaux[0].date)) : '');
-const confirmationSlot = computed(() => confirmation.value?.creneaux[0] ? `${confirmation.value.creneaux[0].heure_debut} - ${confirmation.value.creneaux[0].heure_fin}` : '');
+const confirmationDate = computed(() => confirmation.value?.creneaux[0]
+  ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(confirmation.value.creneaux[0].date))
+  : '');
+const confirmationSlot = computed(() => confirmation.value?.creneaux[0]
+  ? `${confirmation.value.creneaux[0].heure_debut} - ${confirmation.value.creneaux[0].heure_fin}`
+  : '');
 
 const calendarCells = computed(() => {
   const first = currentMonth.value;
@@ -209,12 +260,29 @@ watch(selectedDate, () => {
 });
 
 onMounted(async () => {
-  const [motifData, raisonData] = await Promise.all([
-    $fetch<Motif[]>('/api/motifs'),
-    $fetch<Raison[]>('/api/raisons-appel'),
-  ]);
-  motifs.value = motifData;
-  raisons.value = raisonData;
+  try {
+    const [motifsResponse, raisonsResponse] = await Promise.all([
+      graphqlRequest<{
+        motifs: GraphQLMotif[] | null;
+      }>(MOTIFS_QUERY),
+      graphqlRequest<{
+        raisonsAppel: GraphQLRaison[] | null;
+      }>(RAISONS_APPPEL_QUERY),
+    ]);
+
+    motifs.value = (motifsResponse.motifs ?? []).map((motif) => ({
+      id: Number(motif.id),
+      nom: motif.nom,
+      duree_minutes: motif.duree_minutes,
+      creneau_type: motif.creneau_type,
+    }));
+    raisons.value = (raisonsResponse.raisonsAppel ?? []).map((raison) => ({
+      id: Number(raison.id),
+      nom: raison.nom,
+    }));
+  } catch (error) {
+    loadError.value = graphqlErrorMessage(error, 'Impossible de charger les données du rendez-vous.');
+  }
 });
 
 function toIsoDate(value: Date) {
@@ -248,13 +316,23 @@ function slotKey(slot: Slot) {
 }
 
 async function loadMonth() {
-  const response = await $fetch<{ results: DayState[] }>('/api/calendrier/mois', {
-    query: {
+  loadError.value = '';
+  try {
+    const response = await graphqlRequest<{
+      calendrierMois: GraphQLDayState[];
+    }>(CALENDRIER_MOIS_QUERY, {
       annee: currentMonth.value.getFullYear(),
       mois: currentMonth.value.getMonth() + 1,
-    },
-  });
-  monthStates.value = response.results;
+    });
+
+    monthStates.value = (response.calendrierMois ?? []).map((day) => ({
+      date: day.date || '',
+      statut: day.statut || 'ferme',
+    })).filter((day) => Boolean(day.date));
+  } catch (error) {
+    loadError.value = graphqlErrorMessage(error, 'Impossible de charger le calendrier.');
+    monthStates.value = [];
+  }
 }
 
 async function loadSlots() {
@@ -264,19 +342,30 @@ async function loadSlots() {
     return;
   }
   isLoadingSlots.value = true;
+  loadError.value = '';
   try {
     const start = selectedDate.value;
     const endDate = new Date(selectedDate.value);
     endDate.setDate(endDate.getDate() + 14);
-    const response = await $fetch<{ results: Slot[] }>('/api/creneaux/disponibles', {
-      query: {
-        motif: selectedMotifId.value,
-        date_debut: start,
-        date_fin: toIsoDate(endDate),
-        urgence: isUrgent.value ? '1' : '0',
-      },
+    const response = await graphqlRequest<{
+      creneauxDisponibles: GraphQLSlot[];
+    }>(CRENEAUX_DISPONIBLES_QUERY, {
+      motifId: selectedMotifId.value,
+      dateDebut: start,
+      dateFin: toIsoDate(endDate),
+      urgence: isUrgent.value,
     });
-    slots.value = response.results;
+    slots.value = (response.creneauxDisponibles ?? [])
+      .filter((slot): slot is GraphQLSlot & { date: string; heure_debut: string; heure_fin: string } => Boolean(slot.date && slot.heure_debut && slot.heure_fin))
+      .map((slot) => ({
+        date: slot.date,
+        heure_debut: slot.heure_debut,
+        heure_fin: slot.heure_fin,
+        label: `${slot.heure_debut} - ${slot.heure_fin}`,
+      }));
+  } catch (error) {
+    loadError.value = graphqlErrorMessage(error, 'Impossible de charger les créneaux disponibles.');
+    slots.value = [];
   } finally {
     isLoadingSlots.value = false;
   }
@@ -287,27 +376,33 @@ async function submitBooking() {
   isSubmitting.value = true;
   bookingError.value = '';
   try {
-    confirmation.value = await $fetch<BookingResponse>('/api/rdv/reserver', {
-      method: 'POST',
-      body: {
-        motif_id: selectedMotif.value.id,
-        date: selectedSlot.value.date,
-        heure_debut: selectedSlot.value.heure_debut,
-        heure_fin: selectedSlot.value.heure_fin,
-        urgence: isUrgent.value,
-        prenom: form.prenom,
-        nom: form.nom,
-        email: form.email,
-        telephone: form.telephone,
-        raison_ids: form.raisonIds,
-        message: form.message,
-      },
+    const response = await graphqlRequest<GraphQLBookingResponse>(CREATE_RDV_RESERVATION_MUTATION, {
+      motifId: selectedMotif.value.id,
+      date: selectedSlot.value.date,
+      heureDebut: selectedSlot.value.heure_debut,
+      heureFin: selectedSlot.value.heure_fin,
+      urgence: isUrgent.value,
+      prenom: form.prenom,
+      nom: form.nom,
+      email: form.email,
+      telephone: form.telephone,
+      raisonIds: form.raisonIds,
+      message: form.message || null,
     });
+
+    const booking = response.createRdvReservation.rdv;
+    confirmation.value = {
+      motif: {
+        id: Number(booking.motif.id),
+        nom: booking.motif.nom,
+        duree_minutes: booking.motif.duree_minutes,
+        creneau_type: booking.motif.creneau_type,
+      },
+      creneaux: booking.creneaux,
+    };
     await loadMonth();
   } catch (error) {
-    bookingError.value = typeof error === 'object' && error && 'statusMessage' in error
-      ? String(error.statusMessage)
-      : 'Impossible de réserver ce créneau pour le moment.';
+    bookingError.value = graphqlErrorMessage(error, 'Impossible de réserver ce créneau pour le moment.');
   } finally {
     isSubmitting.value = false;
   }

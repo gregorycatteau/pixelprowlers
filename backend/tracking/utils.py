@@ -7,7 +7,7 @@ from typing import Optional
 # ----------------------------------------------------------------------
 _DEVICE_PATTERNS = [
     (re.compile(r"\biPad\b", re.IGNORECASE), "tablet"),
-    (re.compile(r"\bAndroid\b(?:[^;]*;)?(?:?!Mobile)", re.IGNORECASE), "tablet"),
+    (re.compile(r"\bAndroid\b(?!.*Mobile)", re.IGNORECASE), "tablet"),
     (re.compile(r"\b(Mobile|Android|iPhone|iphone|Windows Phone|IEMobile|Opera Mobi)\b", re.IGNORECASE), "mobile"),
 ]
 

@@ -1,22 +1,27 @@
 <template>
   <main>
-    <section id="probleme" class="hero-section" aria-labelledby="hero-title">
+    <section v-if="showHero" id="probleme" class="hero-section" aria-labelledby="hero-title">
+      <img class="hero-background" src="/images/hero_wallpaper.jpeg" alt="" aria-hidden="true" loading="eager" decoding="async">
+      <div class="hero-overlay" aria-hidden="true"></div>
       <div class="container">
-        <div class="hero-copy">
-          <h1 id="hero-title">
-            Votre site ralentit l'équipe. Vos accès sont partout. Et si demain, la personne qui sait
-            comment ça marche n'est pas là ?
-          </h1>
-          <p>
-            PixelProwlers remet ça en ordre. Sites qui tiennent la route. Accès qui se voient.
-            Sauvegardes qui sauvent vraiment.
-          </p>
-          <div class="hero-actions" aria-label="Actions principales">
-            <AppButton href="/diagnostic-situation">Diagnostic gratuit - clarifions votre situation</AppButton>
-            <AppButton variant="validate" href="/urgence">Urgence maintenant ? Décrivez-moi votre problème</AppButton>
+        <div class="hero-layout">
+          <div class="hero-copy">
+            <h1 id="hero-title">
+              Votre site ralentit l'équipe. Vos accès sont partout. Et si demain, la personne qui sait
+              comment ça marche n'est pas là ?
+            </h1>
+            <p>
+              PixelProwlers remet ça en ordre. Sites qui tiennent la route. Accès qui se voient.
+              Sauvegardes qui sauvent vraiment.
+            </p>
+            <p class="hero-support">
+              Audit, urgence, refonte et transmission d'accès sont pensés pour se lire vite, se décider vite,
+              et se lancer sans perdre la main.
+            </p>
           </div>
         </div>
       </div>
+      <div class="hero-wave" aria-hidden="true"></div>
     </section>
 
     <section id="solutions" class="section section-alt" aria-labelledby="offers-title">
@@ -118,40 +123,112 @@
 <script setup lang="ts">
 import AppButton from '~/components/ui/AppButton.vue';
 import { badFits, goodFits, offers, problems, steps } from '~/utils/siteContent';
+
+withDefaults(defineProps<{
+  showHero?: boolean;
+}>(), {
+  showHero: true,
+});
 </script>
 
 <style scoped>
 .hero-section {
-  padding: 72px 0;
+  position: relative;
+  overflow: hidden;
+  padding: 92px 0 0;
+  background: #102033;
+}
+
+.hero-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.7) contrast(1.2);
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   background:
-    linear-gradient(90deg, rgba(247, 244, 234, 0.94), rgba(247, 244, 234, 0.76)),
-    url("/fond.jpg") center / cover;
+    linear-gradient(180deg, rgba(16, 32, 51, 0.18) 0%, rgba(16, 32, 51, 0.44) 62%, rgba(16, 32, 51, 0.66) 100%),
+    linear-gradient(90deg, rgba(247, 244, 234, 0.16) 0%, rgba(247, 244, 234, 0) 44%);
+}
+
+.hero-layout {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding-bottom: 70px;
+  min-height: 620px;
 }
 
 .hero-copy {
-  max-width: 940px;
+  display: grid;
+  gap: 20px;
+  max-width: 980px;
+  justify-items: center;
+  color: #fff;
+  text-align: center;
 }
 
 .hero-copy h1 {
-  max-width: 880px;
-  font-size: clamp(2.25rem, 5vw, 4.9rem);
+  max-width: 940px;
+  font-size: clamp(2.15rem, 5vw, 5rem);
   line-height: 1.02;
   font-weight: 900;
+  text-wrap: balance;
 }
 
 .hero-copy > p {
   max-width: 760px;
-  margin-top: 28px;
-  color: #445046;
   font-size: 1.18rem;
   line-height: 1.75;
 }
 
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 34px;
+.hero-support {
+  max-width: 700px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.hero-wave {
+  position: relative;
+  z-index: 2;
+  height: 30px;
+  background-image: url("/images/header-wave.svg");
+  background-repeat: repeat-x;
+  background-size: 1200px 30px;
+  animation: wave-drift 20s linear infinite;
+}
+
+@keyframes wave-drift {
+  from {
+    background-position-x: 0;
+  }
+
+  to {
+    background-position-x: 1200px;
+  }
+}
+
+@media (max-width: 959px) {
+  .hero-section {
+    padding-top: 64px;
+  }
+
+  .hero-layout {
+    min-height: auto;
+    padding-bottom: 52px;
+  }
+
+  .hero-copy {
+    gap: 16px;
+  }
 }
 
 .offer-card {

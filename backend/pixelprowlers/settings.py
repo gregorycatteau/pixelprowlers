@@ -1,14 +1,15 @@
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
+DEV_INSECURE_SECRET_KEY = "pixelprowlers-dev-insecure-change-me"
 
 
 def load_env_file() -> None:
-    import os
-
     env_path = PROJECT_DIR / ".env"
     if not env_path.exists():
         return
@@ -30,8 +31,6 @@ load_env_file()
 
 
 def env(name: str, default: str = "") -> str:
-    import os
-
     return os.environ.get(name, default).strip()
 
 
@@ -53,8 +52,17 @@ def env_bool(name: str, default: bool = False) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
-SECRET_KEY = env_first("DJANGO_SECRET_KEY", "SECRET_KEY", default="pixelprowlers-dev-insecure-change-me")
+def env_list(name: str, default: str = "") -> list[str]:
+    raw = env(name, default=default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+SECRET_KEY = env_first("DJANGO_SECRET_KEY", "SECRET_KEY", default=DEV_INSECURE_SECRET_KEY)
 DEBUG = env_bool("DJANGO_DEBUG", env_bool("DEBUG", True))
+
+if not DEBUG and (not SECRET_KEY or SECRET_KEY == DEV_INSECURE_SECRET_KEY):
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set in production.")
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in env_first("DJANGO_ALLOWED_HOSTS", "ALLOWED_HOSTS", default="127.0.0.1,localhost").split(",")
@@ -62,13 +70,16 @@ ALLOWED_HOSTS = [
 ]
 
 INSTALLED_APPS = [
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
+    "graphene_django",
     "audits",
     "urgencies",
     "tracking",
@@ -76,6 +87,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -140,12 +152,30 @@ DATABASES = {
     "default": database_config(),
 }
 
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
-    ],
+GRAPHENE = {
+    "SCHEMA": "pixelprowlers.schema.schema",
 }
+
+# CORS strict: only explicit frontend origins are allowed.
+# Production values come from the repo deployment docs.
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
+)
+CORS_ALLOW_CREDENTIALS = env_bool("CORS_ALLOW_CREDENTIALS", False)
+
+CSRF_TRUSTED_ORIGINS = env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
+)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = env_bool("DJANGO_USE_X_FORWARDED_HOST", True)
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
+SECURE_HSTS_SECONDS = int(env("DJANGO_SECURE_HSTS_SECONDS", "0") or "0")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
@@ -153,6 +183,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
@@ -165,3 +198,106 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", env("CONTACT_FROM"))
 CONTACT_TO = env("CONTACT_TO")
 AUDIT_INTERNAL_EMAIL = env("AUDIT_INTERNAL_EMAIL")
 URGENCY_INTERNAL_EMAIL = env("URGENCY_INTERNAL_EMAIL")
+
+# Clé secrète HMAC pour la signature légale des réponses d'audit (AuditReponse.compute_signature)
+AUDIT_SIGNATURE_KEY = env("AUDIT_SIGNATURE_KEY")
+
+
+# ---------------------------------------------------------------------------
+# Django Jazzmin — thème admin
+# ---------------------------------------------------------------------------
+
+JAZZMIN_SETTINGS = {
+    "site_title": "PixelProwlers Admin",
+    "site_header": "PixelProwlers",
+    "site_brand": "PixelProwlers",
+    "site_logo": None,
+    "login_logo": None,
+    "site_logo_classes": "img-circle",
+    "site_icon": None,
+    "welcome_sign": "Bienvenue dans le cockpit PixelProwlers",
+    "copyright": "PixelProwlers",
+
+    # Modèles inclus dans la recherche rapide (barre en haut)
+    # Ajuste les préfixes d'app selon l'emplacement réel de tes modèles
+    "search_model": [
+        "urgencies.Rdv",
+        "audits.AuditDossier",
+    ],
+
+    "user_avatar": None,
+
+    "topmenu_links": [
+        {"name": "Accueil", "url": "admin:index"},
+        {"name": "Voir le site", "url": "/", "new_window": True},
+    ],
+
+    # Ordre des apps dans la sidebar
+    "order_with_respect_to": ["auth", "audits", "urgencies", "tracking"],
+
+    # Icônes FontAwesome par modèle
+    # Format: "app_label.ModelName": "fa-solid fa-icone"
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+
+        # ajuster selon l'app réelle si différente
+        "urgencies.Rdv": "fas fa-calendar-check",
+        "urgencies.RdvRappel": "fas fa-bell",
+        "urgencies.RdvContact": "fas fa-address-book",
+        "urgencies.CreneauCalendrier": "fas fa-calendar-alt",
+        "urgencies.Motif": "fas fa-tags",
+        "urgencies.RaisonAppel": "fas fa-phone",
+
+        "audits.AuditDossier": "fas fa-folder-open",
+        "audits.AuditDossierCounter": "fas fa-hashtag",
+        "audits.AuditReponse": "fas fa-file-signature",
+        "audits.RefonteAudit": "fas fa-tools",
+        "audits.Citation": "fas fa-quote-right",
+
+        "tracking": "fas fa-chart-line",
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+
+    # UX des formulaires
+    "related_modal_active": True,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": True,
+
+    "changeform_format": "horizontal_tabs",
+    "language_chooser": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-dark",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "darkly",
+    "dark_mode_theme": "darkly",
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}

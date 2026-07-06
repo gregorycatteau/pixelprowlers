@@ -99,7 +99,7 @@ const handleIdentitySubmit = (identity: RefonteIdentity) => {
 }
 
 .RefonteStepperKicker {
-  @apply text-sm font-black uppercase tracking-wide text-[#2b7053];
+  @apply text-sm font-black uppercase tracking-wide text-pxp-green;
 }
 
 .RefonteStepperTitle {
@@ -107,7 +107,7 @@ const handleIdentitySubmit = (identity: RefonteIdentity) => {
 }
 
 .RefonteProgressBar {
-  @apply h-3 w-full overflow-hidden rounded-full accent-[#2b7053];
+  @apply h-3 w-full overflow-hidden rounded-full accent-pxp-green;
 }
 
 .RefonteQuestionForm {

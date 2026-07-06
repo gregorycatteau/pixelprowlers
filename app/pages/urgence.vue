@@ -7,7 +7,7 @@
         <p>Décrivez le problème en quelques blocs. Vous recevez une référence de dossier à conserver.</p>
       </div>
     </section>
-    <LazyUrgencyForm />
+    <LazyFormsUrgencyForm />
   </main>
 </template>
 

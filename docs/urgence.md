@@ -10,7 +10,7 @@
 
 ## Endpoint
 
-- API : `POST /api/urgency`
+- API GraphQL : mutation `createUrgencyRequest`
 - Stockage actuel : Nitro storage `data`, clé `urgency-tickets:<reference>`.
 - Référence générée : `PXP-URG-YYYYMMDD-XXXX`.
 - Champ de qualification humaine : `expected_next_step`.
@@ -37,7 +37,7 @@ Aucun secret ne doit être codé en dur dans le dépôt.
 ## Flux de notification
 
 1. Le visiteur soumet `/urgence`.
-2. `POST /api/urgency` valide et refuse les contenus à risque.
+2. La mutation `createUrgencyRequest` valide et refuse les contenus à risque.
 3. Une référence `PXP-URG-YYYYMMDD-XXXX` est générée.
 4. La prochaine étape souhaitée est transmise dans le ticket interne.
 5. Un email interne prioritaire est envoyé si la configuration SMTP et le destinataire interne sont présents.

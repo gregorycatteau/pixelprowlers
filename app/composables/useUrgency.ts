@@ -1,5 +1,10 @@
 import { computed, reactive, ref } from 'vue';
 import { isEmailLike } from '~/utils/formatDate';
+import {
+  CREATE_URGENCY_REQUEST_MUTATION,
+  graphqlErrorMessage,
+  graphqlRequest,
+} from '~/utils/graphql';
 
 export type UrgencyProblemType =
   | 'site_down'
@@ -116,15 +121,43 @@ export const useUrgency = () => {
     submitError.value = '';
 
     try {
-      result.value = await $fetch<UrgencyResponse>('/api/urgency', {
-        method: 'POST',
-        body: form,
+      const response = await graphqlRequest<{
+        createUrgencyRequest: {
+          reference: string | null;
+          status: string | null;
+          message: string | null;
+          clientEmailStatus: UrgencyResponse['clientEmailStatus'] | null;
+          ticket: {
+            reference: string;
+            status: string;
+          } | null;
+        };
+      }>(CREATE_URGENCY_REQUEST_MUTATION, {
+        affectedUrl: form.affectedUrl,
+        callbackSlot: form.callbackSlot,
+        consentToContact: form.consentToContact,
+        contactPreference: form.contactPreference,
+        email: form.email,
+        expectedNextStep: form.expected_next_step,
+        impactLevel: form.impactLevel,
+        name: form.name,
+        noSecretsConfirmed: form.noSecretsConfirmed,
+        organization: form.organization,
+        phone: form.phone,
+        problemType: form.problemType,
+        shortDescription: form.shortDescription,
+        sinceWhen: form.sinceWhen,
+        website: form.website || '',
       });
+
+      result.value = {
+        reference: response.createUrgencyRequest.reference || '',
+        status: (response.createUrgencyRequest.status || 'open') as 'open',
+        clientEmailStatus: response.createUrgencyRequest.clientEmailStatus || 'not_configured',
+        message: response.createUrgencyRequest.message || 'Demande urgente enregistrée.',
+      };
     } catch (error) {
-      const statusMessage = typeof error === 'object' && error && 'statusMessage' in error
-        ? String(error.statusMessage)
-        : '';
-      submitError.value = statusMessage || "Impossible d'enregistrer l'urgence pour le moment. Réessayez dans quelques instants.";
+      submitError.value = graphqlErrorMessage(error, "Impossible d'enregistrer l'urgence pour le moment. Réessayez dans quelques instants.");
     } finally {
       isSubmitting.value = false;
     }

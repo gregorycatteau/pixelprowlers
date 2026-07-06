@@ -41,3 +41,4 @@ frontend.junk.*/
 # Config perso / fichiers temporaires
 .vscode/
 tmp/
+AGENTS.md

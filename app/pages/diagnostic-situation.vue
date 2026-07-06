@@ -7,7 +7,7 @@
         <p>5 minutes. 5 questions. Zéro pression.</p>
       </div>
     </section>
-    <LazyDiagnosticForm />
+    <LazyFormsDiagnosticForm />
   </main>
 </template>
 

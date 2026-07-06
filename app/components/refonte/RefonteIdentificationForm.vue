@@ -154,7 +154,7 @@ const submitForm = handleSubmit((values) => {
 
 .RefonteIdentificationPanel,
 .RefonteSidePanel {
-  @apply rounded-lg border border-white/70 bg-[#fbfaf5]/90 p-6 shadow-[0_22px_60px_rgb(23_37_29/0.14)] backdrop-blur-xl;
+  @apply rounded-lg border border-white/70 bg-pxp-panel/90 p-6 shadow-[0_22px_60px_rgb(23_37_29/0.14)] backdrop-blur-xl;
 }
 
 .RefonteIdentificationHeader,
