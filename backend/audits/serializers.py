@@ -143,6 +143,8 @@ class AuditSubmitSerializer(serializers.Serializer):
     def save(self, **kwargs):
         dossier = self.validated_data["numero_dossier"]
         calculated = self.validated_data["calculated"]
+        ip_address = self.context.get("ip_address")
+        user_agent = self.context.get("user_agent", "")
         reponse, _created = AuditReponse.objects.update_or_create(
             dossier=dossier,
             defaults={
@@ -150,6 +152,8 @@ class AuditSubmitSerializer(serializers.Serializer):
                 "scores_series": calculated["scores_series"],
                 "score_global": calculated["score_global"],
                 "pilier_faible": calculated["pilier_faible"],
+                "ip_address": ip_address,
+                "user_agent": user_agent,
             },
         )
         dossier.statut = AuditDossier.Status.QUESTIONNAIRE_COMPLETE

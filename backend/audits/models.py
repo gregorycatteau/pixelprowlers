@@ -1,3 +1,8 @@
+import json
+import hmac
+import hashlib
+
+from django.conf import settings
 from django.db import models
 
 
@@ -49,11 +54,43 @@ class AuditReponse(models.Model):
     pilier_faible = models.CharField(max_length=80)
     date_soumission = models.DateTimeField(auto_now_add=True)
 
+    # Traçabilité / preuve légale
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default="")
+    nom_signataire = models.CharField(max_length=160, blank=True, default="")
+    telephone_signataire = models.CharField(max_length=24, blank=True, default="")
+    signature_hash = models.CharField(max_length=64, blank=True, default="")
+
     class Meta:
         ordering = ["-date_soumission"]
 
     def __str__(self) -> str:
         return f"{self.dossier.numero_dossier} - {self.score_global}/10"
+
+    def compute_signature(self) -> str:
+        sig_key = settings.AUDIT_SIGNATURE_KEY
+        if not sig_key:
+            raise RuntimeError("AUDIT_SIGNATURE_KEY n'est pas configuré")
+        canonical = json.dumps(
+            {
+                "reponses": self.reponses,
+                "score_global": str(self.score_global),
+                "date_soumission": self.date_soumission.isoformat() if self.date_soumission else "",
+                "ip_address": self.ip_address or "",
+                "telephone_signataire": self.telephone_signataire or "",
+                "nom_signataire": self.nom_signataire or "",
+            },
+            sort_keys=True,
+        )
+        return hmac.new(sig_key.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.signature_hash:
+            super().save(*args, **kwargs)
+            self.signature_hash = self.compute_signature()
+            AuditReponse.objects.filter(pk=self.pk).update(signature_hash=self.signature_hash)
+        else:
+            super().save(*args, **kwargs)
 
 
 class RefonteAudit(models.Model):
@@ -176,7 +213,9 @@ class RdvContact(models.Model):
     nom = models.CharField(max_length=80)
     email = models.EmailField(max_length=180, db_index=True)
     telephone = models.CharField(max_length=40)
-    audit_dossier = models.ForeignKey(AuditDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="rdv_contacts")
+    audit_dossier = models.ForeignKey(
+        AuditDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="rdv_contacts"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -198,7 +237,9 @@ class CreneauCalendrier(models.Model):
     heure_debut = models.TimeField()
     heure_fin = models.TimeField()
     statut = models.CharField(max_length=24, choices=Statut.choices, default=Statut.LIBRE, db_index=True)
-    motif_reserve = models.ForeignKey(Motif, on_delete=models.SET_NULL, blank=True, null=True, related_name="creneaux_reserves")
+    motif_reserve = models.ForeignKey(
+        Motif, on_delete=models.SET_NULL, blank=True, null=True, related_name="creneaux_reserves"
+    )
     urgence = models.BooleanField(default=False)
     client = models.ForeignKey(RdvContact, on_delete=models.SET_NULL, blank=True, null=True, related_name="creneaux")
     created_at = models.DateTimeField(auto_now_add=True)

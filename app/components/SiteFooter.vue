@@ -2,7 +2,7 @@
   <footer class="SiteFooter">
     <div class="FooterInner">
       <div class="FooterBrand">
-        <img class="FooterLogo" src="/logo-nav.png" alt="" width="32" height="32">
+        <img class="FooterLogo" src="/logo-nav-transparent.png" alt="" width="32" height="32">
         <span class="FooterName">PixelProwlers</span>
       </div>
 

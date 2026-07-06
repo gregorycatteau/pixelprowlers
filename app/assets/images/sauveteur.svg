@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-labelledby="title desc">
+  <title id="title">Sauveteur PixelProwlers</title>
+  <desc id="desc">Mascotte sauveteur stylisee avec bouee et drapeau.</desc>
+  <circle cx="110" cy="112" r="82" fill="#e0f2fe" opacity="0.18"/>
+  <path d="M55 172h112l-12-56c-5-24-23-39-45-39s-40 15-45 39Z" fill="#0f766e"/>
+  <path d="M74 174h72l-8-42c-4-18-15-30-28-30s-24 12-28 30Z" fill="#10b981"/>
+  <circle cx="110" cy="72" r="30" fill="#f8d5a8"/>
+  <path d="M80 65c4-22 18-35 38-35 18 0 31 11 35 30-22-8-45-6-73 5Z" fill="#1a2b3c"/>
+  <path d="M76 66c23-14 50-17 80-5l-5-21c-28-9-53-5-74 12Z" fill="#ff6b35"/>
+  <circle cx="98" cy="73" r="4" fill="#1a2b3c"/>
+  <circle cx="122" cy="73" r="4" fill="#1a2b3c"/>
+  <path d="M98 88c8 7 17 7 25 0" fill="none" stroke="#1a2b3c" stroke-linecap="round" stroke-width="4"/>
+  <circle cx="110" cy="130" r="34" fill="none" stroke="#ff6b35" stroke-width="14"/>
+  <circle cx="110" cy="130" r="20" fill="none" stroke="#e0f2fe" stroke-width="12"/>
+  <path d="M156 54h28v62h-28Z" fill="#1e3a8a"/>
+  <path d="M184 54l20 12-20 12Z" fill="#ff6b35"/>
+  <path d="M156 50v108" stroke="#1a2b3c" stroke-linecap="round" stroke-width="6"/>
+</svg>

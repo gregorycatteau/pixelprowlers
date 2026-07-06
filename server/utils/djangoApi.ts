@@ -5,7 +5,7 @@ const clean = (value: unknown) => typeof value === 'string' ? value.trim().repla
 export const djangoApiBaseUrl = () => (
   clean(process.env.DJANGO_API_BASE_URL)
   || clean(process.env.NUXT_DJANGO_API_BASE_URL)
-  || 'http://127.0.0.1:8000/api'
+  || 'http://pixelprowlers-django:8000/api'
 );
 
 export const postToDjango = async <T>(path: string, body: unknown) => {

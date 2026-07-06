@@ -99,6 +99,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
 import type { RefonteAuditResult } from '~/composables/useRefonteAudit';
+import {
+  REFONTE_AUDIT_QUERY,
+  graphqlErrorMessage,
+  graphqlRequest,
+  parseGraphqlJson,
+} from '~/utils/graphql';
 
 const route = useRoute();
 const reference = computed(() => typeof route.query.reference === 'string' ? route.query.reference : '');
@@ -108,6 +114,14 @@ const error = ref('');
 let intervalId: ReturnType<typeof window.setInterval> | null = null;
 
 const isPending = computed(() => result.value?.analysis_status === 'en_cours');
+const normalizeAnalysisStatus = (status: string): RefonteAuditResult['analysis_status'] => ({
+  EN_COURS: 'en_cours',
+  TERMINE: 'termine',
+  ECHEC_PARTIEL: 'echec_partiel',
+  NON_ANALYSABLE: 'non_analysable',
+  ECHEC: 'echec',
+}[status] || status.toLowerCase()) as RefonteAuditResult['analysis_status'];
+
 const statusLabel = computed(() => {
   if (!result.value) return "L'analyse démarre dès que le questionnaire est reçu.";
   if (result.value.analysis_status === 'en_cours') return "Analyse en cours. Cette page se met à jour automatiquement.";
@@ -150,13 +164,42 @@ const fetchResult = async () => {
   error.value = '';
 
   try {
-    result.value = await $fetch<RefonteAuditResult>(`/api/audit-refonte/${encodeURIComponent(reference.value)}`);
+    const response = await graphqlRequest<{
+      refonteAudit: {
+        reference: string;
+        site_url: string;
+        analysis_status: RefonteAuditResult['analysis_status'];
+        technical_report: RefonteAuditResult['technical_report'] | string;
+        pagespeed_report: RefonteAuditResult['pagespeed_report'] | string;
+        heuristic_report: RefonteAuditResult['heuristic_report'] | string;
+        analysis_error: string;
+        date_creation: string;
+        date_maj: string;
+      } | null;
+    }>(REFONTE_AUDIT_QUERY, {
+      reference: reference.value,
+    });
+
+    const data = response.refonteAudit;
+
+    result.value = data ? {
+      reference: data.reference,
+      site_url: data.site_url,
+      analysis_status: normalizeAnalysisStatus(data.analysis_status),
+      technical_report: parseGraphqlJson<RefonteAuditResult['technical_report']>(data.technical_report, {}),
+      pagespeed_report: parseGraphqlJson<RefonteAuditResult['pagespeed_report']>(data.pagespeed_report, {}),
+      heuristic_report: parseGraphqlJson<RefonteAuditResult['heuristic_report']>(data.heuristic_report, []),
+      analysis_error: data.analysis_error,
+      date_creation: data.date_creation,
+      date_maj: data.date_maj,
+    } : null;
+
     if (!isPending.value && intervalId) {
       window.clearInterval(intervalId);
       intervalId = null;
     }
-  } catch {
-    error.value = 'Impossible de récupérer ce rapport.';
+  } catch (caughtError) {
+    error.value = graphqlErrorMessage(caughtError, 'Impossible de récupérer ce rapport.');
   } finally {
     isLoading.value = false;
   }

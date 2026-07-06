@@ -4,6 +4,13 @@ import {
   createAuditAnswersSchema,
   type AuditIdentity,
 } from '~/validation/schemas';
+import {
+  CREATE_AUDIT_DOSSIER_MUTATION,
+  graphqlErrorMessage,
+  graphqlRequest,
+  parseGraphqlJson,
+  SUBMIT_AUDIT_REPONSES_MUTATION,
+} from '~/utils/graphql';
 
 export type AuditPersonType = 'individu' | 'association' | 'entreprise';
 
@@ -114,6 +121,26 @@ export const useAudit = () => {
 
   const canCreateDossier = computed(() => auditIdentitySchema.safeParse(identity).success);
 
+  type CreateAuditDossierResponse = {
+    createAuditDossier: {
+      dossier: {
+        numeroDossier: string;
+        statut: string;
+      };
+    };
+  };
+
+  type SubmitAuditReponsesResponse = {
+    submitAuditReponses: {
+      numero_dossier: string;
+      statut: string;
+      scores_series: AuditScoreSeries | string;
+      score_global: number | string;
+      pilier_faible: string;
+      notification_status: Record<string, string> | string;
+    };
+  };
+
   const createDossier = async (payload?: AuditIdentity) => {
     const parsedIdentity = payload || auditIdentitySchema.safeParse(identity);
 
@@ -134,16 +161,18 @@ export const useAudit = () => {
         return;
       }
 
-      const response = await $fetch<{ numero_dossier: string }>('/api/audit/creer-dossier', {
-        method: 'POST',
-        body: data,
+      const response = await graphqlRequest<CreateAuditDossierResponse>(CREATE_AUDIT_DOSSIER_MUTATION, {
+        consentementRgpd: data.consentement_rgpd,
+        email: data.email,
+        nom: data.nom,
+        nomStructure: data.nom_structure || null,
+        prenom: data.prenom,
+        telephone: data.telephone,
+        typePersonne: data.type_personne,
       });
-      numeroDossier.value = response.numero_dossier;
+      numeroDossier.value = response.createAuditDossier.dossier.numeroDossier;
     } catch (error) {
-      const statusMessage = typeof error === 'object' && error && 'statusMessage' in error
-        ? String(error.statusMessage)
-        : '';
-      createError.value = statusMessage || "Impossible de créer le dossier d'audit pour le moment.";
+      createError.value = graphqlErrorMessage(error, "Impossible de créer le dossier d'audit pour le moment.");
     } finally {
       isCreatingDossier.value = false;
     }
@@ -177,18 +206,27 @@ export const useAudit = () => {
         return;
       }
 
-      result.value = await $fetch<AuditResult>('/api/audit/soumettre-reponses', {
-        method: 'POST',
-        body: {
-          numero_dossier: numeroDossier.value,
-          reponses: parsedAnswers.data,
-        },
+      const response = await graphqlRequest<SubmitAuditReponsesResponse>(SUBMIT_AUDIT_REPONSES_MUTATION, {
+        numeroDossier: numeroDossier.value,
+        reponses: JSON.stringify(parsedAnswers.data),
       });
+
+      result.value = {
+        numero_dossier: response.submitAuditReponses.numero_dossier,
+        statut: response.submitAuditReponses.statut,
+        scores_series: parseGraphqlJson<AuditScoreSeries>(
+          response.submitAuditReponses.scores_series,
+          {},
+        ),
+        score_global: response.submitAuditReponses.score_global,
+        pilier_faible: response.submitAuditReponses.pilier_faible,
+        notification_status: parseGraphqlJson<Record<string, string>>(
+          response.submitAuditReponses.notification_status,
+          {},
+        ),
+      };
     } catch (error) {
-      const statusMessage = typeof error === 'object' && error && 'statusMessage' in error
-        ? String(error.statusMessage)
-        : '';
-      submitError.value = statusMessage || "Impossible d'enregistrer les réponses pour le moment.";
+      submitError.value = graphqlErrorMessage(error, "Impossible d'enregistrer les réponses pour le moment.");
     } finally {
       isSubmittingResponses.value = false;
     }

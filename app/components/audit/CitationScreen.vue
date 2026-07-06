@@ -25,6 +25,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
+import {
+  CITATION_ALEATOIRE_QUERY,
+  graphqlErrorMessage,
+  graphqlRequest,
+} from '~/utils/graphql';
 
 type Citation = {
   id: number;
@@ -53,13 +58,24 @@ const fetchCitation = async () => {
 
   try {
     const lastCitationId = window.localStorage.getItem('pixelprowlers:lastCitationId') || '';
-    citation.value = await $fetch<Citation>('/api/citations/random', {
-      query: lastCitationId ? { exclude_id: lastCitationId } : undefined,
+    const response = await graphqlRequest<{
+      citationAleatoire: Citation | null;
+    }>(CITATION_ALEATOIRE_QUERY, {
+      excludeId: lastCitationId ? Number(lastCitationId) : null,
     });
+    citation.value = response.citationAleatoire;
 
-    if (citation.value.id) {
+    if (citation.value?.id) {
       window.localStorage.setItem('pixelprowlers:lastCitationId', String(citation.value.id));
     }
+  } catch (error) {
+    console.warn(graphqlErrorMessage(error, 'Impossible de charger une citation.'));
+    citation.value = {
+      id: 0,
+      texte: "Il n'est jamais trop tard pour remettre de l'ordre dans ce qui compte.",
+      auteur: 'PixelProwlers',
+      source: '',
+    };
   } finally {
     isLoading.value = false;
   }

@@ -1,0 +1,563 @@
+type Query {
+  citationAleatoire(excludeId: Int): CitationType
+  motifs: [MotifType]
+  raisonsAppel: [RaisonAppelType]
+  refonteAudit(reference: String!): RefonteAuditType
+  auditDossier(numeroDossier: String!): AuditDossierType
+  creneauxDisponibles(motifId: Int!, dateDebut: Date!, dateFin: Date!, urgence: Boolean = false): [CreneauDisponibleType]
+  calendrierMois(annee: Int!, mois: Int!): [JourCalendrierType]
+}
+
+type CitationType {
+  id: ID!
+  texte: String!
+  numero: Int!
+  auteur: String!
+  source: String!
+  langue: AuditsCitationLangueChoices!
+  theme: AuditsCitationThemeChoices!
+  actif: Boolean!
+  verifie: Boolean!
+  nbAffichages: Int!
+  annee: Int
+  metadata: JSONString!
+  dateCreation: DateTime!
+  dateMaj: DateTime!
+}
+
+"""An enumeration."""
+enum AuditsCitationLangueChoices {
+  """Français"""
+  FR
+
+  """Anglais"""
+  EN
+
+  """Latin"""
+  LA
+}
+
+"""An enumeration."""
+enum AuditsCitationThemeChoices {
+  """Espoir"""
+  ESPOIR
+
+  """Renouveau"""
+  RENOUVEAU
+
+  """Résilience"""
+  RESILIENCE
+
+  """Joie de vivre"""
+  JOIE_DE_VIVRE
+
+  """Amour"""
+  AMOUR
+
+  """Paix"""
+  PAIX
+}
+
+"""
+Allows use of a JSON String for input / output from the GraphQL schema.
+
+Use of this type is *not recommended* as you lose the benefits of having a defined, static
+schema (one of the key benefits of GraphQL).
+"""
+scalar JSONString
+
+"""
+The `DateTime` scalar type represents a DateTime
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar DateTime
+
+type MotifType {
+  id: ID!
+  nom: String!
+  dureeMinutes: Int!
+  creneauType: AuditsMotifCreneauTypeChoices!
+  actif: Boolean!
+  ordre: Int!
+  creneauxReserves: [CreneauCalendrierType!]!
+  rdvs: [RdvType!]!
+}
+
+"""An enumeration."""
+enum AuditsMotifCreneauTypeChoices {
+  """Horaire précis"""
+  HORAIRE_PRECIS
+
+  """Demi-journée"""
+  DEMI_JOURNEE
+
+  """Journée complète"""
+  JOURNEE_COMPLETE
+}
+
+type CreneauCalendrierType {
+  id: ID!
+  date: Date!
+  heureDebut: Time!
+  heureFin: Time!
+  statut: AuditsCreneauCalendrierStatutChoices!
+  motifReserve: MotifType
+  urgence: Boolean!
+  client: RdvContactType
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  rdvs: [RdvType!]!
+}
+
+"""
+The `Date` scalar type represents a Date
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar Date
+
+"""
+The `Time` scalar type represents a Time value as
+specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar Time
+
+"""An enumeration."""
+enum AuditsCreneauCalendrierStatutChoices {
+  """Libre"""
+  LIBRE
+
+  """Réservé audit"""
+  RESERVE_AUDIT
+
+  """Réservé intervention"""
+  RESERVE_INTERVENTION
+
+  """Bloqué"""
+  BLOQUE
+}
+
+type RdvContactType {
+  id: ID!
+  prenom: String!
+  nom: String!
+  email: String!
+  telephone: String!
+  auditDossier: AuditDossierType
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  creneaux: [CreneauCalendrierType!]!
+  rdvs: [RdvType!]!
+}
+
+type AuditDossierType {
+  id: ID!
+  numeroDossier: String!
+  prenom: String!
+  nom: String!
+  email: String!
+  telephone: String!
+  typePersonne: AuditsAuditDossierTypePersonneChoices!
+  nomStructure: String
+  consentementRgpd: Boolean!
+  dateCreation: DateTime!
+  statut: AuditsAuditDossierStatutChoices!
+  notificationStatus: JSONString!
+  reponse: AuditReponseType
+  rdvContacts: [RdvContactType!]!
+}
+
+"""An enumeration."""
+enum AuditsAuditDossierTypePersonneChoices {
+  """Individu"""
+  INDIVIDU
+
+  """Association"""
+  ASSOCIATION
+
+  """Entreprise"""
+  ENTREPRISE
+}
+
+"""An enumeration."""
+enum AuditsAuditDossierStatutChoices {
+  """Identifié"""
+  IDENTIFIE
+
+  """Questionnaire complété"""
+  QUESTIONNAIRE_COMPLETE
+}
+
+type AuditReponseType {
+  id: ID!
+  dossier: AuditDossierType!
+  reponses: JSONString!
+  scoresSeries: JSONString!
+  scoreGlobal: Decimal!
+  pilierFaible: String!
+  dateSoumission: DateTime!
+  ipAddress: String
+  userAgent: String!
+  nomSignataire: String!
+  telephoneSignataire: String!
+  signatureHash: String!
+}
+
+"""The `Decimal` scalar type represents a python Decimal."""
+scalar Decimal
+
+type RdvType {
+  id: ID!
+  contact: RdvContactType!
+  motif: MotifType!
+  creneaux: [CreneauCalendrierType!]!
+  raisons: [RaisonAppelType!]!
+  urgence: Boolean!
+  message: String!
+  statut: AuditsRdvStatutChoices!
+  notificationStatus: JSONString!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  rappels: [RdvRappelType!]!
+}
+
+type RaisonAppelType {
+  id: ID!
+  nom: String!
+  actif: Boolean!
+  ordre: Int!
+  rdvs: [RdvType!]!
+}
+
+"""An enumeration."""
+enum AuditsRdvStatutChoices {
+  """Confirmé"""
+  CONFIRME
+
+  """Annulé"""
+  ANNULE
+}
+
+type RdvRappelType {
+  id: ID!
+  rdv: RdvType!
+  typeRappel: AuditsRdvRappelTypeRappelChoices!
+  scheduledAt: DateTime!
+  sentAt: DateTime
+  status: String!
+  lastError: String!
+}
+
+"""An enumeration."""
+enum AuditsRdvRappelTypeRappelChoices {
+  """La veille"""
+  VEILLE
+
+  """Une heure avant"""
+  UNE_HEURE
+}
+
+type RefonteAuditType {
+  id: ID!
+  reference: String!
+  prenom: String!
+  nom: String!
+  email: String!
+  telephone: String!
+  typePersonne: AuditsRefonteAuditTypePersonneChoices!
+  nomStructure: String
+  siteUrl: String!
+  consentementRgpd: Boolean!
+  reponses: JSONString!
+  analysisStatus: AuditsRefonteAuditAnalysisStatusChoices!
+  technicalReport: JSONString!
+  pagespeedReport: JSONString!
+  heuristicReport: JSONString!
+  analysisError: String!
+  dateCreation: DateTime!
+  dateMaj: DateTime!
+}
+
+"""An enumeration."""
+enum AuditsRefonteAuditTypePersonneChoices {
+  """Individu"""
+  INDIVIDU
+
+  """Association"""
+  ASSOCIATION
+
+  """Entreprise"""
+  ENTREPRISE
+}
+
+"""An enumeration."""
+enum AuditsRefonteAuditAnalysisStatusChoices {
+  """En cours d'analyse"""
+  EN_COURS
+
+  """Terminé"""
+  TERMINE
+
+  """Échec partiel"""
+  ECHEC_PARTIEL
+
+  """Non analysable"""
+  NON_ANALYSABLE
+
+  """Échec"""
+  ECHEC
+}
+
+type CreneauDisponibleType {
+  date: String
+  heureDebut: String
+  heureFin: String
+}
+
+type JourCalendrierType {
+  date: String
+  statut: String
+}
+
+type Mutation {
+  createUrgencyRequest(affectedUrl: String!, callbackSlot: String!, consentToContact: Boolean!, contactPreference: String!, email: String!, expectedNextStep: String!, impactLevel: String!, name: String!, noSecretsConfirmed: Boolean!, organization: String!, phone: String!, problemType: String!, shortDescription: String!, sinceWhen: String!, website: String): CreateUrgencyRequest
+  sessionInit(language: String, referrer: String, sessionId: UUID!, utmCampaign: String, utmMedium: String, utmSource: String): SessionInit
+  recordPageView(sessionId: UUID!, title: String, url: String!): RecordPageView
+  recordQuestionInteraction(orderIndex: Int, questionId: String!, revisitCount: Int, serie: String, sessionId: UUID!, timeSpentSeconds: Float): RecordQuestionInteraction
+  recordTrackingEvent(eventType: String!, metadata: JSONString, pageUrl: String!, sessionId: UUID): RecordTrackingEvent
+  createAuditDossier(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, telephone: String!, typePersonne: String!): CreateAuditDossier
+  submitAuditReponses(numeroDossier: String!, reponses: JSONString!): SubmitAuditReponses
+  createRefonteAudit(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, reponses: JSONString!, siteUrl: String!, telephone: String!, typePersonne: String!): CreateRefonteAudit
+  createRdvReservation(date: Date!, email: String!, heureDebut: String!, heureFin: String!, message: String, motifId: Int!, nom: String!, prenom: String!, raisonIds: [Int]!, telephone: String!, urgence: Boolean = false): CreateRdvReservation
+}
+
+type CreateUrgencyRequest {
+  reference: String
+  status: String
+  message: String
+  clientEmailStatus: String
+  ticket: UrgencyRequestType
+}
+
+type UrgencyRequestType {
+  id: ID!
+  reference: String!
+  problemType: UrgenciesUrgencyRequestProblemTypeChoices!
+  impactLevel: UrgenciesUrgencyRequestImpactLevelChoices!
+  affectedUrl: String!
+  shortDescription: String!
+  sinceWhen: String!
+  name: String!
+  organization: String!
+  email: String!
+  phone: String!
+  contactPreference: UrgenciesUrgencyRequestContactPreferenceChoices!
+  callbackSlot: String!
+  expectedNextStep: UrgenciesUrgencyRequestExpectedNextStepChoices!
+  consentToContact: Boolean!
+  noSecretsConfirmed: Boolean!
+  status: String!
+  notificationStatus: JSONString!
+  createdAt: DateTime!
+}
+
+"""An enumeration."""
+enum UrgenciesUrgencyRequestProblemTypeChoices {
+  """Site inaccessible"""
+  SITE_DOWN
+
+  """Suspicion de piratage"""
+  SUSPECTED_HACK
+
+  """Formulaire cassé"""
+  BROKEN_FORM
+
+  """Problème email / DNS / domaine"""
+  EMAIL_DNS_DOMAIN
+
+  """Contenu modifié"""
+  CONTENT_MODIFIED
+
+  """Erreur critique"""
+  CRITICAL_ERROR
+
+  """Ralentissement massif"""
+  MASSIVE_SLOWDOWN
+
+  """Autre"""
+  OTHER
+}
+
+"""An enumeration."""
+enum UrgenciesUrgencyRequestImpactLevelChoices {
+  """Simple gêne"""
+  MINOR
+
+  """Activité perturbée"""
+  DISRUPTED
+
+  """Activité bloquée"""
+  BLOCKED
+
+  """Risque sécurité / données"""
+  SECURITY_DATA_RISK
+}
+
+"""An enumeration."""
+enum UrgenciesUrgencyRequestContactPreferenceChoices {
+  """Email"""
+  EMAIL
+
+  """Téléphone"""
+  PHONE
+
+  """Email ou téléphone"""
+  EITHER
+}
+
+"""An enumeration."""
+enum UrgenciesUrgencyRequestExpectedNextStepChoices {
+  """Je veux d’abord comprendre ce qui se passe"""
+  UNDERSTAND_FIRST
+
+  """Je souhaite être rappelé rapidement"""
+  QUICK_CALLBACK
+
+  """Je veux sécuriser la situation avant d’agir"""
+  SECURE_BEFORE_ACTION
+
+  """Je veux préparer une intervention si nécessaire"""
+  PREPARE_INTERVENTION
+
+  """Je ne sais pas encore, j’ai besoin d’être guidé"""
+  NEED_GUIDANCE
+}
+
+type SessionInit {
+  sessionId: UUID
+  created: DateTime
+  session: VisitorSessionType
+}
+
+"""
+Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
+in fields, resolvers and input.
+"""
+scalar UUID
+
+type VisitorSessionType {
+  id: UUID!
+  sessionId: UUID!
+  ipAddress: String
+  userAgent: String!
+  deviceType: TrackingVisitorSessionDeviceTypeChoices!
+  browser: String
+  os: String
+  referrer: String
+  utmSource: String
+  utmMedium: String
+  utmCampaign: String
+  language: String
+  createdAt: DateTime!
+  lastSeenAt: DateTime!
+}
+
+"""An enumeration."""
+enum TrackingVisitorSessionDeviceTypeChoices {
+  """Desktop"""
+  DESKTOP
+
+  """Mobile"""
+  MOBILE
+
+  """Tablet"""
+  TABLET
+
+  """Unknown"""
+  UNKNOWN
+}
+
+type RecordPageView {
+  pageviewId: UUID
+  pageView: PageViewType
+}
+
+type PageViewType {
+  id: UUID!
+  session: VisitorSessionType!
+  url: String!
+  title: String
+  createdAt: DateTime!
+}
+
+type RecordQuestionInteraction {
+  interactionId: UUID
+  revisitCount: Int
+  interaction: QuestionInteractionType
+}
+
+type QuestionInteractionType {
+  id: UUID!
+  session: VisitorSessionType!
+  questionId: String!
+  serie: String
+  timeSpentSeconds: Float!
+  revisitCount: Int!
+  orderIndex: Int!
+  createdAt: DateTime!
+}
+
+type RecordTrackingEvent {
+  eventId: UUID
+  event: TrackingEventType
+}
+
+type TrackingEventType {
+  id: UUID!
+  session: VisitorSessionType
+  eventType: TrackingTrackingEventEventTypeChoices!
+  pageUrl: String!
+  metadata: JSONString!
+  createdAt: DateTime!
+}
+
+"""An enumeration."""
+enum TrackingTrackingEventEventTypeChoices {
+  """Pageview"""
+  PAGEVIEW
+
+  """CTA Click"""
+  CTA_CLICK
+
+  """Form Submit"""
+  FORM_SUBMIT
+
+  """Form Abandon"""
+  FORM_ABANDON
+
+  """Custom"""
+  CUSTOM
+}
+
+type CreateAuditDossier {
+  dossier: AuditDossierType
+}
+
+type SubmitAuditReponses {
+  numeroDossier: String
+  statut: String
+  scoresSeries: JSONString
+  scoreGlobal: String
+  pilierFaible: String
+  notificationStatus: JSONString
+}
+
+type CreateRefonteAudit {
+  audit: RefonteAuditType
+}
+
+type CreateRdvReservation {
+  rdv: RdvType
+}

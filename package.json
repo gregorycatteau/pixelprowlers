@@ -14,12 +14,16 @@
     "@tailwindcss/postcss": "^4.3.2",
     "nuxt": "4.4.8",
     "tailwindcss": "4.3.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.9",
     "vue": "^3.5.0",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "vue-tsc": "^3.3.6"
   },
   "dependencies": {
     "@vee-validate/zod": "^4.15.1",
+    "graphql": "^16.14.2",
+    "graphql-request": "^7.4.0",
     "vee-validate": "^4.15.1",
     "zod": "^3.25.76"
   }

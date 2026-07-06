@@ -10,7 +10,7 @@
 
     <section class="manifest-section" aria-labelledby="contact-form-title">
       <div class="article-container">
-        <LazyContactForm />
+        <LazyFormsContactForm />
       </div>
     </section>
   </main>

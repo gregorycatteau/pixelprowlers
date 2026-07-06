@@ -5,9 +5,7 @@ from .utils import parse_user_agent, get_client_ip, extract_utm
 
 
 class SessionInitSerializer(serializers.Serializer):
-    """Serializer for POST /api/tracking/session/init.
-    Creates or updates a VisitorSession from client payload + server-side data.
-    """
+    """Creates or updates a VisitorSession from client payload + server-side data."""
 
     session_id = serializers.UUIDField(required=True)
     referrer = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
@@ -23,20 +21,29 @@ class SessionInitSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         request = self.context.get("request")
-        if not request:
-            raise serializers.ValidationError("Request context missing")
+        ip_address = self.context.get("ip_address")
+        raw_ua = self.context.get("user_agent", "")
 
-        # Server-side identity data
-        ip_address = get_client_ip(request)
-        raw_ua = request.META.get("HTTP_USER_AGENT", "")
+        if request is not None and not ip_address:
+            ip_address = get_client_ip(request)
+
+        if request is not None and not raw_ua:
+            raw_ua = request.META.get("HTTP_USER_AGENT", "")
+
         parsed_ua = parse_user_agent(raw_ua)
 
-        # UTM may come from payload or query string
-        utm = {}
-        if request.method == "GET":
-            utm = extract_utm(request.GET)
-        else:
-            utm = extract_utm(request.POST)
+        utm = {
+            "utm_source": validated_data.get("utm_source"),
+            "utm_medium": validated_data.get("utm_medium"),
+            "utm_campaign": validated_data.get("utm_campaign"),
+            "referrer": validated_data.get("referrer"),
+        }
+
+        if request is not None and not any(utm.values()):
+            if request.method == "GET":
+                utm = {**utm, **extract_utm(request.GET)}
+            else:
+                utm = {**utm, **extract_utm(request.POST)}
 
         return VisitorSession.objects.create(
             session_id=validated_data["session_id"],
@@ -53,10 +60,6 @@ class SessionInitSerializer(serializers.Serializer):
         )
 
     def update(self, instance, validated_data):
-        request = self.context.get("request")
-        if not request:
-            raise serializers.ValidationError("Request context missing")
-
         # Update last_seen_at by touching the record
         instance.save()  # auto_now handles last_seen_at
         # Update UTM if provided
@@ -71,25 +74,22 @@ class SessionInitSerializer(serializers.Serializer):
 
 
 class PageViewSerializer(serializers.ModelSerializer):
-    """Serializer for POST /api/tracking/pageview."""
+    """Validates page view payloads."""
 
     class Meta:
         model = PageView
-        fields = ["url", "title"]
+        fields = ["session", "url", "title"]
         read_only_fields = ["session"]
 
     session = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
 class QuestionInteractionSerializer(serializers.ModelSerializer):
-    """Serializer for POST /api/tracking/question-interaction.
-    Implements upsert logic: if question_id already seen for this session,
-    increment revisit_count and update time_spent_seconds / order_index.
-    """
+    """Validates question interaction payloads and applies upsert logic."""
 
     class Meta:
         model = QuestionInteraction
-        fields = ["question_id", "serie", "time_spent_seconds", "revisit_count", "order_index"]
+        fields = ["session", "question_id", "serie", "time_spent_seconds", "revisit_count", "order_index"]
 
     session = serializers.PrimaryKeyRelatedField(read_only=True)
 
@@ -143,11 +143,11 @@ class QuestionInteractionSerializer(serializers.ModelSerializer):
 
 
 class TrackingEventSerializer(serializers.ModelSerializer):
-    """Serializer for POST /api/tracking/event (generic events)."""
+    """Validates generic tracking event payloads."""
 
     class Meta:
         model = TrackingEvent
-        fields = ["event_type", "page_url", "metadata"]
+        fields = ["session", "event_type", "page_url", "metadata"]
 
     session = serializers.PrimaryKeyRelatedField(read_only=True)
 

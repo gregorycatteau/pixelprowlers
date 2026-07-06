@@ -3,6 +3,11 @@ import {
   refonteIdentitySchema,
   type RefonteIdentity,
 } from '~/validation/schemas';
+import {
+  CREATE_REFONTE_AUDIT_MUTATION,
+  graphqlErrorMessage,
+  graphqlRequest,
+} from '~/utils/graphql';
 
 export type RefonteQuestionType = 'text' | 'select' | 'radio' | 'checkbox' | 'boolean';
 
@@ -98,14 +103,23 @@ export const useRefonteAudit = () => {
   const createError = ref('');
   const isSubmitting = ref(false);
 
-  const activeSeries = computed(() => refonteSeries[currentSeriesIndex.value]);
+  const activeSeries = computed<RefonteSeries>(() => refonteSeries[currentSeriesIndex.value] ?? refonteSeries[0]!);
   const isLastSeries = computed(() => currentSeriesIndex.value === refonteSeries.length - 1);
   const progressPercent = computed(() => ((currentSeriesIndex.value + 1) / refonteSeries.length) * 100);
   const progressLabel = computed(() => `Bloc ${currentSeriesIndex.value + 1} sur ${refonteSeries.length}`);
   const hasIdentity = computed(() => Boolean(identity.value));
 
-  const canContinue = computed(() => activeSeries.value.questions.every((question) => isAnswered(answers[question.id])));
-  const canSubmit = computed(() => Boolean(identity.value) && questionIds.every((id) => isAnswered(answers[id])));
+  const canContinue = computed(() => activeSeries.value.questions.every((question) => isAnswered(answers[question.id] ?? '')));
+  const canSubmit = computed(() => Boolean(identity.value) && questionIds.every((id) => isAnswered(answers[id] ?? '')));
+
+  type CreateRefonteAuditResponse = {
+    createRefonteAudit: {
+      audit: {
+        reference: string;
+        analysis_status: string;
+      };
+    };
+  };
 
   const setIdentity = (payload: RefonteIdentity) => {
     const parsed = refonteIdentitySchema.safeParse(payload);
@@ -137,20 +151,22 @@ export const useRefonteAudit = () => {
     createError.value = '';
 
     try {
-      const response = await $fetch<{ reference: string; analysis_status: string }>('/api/audit-refonte', {
-        method: 'POST',
-        body: {
-          ...identity.value,
-          reponses: answers,
-        },
+      const response = await graphqlRequest<CreateRefonteAuditResponse>(CREATE_REFONTE_AUDIT_MUTATION, {
+        consentementRgpd: identity.value.consentement_rgpd,
+        email: identity.value.email,
+        nom: identity.value.nom,
+        nomStructure: identity.value.nom_structure || null,
+        prenom: identity.value.prenom,
+        reponses: JSON.stringify(answers),
+        siteUrl: identity.value.site_url,
+        telephone: identity.value.telephone,
+        typePersonne: identity.value.type_personne,
       });
-      reference.value = response.reference;
-      await navigateTo(`/audit-refonte/resultat?reference=${encodeURIComponent(response.reference)}`);
-      return response.reference;
+      reference.value = response.createRefonteAudit.audit.reference;
+      await navigateTo(`/audit-refonte/resultat?reference=${encodeURIComponent(response.createRefonteAudit.audit.reference)}`);
+      return response.createRefonteAudit.audit.reference;
     } catch (error) {
-      createError.value = typeof error === 'object' && error && 'statusMessage' in error
-        ? String(error.statusMessage)
-        : "Impossible d'enregistrer l'audit refonte pour le moment.";
+      createError.value = graphqlErrorMessage(error, "Impossible d'enregistrer l'audit refonte pour le moment.");
       return '';
     } finally {
       isSubmitting.value = false;
