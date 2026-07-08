@@ -1,7 +1,6 @@
 import graphene
 from django.core.cache import cache
 from graphql import GraphQLError
-from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from audits.rdv_services import reserve_rdv
 from audits.serializers import (
@@ -178,8 +177,6 @@ class CreateRdvReservation(graphene.Mutation):
             rdv = serializer.save()
         except ValueError as exc:
             raise GraphQLError(str(exc)) from exc
-        except DRFValidationError as exc:
-            raise GraphQLError(str(exc.detail)) from exc
 
         return CreateRdvReservation(rdv=rdv)
 

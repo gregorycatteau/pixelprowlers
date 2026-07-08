@@ -1,5 +1,5 @@
 """
-Fonctions de validation réutilisables, extraites de l'ancien serializers.py DRF.
+Fonctions de validation réutilisables pour les mutations GraphQL.
 Utilisées par les mutations GraphQL (audits/mutations.py) pour valider les inputs
 avant création/modification des objets métier.
 """

@@ -225,3 +225,344 @@ Variables SMS/webhook backend :
 - `INTERNAL_SMS_TO` destinataire interne optionnel ; sinon l'urgence utilise le téléphone client pour le dry-run.
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` pour l'envoi réel.
 - `WEBHOOK_URL` ou `URGENCY_WEBHOOK_URL`, avec `WEBHOOK_TOKEN` ou `URGENCY_WEBHOOK_TOKEN` si besoin.
+
+## CRM GraphQL
+
+Les anciennes routes REST/DRF `contacts/`, `leads/`, `formations/`, `registrations` et `services`, ainsi que les anciens handlers Nitro `/api/contact` et `/api/diagnostic`, sont remplacés par les queries/mutations GraphQL ci-dessous.
+
+### Contacts
+
+```graphql
+query {
+  contacts(serviceType: "audit_site", read: false) {
+    id
+    ticketId
+    secretToken
+    name
+    email
+    status
+    demandType
+    demandLabel
+    serviceType
+    read
+    messages {
+      author
+      authorName
+      message
+      createdAt
+    }
+    clientDossier {
+      dossierId
+    }
+  }
+}
+```
+
+```graphql
+query {
+  unreadContacts {
+    id
+    name
+    email
+    serviceType
+  }
+}
+```
+
+```graphql
+mutation CreateContact($startedAt: Float!) {
+  createContact(
+    name: "Alice Martin"
+    email: "alice@example.com"
+    company: "ACME"
+    phone: "0612345678"
+    serviceType: "audit_site"
+    demandType: "audit"
+    message: "Nous voulons faire auditer notre site avant une refonte."
+    structureType: "TPE"
+    urgency: "Projet à cadrer"
+    contactPreference: "Email"
+    backups: "Oui, mais jamais testée"
+    access: "Accès partiels"
+    privacyConsent: true
+    startedAt: $startedAt
+  ) {
+    detail
+    contact {
+      id
+      ticketId
+      secretToken
+      status
+      demandLabel
+      emailConfirmation
+      notificationStatus
+      messages {
+        author
+        message
+      }
+      clientDossier {
+        dossierId
+      }
+    }
+  }
+}
+```
+
+`websiteCompany` est le honeypot. `startedAt` est un timestamp navigateur en millisecondes ; les soumissions trop rapides sont ignorées avec un message neutre.
+
+Lecture et réponse d'un ticket contact :
+
+```graphql
+query ContactByToken($token: String!) {
+  contactByToken(token: $token) {
+    ticketId
+    secretToken
+    email
+    status
+    messages {
+      author
+      authorName
+      message
+      createdAt
+    }
+  }
+}
+```
+
+```graphql
+mutation AddContactMessage($token: String!) {
+  addContactMessage(
+    token: $token
+    message: "Voici une précision côté client."
+    authorName: "ACME"
+  ) {
+    contact {
+      ticketId
+      status
+      messages {
+        message
+      }
+    }
+  }
+}
+```
+
+### Diagnostic
+
+Le diagnostic public est persistant côté Django, rattaché à un `ClientDossier` en phase `Diagnostic`, et n'utilise plus de stockage Nitro.
+
+```graphql
+mutation CreateDiagnosticTicket($answers: JSONString!) {
+  createDiagnosticTicket(
+    organization: "ACME"
+    email: "contact@example.com"
+    phone: "0612345678"
+    message: "Nous voulons comprendre les priorités."
+    answers: $answers
+  ) {
+    redirectTo
+    ticket {
+      id
+      ticketId
+      organization
+      diagnosticResult
+      emailConfirmation
+      clientDossier {
+        dossierId
+        phase
+      }
+    }
+  }
+}
+```
+
+```json
+{
+  "answers": "{\"stress\":\"site-slow\",\"siteState\":\"fragile\",\"dependency\":\"one\"}"
+}
+```
+
+```graphql
+query DiagnosticTicket($ticketId: String!) {
+  diagnosticTicket(ticketId: $ticketId) {
+    id
+    organization
+    answers
+    diagnosticResult
+  }
+}
+```
+
+### Leads
+
+```graphql
+query {
+  leads(leadType: "developpement", status: "new") {
+    id
+    name
+    email
+    leadType
+    status
+    clientDossier {
+      dossierId
+    }
+  }
+}
+```
+
+```graphql
+mutation {
+  createLead(
+    name: "Alice Martin"
+    email: "alice@example.com"
+    budget: "1500"
+    projectDescription: "Créer une application métier maintenable."
+    timeline: "Q3"
+    leadType: "developpement"
+  ) {
+    lead {
+      id
+      status
+      clientDossier {
+        dossierId
+      }
+    }
+  }
+}
+```
+
+```graphql
+mutation {
+  updateLeadStatus(id: 1, status: "qualified") {
+    lead {
+      id
+      status
+    }
+  }
+}
+```
+
+### Formations
+
+```graphql
+query {
+  formations(formatType: "presentiel", active: true) {
+    id
+    title
+    formatType
+    price
+  }
+}
+```
+
+```graphql
+mutation {
+  createFormation(
+    title: "Hygiène numérique"
+    description: "Formation d'équipe"
+    formatType: "presentiel"
+    durationHours: 7
+    price: "490.00"
+    maxParticipants: 8
+    scheduledDates: "[]"
+  ) {
+    formation {
+      id
+      title
+    }
+  }
+}
+```
+
+### Inscriptions formation
+
+```graphql
+query {
+  formationRegistrations(formationId: 1, status: "pending") {
+    id
+    name
+    email
+    status
+    formation {
+      title
+    }
+    clientDossier {
+      dossierId
+    }
+  }
+}
+```
+
+```graphql
+mutation {
+  createFormationRegistration(
+    formationId: 1
+    name: "Alice Martin"
+    email: "alice@example.com"
+    phone: "0612345678"
+    numberOfParticipants: 2
+  ) {
+    registration {
+      id
+      status
+      clientDossier {
+        dossierId
+      }
+    }
+  }
+}
+```
+
+```graphql
+mutation {
+  updateFormationRegistrationStatus(id: 1, status: "confirmed") {
+    registration {
+      id
+      status
+    }
+  }
+}
+```
+
+### Services
+
+```graphql
+query {
+  services(serviceCategory: "developpement") {
+    id
+    name
+    slug
+    serviceCategory
+    order
+  }
+}
+```
+
+```graphql
+mutation {
+  upsertService(
+    slug: "audit-site"
+    name: "Audit site"
+    description: "Audit de présence web"
+    serviceCategory: "developpement"
+    order: 1
+  ) {
+    service {
+      id
+      slug
+    }
+  }
+}
+```
+
+### Suppression admin
+
+```graphql
+mutation {
+  deleteCrmObject(model: "lead", id: 1) {
+    ok
+  }
+}
+```
+
+`model` accepte `contact`, `lead`, `formation`, `registration` ou `service`.

@@ -1,14 +1,17 @@
 import json
+import time
 from datetime import timedelta
 from unittest import mock
 
 from django.test import Client, TestCase, override_settings
 from django.core.cache import cache
+from django.urls import get_resolver
 from django.utils import timezone
 
 from audits.models import AuditDossier, AuditReponse, ClientDossier, DossierLog, Motif, RaisonAppel
 from audits.questions import QUESTION_IDS
 from audits.refonte_questions import REFONTE_QUESTION_IDS
+from crm.models import Contact, ContactMessage, DiagnosticTicket, Formation, FormationRegistration, Lead, Service
 from tracking.models import TrackingEvent, VisitorSession
 from urgencies.models import UrgencyRequest
 
@@ -389,6 +392,270 @@ class GraphQLSmokeTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.json().get("errors"))
+
+    def test_crm_graphql_replaces_legacy_rest_domains(self):
+        started_at = int((time.time() - 5) * 1000)
+        contact = self.graphql(
+            """
+            mutation CreateContact($startedAt: Float!) {
+              createContact(
+                name: "Alice Martin"
+                email: "crm-contact@example.com"
+                company: "ACME"
+                phone: "0612345678"
+                serviceType: "audit_site"
+                message: "Nous voulons faire auditer notre site avant une refonte."
+                structureType: "TPE"
+                urgency: "Projet à cadrer"
+                contactPreference: "Email"
+                backups: "Oui, mais jamais testée"
+                access: "Accès partiels"
+                privacyConsent: true
+                startedAt: $startedAt
+              ) {
+                detail
+                contact {
+                  id
+                  serviceType
+                  notificationStatus
+                  clientDossier {
+                    dossierId
+                  }
+                }
+              }
+            }
+            """,
+            variables={"startedAt": started_at},
+        )
+        self.assertEqual(contact.status_code, 200)
+        self.assertIsNone(contact.json().get("errors"))
+        self.assertEqual(Contact.objects.count(), 1)
+        self.assertRegex(contact.json()["data"]["createContact"]["contact"]["clientDossier"]["dossierId"], r"^\d{7}-0$")
+
+        lead = self.graphql(
+            """
+            mutation {
+              createLead(
+                name: "Bob"
+                email: "lead@example.com"
+                phone: "0612345678"
+                budget: "1500"
+                projectDescription: "Créer une application métier maintenable."
+                timeline: "Q3"
+                leadType: "developpement"
+              ) {
+                lead { id leadType status clientDossier { dossierId } }
+              }
+            }
+            """,
+        )
+        self.assertEqual(lead.status_code, 200)
+        self.assertIsNone(lead.json().get("errors"))
+        lead_id = lead.json()["data"]["createLead"]["lead"]["id"]
+        self.assertTrue(Lead.objects.filter(pk=lead_id).exists())
+
+        formation = self.graphql(
+            """
+            mutation {
+              createFormation(
+                title: "Hygiène numérique"
+                description: "Formation d'équipe"
+                formatType: "presentiel"
+                durationHours: 7
+                price: "490.00"
+                maxParticipants: 8
+                scheduledDates: "[]"
+              ) {
+                formation { id title formatType }
+              }
+            }
+            """,
+        )
+        self.assertEqual(formation.status_code, 200)
+        self.assertIsNone(formation.json().get("errors"))
+        formation_id = formation.json()["data"]["createFormation"]["formation"]["id"]
+
+        registration = self.graphql(
+            """
+            mutation Register($formationId: ID!) {
+              createFormationRegistration(
+                formationId: $formationId
+                name: "Claire"
+                email: "formation@example.com"
+                phone: "0612345678"
+                numberOfParticipants: 2
+              ) {
+                registration { id status clientDossier { dossierId } }
+              }
+            }
+            """,
+            variables={"formationId": formation_id},
+        )
+        self.assertEqual(registration.status_code, 200)
+        self.assertIsNone(registration.json().get("errors"))
+        self.assertEqual(FormationRegistration.objects.count(), 1)
+
+        service = self.graphql(
+            """
+            mutation {
+              upsertService(
+                slug: "audit-site"
+                name: "Audit site"
+                description: "Audit de présence web"
+                serviceCategory: "developpement"
+                order: 1
+              ) {
+                service { slug serviceCategory }
+              }
+            }
+            """,
+        )
+        self.assertEqual(service.status_code, 200)
+        self.assertIsNone(service.json().get("errors"))
+        self.assertTrue(Service.objects.filter(slug="audit-site").exists())
+
+        query = self.graphql(
+            """
+            query {
+              contacts(serviceType: "audit_site") { id }
+              leads(leadType: "developpement") { id }
+              formations(formatType: "presentiel") { id }
+              formationRegistrations(formationId: 1) { id }
+              services(serviceCategory: "developpement") { slug }
+            }
+            """,
+        )
+        self.assertEqual(query.status_code, 200)
+        self.assertIsNone(query.json().get("errors"))
+        self.assertEqual(len(query.json()["data"]["contacts"]), 1)
+
+    def test_contact_ticket_flow_is_graphql_only(self):
+        started_at = int((time.time() - 5) * 1000)
+        created = self.graphql(
+            """
+            mutation CreateContact($startedAt: Float!) {
+              createContact(
+                name: "Ticket Client"
+                email: "ticket@example.com"
+                company: "Ticket Org"
+                phone: "0612345678"
+                serviceType: "audit_site"
+                demandType: "audit"
+                message: "Nous avons besoin d'un suivi clair pour notre demande d'audit."
+                privacyConsent: true
+                startedAt: $startedAt
+              ) {
+                contact {
+                  ticketId
+                  secretToken
+                  demandLabel
+                  emailConfirmation
+                  messages { author authorName message }
+                }
+              }
+            }
+            """,
+            variables={"startedAt": started_at},
+        )
+        self.assertEqual(created.status_code, 200)
+        self.assertIsNone(created.json().get("errors"))
+        contact_data = created.json()["data"]["createContact"]["contact"]
+        self.assertEqual(Contact.objects.count(), 1)
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        self.assertTrue(contact_data["secretToken"])
+        self.assertEqual(contact_data["messages"][0]["author"], "CUSTOMER")
+
+        loaded = self.graphql(
+            """
+            query ContactByToken($token: String!) {
+              contactByToken(token: $token) {
+                ticketId
+                email
+                messages { message }
+              }
+            }
+            """,
+            variables={"token": contact_data["secretToken"]},
+        )
+        self.assertEqual(loaded.status_code, 200)
+        self.assertIsNone(loaded.json().get("errors"))
+        self.assertEqual(loaded.json()["data"]["contactByToken"]["ticketId"], contact_data["ticketId"])
+
+        replied = self.graphql(
+            """
+            mutation AddContactMessage($token: String!) {
+              addContactMessage(
+                token: $token
+                message: "Voici une précision côté client."
+                authorName: "Ticket Org"
+              ) {
+                contact {
+                  status
+                  messages { message }
+                }
+              }
+            }
+            """,
+            variables={"token": contact_data["secretToken"]},
+        )
+        self.assertEqual(replied.status_code, 200)
+        self.assertIsNone(replied.json().get("errors"))
+        self.assertEqual(ContactMessage.objects.count(), 2)
+        self.assertEqual(replied.json()["data"]["addContactMessage"]["contact"]["status"], "WAITING_CUSTOMER")
+
+    def test_diagnostic_ticket_flow_is_graphql_only(self):
+        created = self.graphql(
+            """
+            mutation CreateDiagnosticTicket($answers: JSONString!) {
+              createDiagnosticTicket(
+                organization: "Diagnostic Org"
+                email: "diagnostic@example.com"
+                phone: "0612345678"
+                message: "Nous voulons comprendre les priorités."
+                answers: $answers
+              ) {
+                redirectTo
+                ticket {
+                  id
+                  ticketId
+                  diagnosticResult
+                  emailConfirmation
+                  clientDossier { dossierId phase }
+                }
+              }
+            }
+            """,
+            variables={"answers": json.dumps({"stress": "site-slow", "siteState": "fragile", "dependency": "one"})},
+        )
+        self.assertEqual(created.status_code, 200)
+        self.assertIsNone(created.json().get("errors"))
+        ticket_data = created.json()["data"]["createDiagnosticTicket"]["ticket"]
+        self.assertTrue(created.json()["data"]["createDiagnosticTicket"]["redirectTo"].endswith(ticket_data["ticketId"]))
+        self.assertEqual(DiagnosticTicket.objects.count(), 1)
+        self.assertRegex(ticket_data["clientDossier"]["dossierId"], r"^\d{7}-1$")
+        self.assertEqual(DiagnosticTicket.objects.get().client_dossier.phase, ClientDossier.Phase.DIAGNOSTIC)
+
+        loaded = self.graphql(
+            """
+            query DiagnosticTicket($ticketId: String!) {
+              diagnosticTicket(ticketId: $ticketId) {
+                id
+                organization
+                answers
+                diagnosticResult
+              }
+            }
+            """,
+            variables={"ticketId": ticket_data["ticketId"]},
+        )
+        self.assertEqual(loaded.status_code, 200)
+        self.assertIsNone(loaded.json().get("errors"))
+        self.assertEqual(loaded.json()["data"]["diagnosticTicket"]["id"], ticket_data["ticketId"])
+
+    def test_top_level_urls_are_admin_health_graphql_only(self):
+        patterns = {str(pattern.pattern) for pattern in get_resolver().url_patterns}
+        self.assertEqual(patterns, {"admin/", "health/", "graphql/"})
+        self.assertEqual(self.client.get("/health/").json(), {"status": "ok"})
 
     def test_graphql_preflight_allows_configured_origin(self):
         response = self.client.options(

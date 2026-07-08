@@ -80,9 +80,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
-    "rest_framework",
     "graphene_django",
     "audits",
+    "crm",
     "urgencies",
     "tracking",
 ]

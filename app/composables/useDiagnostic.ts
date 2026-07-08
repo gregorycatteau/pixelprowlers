@@ -1,5 +1,6 @@
 import { computed, reactive, ref } from 'vue';
 import { isEmailLike, maskEmail } from '~/utils/formatDate';
+import { graphqlRequest, parseGraphqlJson } from '~/utils/graphql';
 
 type DiagnosticPath = 'CRITICAL' | 'AUDIT' | 'TRANSMISSION' | 'MAINTENANCE';
 
@@ -53,6 +54,79 @@ export type ResultContent = {
   cta: string;
   ctaHref: string;
 };
+
+type DiagnosticTicketGraphql = {
+  id: string;
+  ticketId: string;
+  organization: string;
+  email: string;
+  phone?: string;
+  message: string;
+  answers: string | Record<string, string>;
+  diagnosticResult: string | DiagnosticTicket['diagnosticResult'];
+  emailConfirmation?: string | DiagnosticTicket['emailConfirmation'];
+};
+
+const DIAGNOSTIC_TICKET_FIELDS = /* GraphQL */ `
+  {
+    id
+    ticketId
+    organization
+    email
+    phone
+    message
+    answers
+    diagnosticResult
+    emailConfirmation
+  }
+`;
+
+const CREATE_DIAGNOSTIC_TICKET_MUTATION = /* GraphQL */ `
+  mutation CreateDiagnosticTicket(
+    $organization: String!
+    $email: String!
+    $phone: String
+    $message: String!
+    $answers: JSONString!
+  ) {
+    createDiagnosticTicket(
+      organization: $organization
+      email: $email
+      phone: $phone
+      message: $message
+      answers: $answers
+    ) {
+      redirectTo
+      ticket ${DIAGNOSTIC_TICKET_FIELDS}
+    }
+  }
+`;
+
+const DIAGNOSTIC_TICKET_QUERY = /* GraphQL */ `
+  query DiagnosticTicket($ticketId: String!) {
+    diagnosticTicket(ticketId: $ticketId) ${DIAGNOSTIC_TICKET_FIELDS}
+  }
+`;
+
+const mapDiagnosticTicket = (ticket: DiagnosticTicketGraphql): DiagnosticTicket => ({
+  id: ticket.ticketId || ticket.id,
+  organization: ticket.organization,
+  email: ticket.email,
+  phone: ticket.phone || '',
+  message: ticket.message,
+  answers: parseGraphqlJson(ticket.answers, {}),
+  diagnosticResult: parseGraphqlJson(ticket.diagnosticResult, {
+    path: 'MAINTENANCE',
+    scores: {
+      urgency: 0,
+      fragility: 0,
+      dependency: 0,
+      total: 0,
+    },
+    timestamp: new Date().toISOString(),
+  }),
+  emailConfirmation: parseGraphqlJson(ticket.emailConfirmation, { status: 'not_configured' }),
+});
 
 export const diagnosticSteps: DiagnosticStep[] = [
   {
@@ -291,11 +365,14 @@ export const useDiagnostic = () => {
     submitError.value = '';
 
     try {
-      const result = await $fetch<{ redirectTo: string }>('/api/diagnostic', {
-        method: 'POST',
-        body: { answers, contact },
+      const result = await graphqlRequest<{ createDiagnosticTicket: { redirectTo: string } }>(CREATE_DIAGNOSTIC_TICKET_MUTATION, {
+        organization: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        message: contact.message,
+        answers: JSON.stringify({ ...answers }),
       });
-      router.push(result.redirectTo);
+      router.push(result.createDiagnosticTicket.redirectTo);
     } catch {
       submitError.value = "Impossible d'enregistrer le diagnostic pour le moment. Vous pouvez réessayer dans quelques instants.";
     } finally {
@@ -337,7 +414,8 @@ export const useDiagnosticResult = () => {
     error.value = '';
 
     try {
-      ticket.value = await $fetch<DiagnosticTicket>(`/api/diagnostic/${ticketId}`);
+      const result = await graphqlRequest<{ diagnosticTicket: DiagnosticTicketGraphql }>(DIAGNOSTIC_TICKET_QUERY, { ticketId });
+      ticket.value = mapDiagnosticTicket(result.diagnosticTicket);
     } catch {
       ticket.value = null;
       error.value = 'Le ticket est absent ou a expiré côté serveur.';

@@ -190,12 +190,12 @@ cd /opt/pixelprowlers
 docker compose ps
 docker compose logs --tail=120 django
 docker compose logs --tail=120 nginx
-curl -fsS http://127.0.0.1:8080/api/health/
+curl -fsS http://127.0.0.1:8080/health/
 systemctl status caddy --no-pager
 journalctl -u caddy -n 120 --no-pager
 curl -I https://pixelprowlers.io
 curl -I https://www.pixelprowlers.io
-curl -i https://pixelprowlers.io/api/health/
+curl -i https://pixelprowlers.io/health/
 ```
 
 Tester le formulaire `/contact` depuis le navigateur et confirmer la reception email.
@@ -243,7 +243,7 @@ Le backup doit rester hors du depot Git.
 - DNS `pixelprowlers.io` et `www.pixelprowlers.io` vers le VPS.
 - HTTPS Caddy valide, sans boucle.
 - SMTP reel fonctionnel.
-- `/api/health/` public OK.
+- `/health/` public OK.
 - Formulaire `/contact` OK et email recu.
 - Logs sans secrets ni messages complets.
 - Rate limit base sur la vraie IP client.
