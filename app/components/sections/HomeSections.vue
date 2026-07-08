@@ -121,8 +121,11 @@
 </template>
 
 <script setup lang="ts">
+import headerWaveSvg from '~/assets/images/header-wave.svg?url';
 import AppButton from '~/components/ui/AppButton.vue';
 import { badFits, goodFits, offers, problems, steps } from '~/utils/siteContent';
+
+const headerWaveBackground = `url(${headerWaveSvg})`;
 
 withDefaults(defineProps<{
   showHero?: boolean;
@@ -200,7 +203,7 @@ withDefaults(defineProps<{
   position: relative;
   z-index: 2;
   height: 30px;
-  background-image: url("/images/header-wave.svg");
+  background-image: v-bind(headerWaveBackground);
   background-repeat: repeat-x;
   background-size: 1200px 30px;
   animation: wave-drift 20s linear infinite;
