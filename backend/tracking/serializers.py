@@ -1,4 +1,6 @@
-from rest_framework import serializers
+from uuid import UUID
+
+from django.core.exceptions import ValidationError
 
 from audits.dossier_services import create_client_dossier
 from audits.models import ClientDossier
@@ -7,20 +9,45 @@ from .models import VisitorSession, PageView, QuestionInteraction, TrackingEvent
 from .utils import parse_user_agent, get_client_ip, extract_utm
 
 
-class SessionInitSerializer(serializers.Serializer):
-    """Creates or updates a VisitorSession from client payload + server-side data."""
+class BaseInputValidator:
+    def __init__(self, data=None, context=None, **kwargs):
+        self.initial_data = data or {}
+        self.context = context or {}
+        self.validated_data = {}
+        self.errors = {}
 
-    session_id = serializers.UUIDField(required=True)
-    referrer = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
-    utm_source = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
-    utm_medium = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
-    utm_campaign = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
-    language = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
+    def is_valid(self):
+        try:
+            attrs = dict(self.initial_data)
+            for field in list(attrs):
+                validator = getattr(self, f"validate_{field}", None)
+                if validator:
+                    attrs[field] = validator(attrs[field])
+            self.validated_data = self.validate(attrs)
+            self.errors = {}
+            return True
+        except ValidationError as exc:
+            self.validated_data = {}
+            self.errors = {"non_field_errors": exc.messages}
+            return False
+
+    def validate(self, attrs):
+        return attrs
+
+    def save(self, **kwargs):
+        return self.create({**self.validated_data, **kwargs})
+
+
+class SessionInitSerializer(BaseInputValidator):
+    """Creates or updates a VisitorSession from client payload + server-side data."""
 
     def validate_session_id(self, value):
         if not value:
-            raise serializers.ValidationError("session_id is required")
-        return value
+            raise ValidationError("session_id is required")
+        try:
+            return value if isinstance(value, UUID) else UUID(str(value))
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("session_id is invalid") from exc
 
     def validate(self, attrs):
         for field in ["referrer", "utm_source", "utm_medium", "utm_campaign", "language"]:
@@ -29,9 +56,9 @@ class SessionInitSerializer(serializers.Serializer):
                 continue
             cleaned = str(value).strip()
             if len(cleaned) > 500:
-                raise serializers.ValidationError(f"{field} is too long")
+                raise ValidationError(f"{field} is too long")
             if any(char in cleaned for char in ["\r", "\n", "<", ">", "`"]):
-                raise serializers.ValidationError(f"{field} contains forbidden characters")
+                raise ValidationError(f"{field} contains forbidden characters")
             attrs[field] = cleaned or None
         return attrs
 
@@ -96,20 +123,13 @@ class SessionInitSerializer(serializers.Serializer):
         return instance
 
 
-class PageViewSerializer(serializers.ModelSerializer):
+class PageViewSerializer(BaseInputValidator):
     """Validates page view payloads."""
-
-    class Meta:
-        model = PageView
-        fields = ["session", "url", "title"]
-        read_only_fields = ["session"]
-
-    session = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate_url(self, value):
         value = (value or "").strip()
         if len(value) > 1000 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
-            raise serializers.ValidationError("url is invalid")
+            raise ValidationError("url is invalid")
         return value
 
     def validate_title(self, value):
@@ -117,38 +137,32 @@ class PageViewSerializer(serializers.ModelSerializer):
             return value
         value = value.strip()
         if len(value) > 300 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
-            raise serializers.ValidationError("title is invalid")
+            raise ValidationError("title is invalid")
         return value
 
 
-class QuestionInteractionSerializer(serializers.ModelSerializer):
+class QuestionInteractionSerializer(BaseInputValidator):
     """Validates question interaction payloads and applies upsert logic."""
-
-    class Meta:
-        model = QuestionInteraction
-        fields = ["session", "question_id", "serie", "time_spent_seconds", "revisit_count", "order_index"]
-
-    session = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate_time_spent_seconds(self, value):
         if value is not None and value < 0:
-            raise serializers.ValidationError("time_spent_seconds must be non-negative")
+            raise ValidationError("time_spent_seconds must be non-negative")
         return value or 0.0
 
     def validate_revisit_count(self, value):
         if value is not None and value < 0:
-            raise serializers.ValidationError("revisit_count must be non-negative")
+            raise ValidationError("revisit_count must be non-negative")
         return value or 0
 
     def validate_order_index(self, value):
         if value is not None and value < 0:
-            raise serializers.ValidationError("order_index must be non-negative")
+            raise ValidationError("order_index must be non-negative")
         return value or 0
 
     def validate_question_id(self, value):
         value = (value or "").strip()
         if not value or len(value) > 100 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
-            raise serializers.ValidationError("question_id is invalid")
+            raise ValidationError("question_id is invalid")
         return value
 
     def validate_serie(self, value):
@@ -156,7 +170,7 @@ class QuestionInteractionSerializer(serializers.ModelSerializer):
             return value
         value = value.strip()
         if len(value) > 50 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
-            raise serializers.ValidationError("serie is invalid")
+            raise ValidationError("serie is invalid")
         return value
 
     def create(self, validated_data):
@@ -193,19 +207,13 @@ class QuestionInteractionSerializer(serializers.ModelSerializer):
         )
 
 
-class TrackingEventSerializer(serializers.ModelSerializer):
+class TrackingEventSerializer(BaseInputValidator):
     """Validates generic tracking event payloads."""
-
-    class Meta:
-        model = TrackingEvent
-        fields = ["session", "event_type", "page_url", "metadata"]
-
-    session = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate_event_type(self, value):
         valid_types = [choice[0] for choice in TrackingEvent.EVENT_TYPE_CHOICES]
         if value not in valid_types:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 f"Invalid event_type. Must be one of: {valid_types}"
             )
         return value
@@ -214,13 +222,13 @@ class TrackingEventSerializer(serializers.ModelSerializer):
         if value is None:
             return {}
         if not isinstance(value, dict):
-            raise serializers.ValidationError("metadata must be a JSON object (dict)")
+            raise ValidationError("metadata must be a JSON object (dict)")
         if len(json_safe := str(value)) > 4000:
-            raise serializers.ValidationError("metadata is too large")
+            raise ValidationError("metadata is too large")
         return value
 
     def validate_page_url(self, value):
         value = (value or "").strip()
         if len(value) > 1000 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
-            raise serializers.ValidationError("page_url is invalid")
+            raise ValidationError("page_url is invalid")
         return value

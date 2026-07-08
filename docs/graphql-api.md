@@ -260,6 +260,20 @@ query {
 
 ```graphql
 query {
+  contact(id: 1) {
+    id
+    ticketId
+    email
+    status
+    clientDossier {
+      dossierId
+    }
+  }
+}
+```
+
+```graphql
+query {
   unreadContacts {
     id
     name

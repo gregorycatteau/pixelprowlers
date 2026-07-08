@@ -1,6 +1,6 @@
 import re
 
-from rest_framework import serializers
+from django.core.exceptions import ValidationError
 
 from audits.dossier_services import attach_client_dossier
 from audits.models import ClientDossier
@@ -28,49 +28,41 @@ SINGLE_LINE_FIELDS = {
 }
 
 
-class UrgencyRequestSerializer(serializers.ModelSerializer):
-    website = serializers.CharField(required=False, allow_blank=True, write_only=True)
+class UrgencyRequestSerializer:
+    def __init__(self, data=None, context=None, **kwargs):
+        self.initial_data = data or {}
+        self.context = context or {}
+        self.validated_data = {}
+        self.errors = {}
 
-    class Meta:
-        model = UrgencyRequest
-        fields = [
-            "reference",
-            "problem_type",
-            "impact_level",
-            "affected_url",
-            "short_description",
-            "since_when",
-            "name",
-            "organization",
-            "email",
-            "phone",
-            "contact_preference",
-            "callback_slot",
-            "expected_next_step",
-            "consent_to_contact",
-            "no_secrets_confirmed",
-            "website",
-        ]
-        read_only_fields = ["reference"]
+    def is_valid(self):
+        try:
+            self.validated_data = self.validate(dict(self.initial_data))
+            self.errors = {}
+            return True
+        except ValidationError as exc:
+            self.validated_data = {}
+            self.errors = {"non_field_errors": exc.messages}
+            return False
 
     def validate(self, attrs):
         if attrs.get("website"):
-            raise serializers.ValidationError("Demande refusée.")
+            raise ValidationError("Demande refusée.")
 
         for field, value in attrs.items():
             if not isinstance(value, str):
                 continue
 
             if field in SINGLE_LINE_FIELDS and ("\r" in value or "\n" in value):
-                raise serializers.ValidationError("Un champ contient un saut de ligne non autorisé.")
+                raise ValidationError("Un champ contient un saut de ligne non autorisé.")
 
             if any(pattern.search(value) for pattern in SECRET_PATTERNS):
-                raise serializers.ValidationError(
+                raise ValidationError(
                     "La demande semble contenir un secret. Retirez tout mot de passe, token, clé privée ou accès sensible."
                 )
 
         if not attrs.get("consent_to_contact") or not attrs.get("no_secrets_confirmed"):
-            raise serializers.ValidationError("Les confirmations obligatoires doivent être cochées.")
+            raise ValidationError("Les confirmations obligatoires doivent être cochées.")
 
         return attrs
 
@@ -83,3 +75,6 @@ class UrgencyRequestSerializer(serializers.ModelSerializer):
         )
         attach_client_dossier(ticket, phase=ClientDossier.Phase.CONTACT, source="urgence", metadata={"urgency_reference": ticket.reference})
         return ticket
+
+    def save(self, **kwargs):
+        return self.create({**self.validated_data, **kwargs})
