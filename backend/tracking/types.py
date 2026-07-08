@@ -19,6 +19,7 @@ class VisitorSessionType(DjangoObjectType):
             "utm_medium",
             "utm_campaign",
             "language",
+            "client_dossier",
             "created_at",
             "last_seen_at",
         ]

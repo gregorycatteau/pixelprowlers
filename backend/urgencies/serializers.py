@@ -2,6 +2,9 @@ import re
 
 from rest_framework import serializers
 
+from audits.dossier_services import attach_client_dossier
+from audits.models import ClientDossier
+
 from .models import UrgencyRequest
 from .services import create_urgency_reference
 
@@ -74,7 +77,9 @@ class UrgencyRequestSerializer(serializers.ModelSerializer):
     # Génère la référence au moment de la création, après validation stricte.
     def create(self, validated_data):
         validated_data.pop("website", None)
-        return UrgencyRequest.objects.create(
+        ticket = UrgencyRequest.objects.create(
             reference=create_urgency_reference(),
             **validated_data,
         )
+        attach_client_dossier(ticket, phase=ClientDossier.Phase.CONTACT, source="urgence", metadata={"urgency_reference": ticket.reference})
+        return ticket

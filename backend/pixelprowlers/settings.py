@@ -10,21 +10,23 @@ DEV_INSECURE_SECRET_KEY = "pixelprowlers-dev-insecure-change-me"
 
 
 def load_env_file() -> None:
-    env_path = PROJECT_DIR / ".env"
-    if not env_path.exists():
-        return
+    env_paths = (PROJECT_DIR / ".env", BASE_DIR / ".env")
 
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    for env_path in env_paths:
+        if not env_path.exists():
             continue
 
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
 
-        if key:
-            os.environ.setdefault(key, value)
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+
+            if key:
+                os.environ.setdefault(key, value)
 
 
 load_env_file()
@@ -188,7 +190,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if env("SMTP_HOST") else "django.core.mail.backends.console.EmailBackend",
+)
 EMAIL_HOST = env("SMTP_HOST", "localhost")
 EMAIL_PORT = int(env("SMTP_PORT", "25") or "25")
 EMAIL_HOST_USER = env("SMTP_USER")
@@ -198,6 +203,13 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", env("CONTACT_FROM"))
 CONTACT_TO = env("CONTACT_TO")
 AUDIT_INTERNAL_EMAIL = env("AUDIT_INTERNAL_EMAIL")
 URGENCY_INTERNAL_EMAIL = env("URGENCY_INTERNAL_EMAIL")
+INTERNAL_SMS_TO = env("INTERNAL_SMS_TO")
+SMS_DRY_RUN = env_bool("SMS_DRY_RUN", True)
+TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = env("TWILIO_FROM_NUMBER")
+WEBHOOK_URL = env_first("WEBHOOK_URL", "URGENCY_WEBHOOK_URL")
+WEBHOOK_TOKEN = env_first("WEBHOOK_TOKEN", "URGENCY_WEBHOOK_TOKEN")
 
 # Clé secrète HMAC pour la signature légale des réponses d'audit (AuditReponse.compute_signature)
 AUDIT_SIGNATURE_KEY = env("AUDIT_SIGNATURE_KEY")

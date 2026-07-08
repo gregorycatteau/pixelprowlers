@@ -3,11 +3,14 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
+from pixelprowlers.notifications import safe_send_mail
+
+from .dossier_services import get_or_create_client_dossier
 from .models import AuditDossier, CreneauCalendrier, Motif, RaisonAppel, Rdv, RdvContact, RdvRappel
+from .models import ClientDossier
 
 
 MORNING_START = time(9, 0)
@@ -137,6 +140,13 @@ def reserve_rdv(*, motif: Motif, slot: dict, contact_data: dict, raison_ids: lis
         raise ValueError("Ce créneau vient d'être réservé. Merci d'en choisir un autre.")
 
     audit_dossier = AuditDossier.objects.filter(email__iexact=contact_data["email"]).order_by("-date_creation").first()
+    client_dossier, _created = get_or_create_client_dossier(
+        email=contact_data["email"],
+        name=f"{contact_data['prenom']} {contact_data['nom']}",
+        phone=contact_data["telephone"],
+        source="rdv",
+        phase=ClientDossier.Phase.PROPOSITION,
+    )
     contact, _created = RdvContact.objects.update_or_create(
         email=contact_data["email"].lower(),
         defaults={
@@ -144,6 +154,7 @@ def reserve_rdv(*, motif: Motif, slot: dict, contact_data: dict, raison_ids: lis
             "nom": contact_data["nom"],
             "telephone": contact_data["telephone"],
             "audit_dossier": audit_dossier,
+            "client_dossier": client_dossier,
         },
     )
     status = CreneauCalendrier.Statut.RESERVE_INTERVENTION if motif.nom.lower().find("intervention") >= 0 else CreneauCalendrier.Statut.RESERVE_AUDIT
@@ -156,7 +167,7 @@ def reserve_rdv(*, motif: Motif, slot: dict, contact_data: dict, raison_ids: lis
         urgence=urgence,
         client=contact,
     )
-    rdv = Rdv.objects.create(contact=contact, motif=motif, urgence=urgence, message=message)
+    rdv = Rdv.objects.create(contact=contact, motif=motif, urgence=urgence, message=message, client_dossier=client_dossier)
     rdv.creneaux.add(creneau)
     rdv.raisons.set(RaisonAppel.objects.filter(id__in=raison_ids, actif=True))
     create_reminders(rdv, day, start)
@@ -184,28 +195,24 @@ def notify_rdv_confirmation(rdv: Rdv) -> dict[str, str]:
     if not creneau:
         return status
 
-    try:
-        send_mail(
-            subject="Votre rendez-vous PixelProwlers est confirmé",
-            message="\n".join([
-                f"Bonjour {rdv.contact.prenom},",
-                "",
-                "Votre rendez-vous est confirmé.",
-                f"Date : {creneau.date.strftime('%d/%m/%Y')}",
-                f"Heure : {creneau.heure_debut.strftime('%H:%M')} - {creneau.heure_fin.strftime('%H:%M')}",
-                f"Motif : {rdv.motif.nom}",
-                "",
-                "Vous recevrez un rappel la veille et 1h avant votre RDV.",
-                "",
-                "PixelProwlers",
-            ]),
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL"),
-            recipient_list=[rdv.contact.email],
-            fail_silently=False,
-        )
-        status["client_email"] = "sent"
-    except Exception:
-        status["client_email"] = "failed"
+    status["client_email"] = safe_send_mail(
+        subject="Votre rendez-vous PixelProwlers est confirmé",
+        message="\n".join([
+            f"Bonjour {rdv.contact.prenom},",
+            "",
+            "Votre rendez-vous est confirmé.",
+            f"Dossier client : {rdv.client_dossier.dossier_id if rdv.client_dossier_id else '-'}",
+            f"Date : {creneau.date.strftime('%d/%m/%Y')}",
+            f"Heure : {creneau.heure_debut.strftime('%H:%M')} - {creneau.heure_fin.strftime('%H:%M')}",
+            f"Motif : {rdv.motif.nom}",
+            "",
+            "Vous recevrez un rappel la veille et 1h avant votre RDV.",
+            "",
+            "PixelProwlers",
+        ]),
+        from_email=getattr(settings, "DEFAULT_FROM_EMAIL"),
+        recipient_list=[rdv.contact.email],
+    )
     return status
 
 
@@ -233,7 +240,7 @@ def notify_rdv_reminder(reminder: RdvRappel) -> None:
     creneau = reminder.rdv.creneaux.order_by("date", "heure_debut").first()
     if not creneau:
         return
-    send_mail(
+    status = safe_send_mail(
         subject="Rappel de votre rendez-vous PixelProwlers",
         message="\n".join([
             f"Bonjour {reminder.rdv.contact.prenom},",
@@ -245,5 +252,6 @@ def notify_rdv_reminder(reminder: RdvRappel) -> None:
         ]),
         from_email=getattr(settings, "DEFAULT_FROM_EMAIL"),
         recipient_list=[reminder.rdv.contact.email],
-        fail_silently=False,
     )
+    if status != "sent":
+        raise RuntimeError(f"Rappel email non envoyé: {status}")

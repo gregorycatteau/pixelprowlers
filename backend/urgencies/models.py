@@ -47,6 +47,13 @@ class UrgencyRequest(models.Model):
     no_secrets_confirmed = models.BooleanField(default=False)
     status = models.CharField(max_length=24, default="open")
     notification_status = models.JSONField(default=dict, blank=True)
+    client_dossier = models.ForeignKey(
+        "audits.ClientDossier",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="urgency_requests",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

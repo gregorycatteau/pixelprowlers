@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+from audits.dossier_services import create_client_dossier
+from audits.models import ClientDossier
+
 from .models import VisitorSession, PageView, QuestionInteraction, TrackingEvent
 from .utils import parse_user_agent, get_client_ip, extract_utm
 
@@ -18,6 +21,19 @@ class SessionInitSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("session_id is required")
         return value
+
+    def validate(self, attrs):
+        for field in ["referrer", "utm_source", "utm_medium", "utm_campaign", "language"]:
+            value = attrs.get(field)
+            if value is None:
+                continue
+            cleaned = str(value).strip()
+            if len(cleaned) > 500:
+                raise serializers.ValidationError(f"{field} is too long")
+            if any(char in cleaned for char in ["\r", "\n", "<", ">", "`"]):
+                raise serializers.ValidationError(f"{field} contains forbidden characters")
+            attrs[field] = cleaned or None
+        return attrs
 
     def create(self, validated_data):
         request = self.context.get("request")
@@ -45,8 +61,15 @@ class SessionInitSerializer(serializers.Serializer):
             else:
                 utm = {**utm, **extract_utm(request.POST)}
 
+        client_dossier = create_client_dossier(
+            source="tracking",
+            phase=ClientDossier.Phase.CONTACT,
+            metadata={"session_id": str(validated_data["session_id"])},
+        )
+
         return VisitorSession.objects.create(
             session_id=validated_data["session_id"],
+            client_dossier=client_dossier,
             ip_address=ip_address,
             user_agent=raw_ua,
             device_type=parsed_ua["device_type"],
@@ -83,6 +106,20 @@ class PageViewSerializer(serializers.ModelSerializer):
 
     session = serializers.PrimaryKeyRelatedField(read_only=True)
 
+    def validate_url(self, value):
+        value = (value or "").strip()
+        if len(value) > 1000 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
+            raise serializers.ValidationError("url is invalid")
+        return value
+
+    def validate_title(self, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if len(value) > 300 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
+            raise serializers.ValidationError("title is invalid")
+        return value
+
 
 class QuestionInteractionSerializer(serializers.ModelSerializer):
     """Validates question interaction payloads and applies upsert logic."""
@@ -107,6 +144,20 @@ class QuestionInteractionSerializer(serializers.ModelSerializer):
         if value is not None and value < 0:
             raise serializers.ValidationError("order_index must be non-negative")
         return value or 0
+
+    def validate_question_id(self, value):
+        value = (value or "").strip()
+        if not value or len(value) > 100 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
+            raise serializers.ValidationError("question_id is invalid")
+        return value
+
+    def validate_serie(self, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if len(value) > 50 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
+            raise serializers.ValidationError("serie is invalid")
+        return value
 
     def create(self, validated_data):
         session = self.context["session"]
@@ -164,4 +215,12 @@ class TrackingEventSerializer(serializers.ModelSerializer):
             return {}
         if not isinstance(value, dict):
             raise serializers.ValidationError("metadata must be a JSON object (dict)")
+        if len(json_safe := str(value)) > 4000:
+            raise serializers.ValidationError("metadata is too large")
+        return value
+
+    def validate_page_url(self, value):
+        value = (value or "").strip()
+        if len(value) > 1000 or any(char in value for char in ["\r", "\n", "<", ">", "`"]):
+            raise serializers.ValidationError("page_url is invalid")
         return value

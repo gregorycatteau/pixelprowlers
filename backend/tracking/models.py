@@ -24,6 +24,13 @@ class VisitorSession(models.Model):
     utm_medium = models.CharField(max_length=255, null=True, blank=True)
     utm_campaign = models.CharField(max_length=255, null=True, blank=True)
     language = models.CharField(max_length=50, null=True, blank=True)
+    client_dossier = models.ForeignKey(
+        "audits.ClientDossier",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="visitor_sessions",
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     last_seen_at = models.DateTimeField(auto_now=True)
 

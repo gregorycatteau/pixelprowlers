@@ -6,7 +6,8 @@ from urllib.parse import urlparse
 
 from rest_framework import serializers
 
-from .models import AuditDossier, AuditReponse, Citation, Motif, RaisonAppel, Rdv, RefonteAudit
+from .dossier_services import attach_client_dossier
+from .models import AuditDossier, AuditReponse, Citation, ClientDossier, Motif, RaisonAppel, Rdv, RefonteAudit
 from .rdv_services import reserve_rdv
 from .refonte_analysis import schedule_refonte_analysis
 from .refonte_questions import REFONTE_QUESTION_IDS
@@ -159,6 +160,8 @@ class AuditSubmitSerializer(serializers.Serializer):
         dossier.statut = AuditDossier.Status.QUESTIONNAIRE_COMPLETE
         dossier.notification_status = notify_completed_audit(dossier, calculated["score_global"])
         dossier.save(update_fields=["statut", "notification_status"])
+        if dossier.client_dossier_id:
+            dossier.client_dossier.increment_phase(ClientDossier.Phase.DIAGNOSTIC, reason="audit questionnaire complété")
 
         return reponse
 
@@ -280,6 +283,7 @@ class RefonteAuditCreateSerializer(serializers.ModelSerializer):
             analysis_status=RefonteAudit.AnalysisStatus.EN_COURS,
             **validated_data,
         )
+        attach_client_dossier(audit, phase=ClientDossier.Phase.DIAGNOSTIC, source="refonte", metadata={"refonte_reference": audit.reference})
         schedule_refonte_analysis(audit.id)
         return audit
 

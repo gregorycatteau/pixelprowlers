@@ -25,5 +25,6 @@ class UrgencyRequestType(DjangoObjectType):
             "no_secrets_confirmed",
             "status",
             "notification_status",
+            "client_dossier",
             "created_at",
         ]

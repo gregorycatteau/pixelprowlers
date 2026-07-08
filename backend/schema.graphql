@@ -4,6 +4,7 @@ type Query {
   raisonsAppel: [RaisonAppelType]
   refonteAudit(reference: String!): RefonteAuditType
   auditDossier(numeroDossier: String!): AuditDossierType
+  clientDossier(dossierId: String!): ClientDossierType
   creneauxDisponibles(motifId: Int!, dateDebut: Date!, dateFin: Date!, urgence: Boolean = false): [CreneauDisponibleType]
   calendrierMois(annee: Int!, mois: Int!): [JourCalendrierType]
 }
@@ -146,6 +147,7 @@ type RdvContactType {
   email: String!
   telephone: String!
   auditDossier: AuditDossierType
+  clientDossier: ClientDossierType
   createdAt: DateTime!
   updatedAt: DateTime!
   creneaux: [CreneauCalendrierType!]!
@@ -165,6 +167,7 @@ type AuditDossierType {
   dateCreation: DateTime!
   statut: AuditsAuditDossierStatutChoices!
   notificationStatus: JSONString!
+  clientDossier: ClientDossierType
   reponse: AuditReponseType
   rdvContacts: [RdvContactType!]!
 }
@@ -190,23 +193,178 @@ enum AuditsAuditDossierStatutChoices {
   QUESTIONNAIRE_COMPLETE
 }
 
-type AuditReponseType {
+type ClientDossierType {
   id: ID!
-  dossier: AuditDossierType!
-  reponses: JSONString!
-  scoresSeries: JSONString!
-  scoreGlobal: Decimal!
-  pilierFaible: String!
-  dateSoumission: DateTime!
-  ipAddress: String
-  userAgent: String!
-  nomSignataire: String!
-  telephoneSignataire: String!
-  signatureHash: String!
+  dossierId: String!
+  sequenceMonth: String!
+  sequenceNumber: Int!
+  phase: AuditsClientDossierPhaseChoices!
+  email: String!
+  name: String!
+  phone: String!
+  source: String!
+  metadata: JSONString!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  logs: [DossierLogType!]!
+  auditDossiers: [AuditDossierType!]!
+  refonteAudits: [RefonteAuditType!]!
+  rdvContacts: [RdvContactType!]!
+  rdvs: [RdvType!]!
+  urgencyRequests: [UrgencyRequestType!]!
+  visitorSessions: [VisitorSessionType!]!
 }
 
-"""The `Decimal` scalar type represents a python Decimal."""
-scalar Decimal
+"""An enumeration."""
+enum AuditsClientDossierPhaseChoices {
+  """Contact"""
+  A_0
+
+  """Diagnostic"""
+  A_1
+
+  """Proposition"""
+  A_2
+
+  """Contrat"""
+  A_3
+
+  """En cours"""
+  A_4
+
+  """Tests / recette"""
+  A_5
+
+  """Livraison"""
+  A_6
+
+  """Suivi"""
+  A_7
+
+  """Archivé"""
+  A_8
+}
+
+type DossierLogType {
+  id: ID!
+  dossier: ClientDossierType!
+  oldPhase: AuditsDossierLogOldPhaseChoices!
+  newPhase: AuditsDossierLogNewPhaseChoices!
+  timestamp: DateTime!
+  reason: String!
+}
+
+"""An enumeration."""
+enum AuditsDossierLogOldPhaseChoices {
+  """Contact"""
+  A_0
+
+  """Diagnostic"""
+  A_1
+
+  """Proposition"""
+  A_2
+
+  """Contrat"""
+  A_3
+
+  """En cours"""
+  A_4
+
+  """Tests / recette"""
+  A_5
+
+  """Livraison"""
+  A_6
+
+  """Suivi"""
+  A_7
+
+  """Archivé"""
+  A_8
+}
+
+"""An enumeration."""
+enum AuditsDossierLogNewPhaseChoices {
+  """Contact"""
+  A_0
+
+  """Diagnostic"""
+  A_1
+
+  """Proposition"""
+  A_2
+
+  """Contrat"""
+  A_3
+
+  """En cours"""
+  A_4
+
+  """Tests / recette"""
+  A_5
+
+  """Livraison"""
+  A_6
+
+  """Suivi"""
+  A_7
+
+  """Archivé"""
+  A_8
+}
+
+type RefonteAuditType {
+  id: ID!
+  reference: String!
+  prenom: String!
+  nom: String!
+  email: String!
+  telephone: String!
+  typePersonne: AuditsRefonteAuditTypePersonneChoices!
+  nomStructure: String
+  siteUrl: String!
+  consentementRgpd: Boolean!
+  reponses: JSONString!
+  analysisStatus: AuditsRefonteAuditAnalysisStatusChoices!
+  technicalReport: JSONString!
+  pagespeedReport: JSONString!
+  heuristicReport: JSONString!
+  analysisError: String!
+  dateCreation: DateTime!
+  dateMaj: DateTime!
+  clientDossier: ClientDossierType
+}
+
+"""An enumeration."""
+enum AuditsRefonteAuditTypePersonneChoices {
+  """Individu"""
+  INDIVIDU
+
+  """Association"""
+  ASSOCIATION
+
+  """Entreprise"""
+  ENTREPRISE
+}
+
+"""An enumeration."""
+enum AuditsRefonteAuditAnalysisStatusChoices {
+  """En cours d'analyse"""
+  EN_COURS
+
+  """Terminé"""
+  TERMINE
+
+  """Échec partiel"""
+  ECHEC_PARTIEL
+
+  """Non analysable"""
+  NON_ANALYSABLE
+
+  """Échec"""
+  ECHEC
+}
 
 type RdvType {
   id: ID!
@@ -218,6 +376,7 @@ type RdvType {
   message: String!
   statut: AuditsRdvStatutChoices!
   notificationStatus: JSONString!
+  clientDossier: ClientDossierType
   createdAt: DateTime!
   updatedAt: DateTime!
   rappels: [RdvRappelType!]!
@@ -259,88 +418,6 @@ enum AuditsRdvRappelTypeRappelChoices {
   UNE_HEURE
 }
 
-type RefonteAuditType {
-  id: ID!
-  reference: String!
-  prenom: String!
-  nom: String!
-  email: String!
-  telephone: String!
-  typePersonne: AuditsRefonteAuditTypePersonneChoices!
-  nomStructure: String
-  siteUrl: String!
-  consentementRgpd: Boolean!
-  reponses: JSONString!
-  analysisStatus: AuditsRefonteAuditAnalysisStatusChoices!
-  technicalReport: JSONString!
-  pagespeedReport: JSONString!
-  heuristicReport: JSONString!
-  analysisError: String!
-  dateCreation: DateTime!
-  dateMaj: DateTime!
-}
-
-"""An enumeration."""
-enum AuditsRefonteAuditTypePersonneChoices {
-  """Individu"""
-  INDIVIDU
-
-  """Association"""
-  ASSOCIATION
-
-  """Entreprise"""
-  ENTREPRISE
-}
-
-"""An enumeration."""
-enum AuditsRefonteAuditAnalysisStatusChoices {
-  """En cours d'analyse"""
-  EN_COURS
-
-  """Terminé"""
-  TERMINE
-
-  """Échec partiel"""
-  ECHEC_PARTIEL
-
-  """Non analysable"""
-  NON_ANALYSABLE
-
-  """Échec"""
-  ECHEC
-}
-
-type CreneauDisponibleType {
-  date: String
-  heureDebut: String
-  heureFin: String
-}
-
-type JourCalendrierType {
-  date: String
-  statut: String
-}
-
-type Mutation {
-  createUrgencyRequest(affectedUrl: String!, callbackSlot: String!, consentToContact: Boolean!, contactPreference: String!, email: String!, expectedNextStep: String!, impactLevel: String!, name: String!, noSecretsConfirmed: Boolean!, organization: String!, phone: String!, problemType: String!, shortDescription: String!, sinceWhen: String!, website: String): CreateUrgencyRequest
-  sessionInit(language: String, referrer: String, sessionId: UUID!, utmCampaign: String, utmMedium: String, utmSource: String): SessionInit
-  recordPageView(sessionId: UUID!, title: String, url: String!): RecordPageView
-  recordQuestionInteraction(orderIndex: Int, questionId: String!, revisitCount: Int, serie: String, sessionId: UUID!, timeSpentSeconds: Float): RecordQuestionInteraction
-  recordTrackingEvent(eventType: String!, metadata: JSONString, pageUrl: String!, sessionId: UUID): RecordTrackingEvent
-  createAuditDossier(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, telephone: String!, typePersonne: String!): CreateAuditDossier
-  submitAuditReponses(numeroDossier: String!, reponses: JSONString!): SubmitAuditReponses
-  createRefonteAudit(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, reponses: JSONString!, siteUrl: String!, telephone: String!, typePersonne: String!): CreateRefonteAudit
-  createRdvReservation(date: Date!, email: String!, heureDebut: String!, heureFin: String!, message: String, motifId: Int!, nom: String!, prenom: String!, raisonIds: [Int]!, telephone: String!, urgence: Boolean = false): CreateRdvReservation
-}
-
-type CreateUrgencyRequest {
-  reference: String
-  status: String
-  message: String
-  clientEmailStatus: String
-  ticket: UrgencyRequestType
-}
-
 type UrgencyRequestType {
   id: ID!
   reference: String!
@@ -360,6 +437,7 @@ type UrgencyRequestType {
   noSecretsConfirmed: Boolean!
   status: String!
   notificationStatus: JSONString!
+  clientDossier: ClientDossierType
   createdAt: DateTime!
 }
 
@@ -435,18 +513,6 @@ enum UrgenciesUrgencyRequestExpectedNextStepChoices {
   NEED_GUIDANCE
 }
 
-type SessionInit {
-  sessionId: UUID
-  created: DateTime
-  session: VisitorSessionType
-}
-
-"""
-Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
-in fields, resolvers and input.
-"""
-scalar UUID
-
 type VisitorSessionType {
   id: UUID!
   sessionId: UUID!
@@ -460,9 +526,16 @@ type VisitorSessionType {
   utmMedium: String
   utmCampaign: String
   language: String
+  clientDossier: ClientDossierType
   createdAt: DateTime!
   lastSeenAt: DateTime!
 }
+
+"""
+Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
+in fields, resolvers and input.
+"""
+scalar UUID
 
 """An enumeration."""
 enum TrackingVisitorSessionDeviceTypeChoices {
@@ -477,6 +550,61 @@ enum TrackingVisitorSessionDeviceTypeChoices {
 
   """Unknown"""
   UNKNOWN
+}
+
+type AuditReponseType {
+  id: ID!
+  dossier: AuditDossierType!
+  reponses: JSONString!
+  scoresSeries: JSONString!
+  scoreGlobal: Decimal!
+  pilierFaible: String!
+  dateSoumission: DateTime!
+  ipAddress: String
+  userAgent: String!
+  nomSignataire: String!
+  telephoneSignataire: String!
+  signatureHash: String!
+}
+
+"""The `Decimal` scalar type represents a python Decimal."""
+scalar Decimal
+
+type CreneauDisponibleType {
+  date: String
+  heureDebut: String
+  heureFin: String
+}
+
+type JourCalendrierType {
+  date: String
+  statut: String
+}
+
+type Mutation {
+  createUrgencyRequest(affectedUrl: String!, callbackSlot: String!, consentToContact: Boolean!, contactPreference: String!, email: String!, expectedNextStep: String!, impactLevel: String!, name: String!, noSecretsConfirmed: Boolean!, organization: String!, phone: String!, problemType: String!, shortDescription: String!, sinceWhen: String!, website: String): CreateUrgencyRequest
+  sessionInit(language: String, referrer: String, sessionId: UUID!, utmCampaign: String, utmMedium: String, utmSource: String): SessionInit
+  recordPageView(sessionId: UUID!, title: String, url: String!): RecordPageView
+  recordQuestionInteraction(orderIndex: Int, questionId: String!, revisitCount: Int, serie: String, sessionId: UUID!, timeSpentSeconds: Float): RecordQuestionInteraction
+  recordTrackingEvent(eventType: String!, metadata: JSONString, pageUrl: String!, sessionId: UUID): RecordTrackingEvent
+  createAuditDossier(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, telephone: String!, typePersonne: String!): CreateAuditDossier
+  submitAuditReponses(numeroDossier: String!, reponses: JSONString!): SubmitAuditReponses
+  createRefonteAudit(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, reponses: JSONString!, siteUrl: String!, telephone: String!, typePersonne: String!): CreateRefonteAudit
+  createRdvReservation(date: Date!, email: String!, heureDebut: String!, heureFin: String!, message: String, motifId: Int!, nom: String!, prenom: String!, raisonIds: [Int]!, telephone: String!, urgence: Boolean = false): CreateRdvReservation
+}
+
+type CreateUrgencyRequest {
+  reference: String
+  status: String
+  message: String
+  clientEmailStatus: String
+  ticket: UrgencyRequestType
+}
+
+type SessionInit {
+  sessionId: UUID
+  created: DateTime
+  session: VisitorSessionType
 }
 
 type RecordPageView {
