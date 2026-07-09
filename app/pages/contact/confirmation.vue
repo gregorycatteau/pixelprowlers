@@ -3,8 +3,8 @@
     <section class="about-hero" aria-labelledby="confirmation-title">
       <div class="article-container">
         <p class="eyebrow">Ticket ouvert</p>
-        <h1 id="confirmation-title">Merci. On a reçu votre demande.</h1>
-        <p>Voici votre numéro de ticket. On vous recontacte rapidement.</p>
+        <h1 id="confirmation-title">Votre demande est prise en charge.</h1>
+        <p>Première étape vers la reprise de contrôle. Un expert va analyser votre situation.</p>
       </div>
     </section>
 
@@ -21,6 +21,8 @@
         <div v-else-if="ticket" class="contact-panel">
           <h2 id="confirmation-ticket-title">Ticket ID : {{ ticket.ticketId }}</h2>
           <p>{{ contactEmailLabel(ticket) }} : {{ maskEmail(ticket.email) }}</p>
+          <p>Vous savez maintenant par où commencer : votre site, vos accès et vos priorités vont être clarifiés.</p>
+          <p>Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
           <div class="result-actions">
             <AppButton :href="`/ticket/${ticket.secretToken}`">Consulter votre ticket</AppButton>
             <AppButton variant="secondary" href="/">Retour à l'accueil</AppButton>

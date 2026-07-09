@@ -11,7 +11,8 @@ export const offers = [
       'Vous repartez sachant ce qui tient et ce qui ne tient pas',
     ],
     href: '/audit-site-web',
-    cta: 'Vérifier mon site maintenant',
+    cta: 'Faire analyser mon site',
+    ctaNote: 'Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.',
   },
   {
     kicker: 'Refonte',
@@ -25,7 +26,8 @@ export const offers = [
       "Documenté : l'équipe sait comment ça marche",
     ],
     href: '/audit-refonte',
-    cta: 'Reconstruire mon site',
+    cta: 'Clarifier mon site',
+    ctaNote: 'Cadrage avant devis. Aucune modification sans votre accord.',
   },
   {
     kicker: 'Transmission',
@@ -39,8 +41,46 @@ export const offers = [
       'Moins de dépendance à une personne, plus de confiance',
     ],
     href: '/transmission-acces',
-    cta: 'Reprendre la main sur mes accès',
+    cta: 'Sécuriser mes accès',
+    ctaNote: 'Confidentialité stricte. Aucun accès partagé sans cadre clair.',
   },
+] as const;
+
+export const credibilityProofs = [
+  'Site bloqué → accès récupéré en 24h',
+  'WordPress piraté → nettoyé + sécurisé',
+  'Refonte mal livrée → reprise complète',
+] as const;
+
+export const methodProofs = [
+  'Audit structuré : accès, sécurité, sauvegardes, performance',
+  'Priorisation claire',
+  'Aucune action sans validation',
+] as const;
+
+export const trustGuarantees = [
+  'Vous ne partagez jamais vos accès sans cadre clair',
+  'Confidentialité stricte',
+  'Aucune modification sans votre accord',
+] as const;
+
+export const postActionSteps = [
+  'Analyse',
+  'Rapport',
+  'Recommandations',
+] as const;
+
+export const inactionCosts = [
+  'Un site fragile finit souvent par casser au pire moment',
+  'Les problèmes d’accès ou de sécurité empirent rarement seuls',
+  'Chaque semaine sans correction augmente le risque de blocage ou de perte',
+] as const;
+
+export const outcomeProjections = [
+  'Vous retrouvez le contrôle de votre site',
+  'Vos accès sont sécurisés et centralisés',
+  'Vous savez exactement quoi faire, dans le bon ordre',
+  'Vous n’êtes plus dépendant d’un prestataire flou',
 ] as const;
 
 export const problems = [
@@ -106,6 +146,8 @@ export type Landing = {
   secondaryCta: string;
   primaryHref: string;
   secondaryHref: string;
+  heroCtaNote?: string;
+  finalCtaNote?: string;
   finalTitle: string;
   finalText: string;
   finalCta: string;
@@ -125,14 +167,38 @@ export const landings: Record<string, Landing> = {
     kicker: 'Audit',
     title: 'Savoir avant que ça casse.',
     subtitle: 'Audit complet de votre site : infra, sécu, accès, sauvegardes. Rapport lisible. Priorités claires. Actions réalistes.',
-    heroCta: "Lancer l'audit",
+    heroCta: 'Faire analyser mon site',
     secondaryCta: "Parlons d'abord",
     primaryHref: '#audit-parcours',
     secondaryHref: '/rendez-vous',
+    heroCtaNote: 'Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.',
     finalTitle: 'Vous voulez savoir ce qui tient vraiment ?',
-    finalText: "On vérifie, on classe les risques, puis on vous dit ce qui mérite d'être traité maintenant.",
-    finalCta: "Lancer l'audit",
+    finalText: "On vérifie, on classe les risques, puis on vous dit ce qui mérite d'être traité maintenant. Si tout fonctionne parfaitement, ce ne sera probablement pas utile.",
+    finalCta: 'Obtenir un diagnostic clair',
+    finalCtaNote: 'Analyse, rapport, recommandations. Vous validez avant toute action.',
     sections: [
+      {
+        id: 'audit-preuves',
+        title: 'Des problèmes déjà vus, déjà repris.',
+        intro: 'Le doute est normal : on parle de sécurité, d’accès et de continuité. Voilà le type de situations traitées.',
+        items: [...credibilityProofs],
+      },
+      {
+        id: 'audit-methode',
+        title: 'La méthode avant l’intervention.',
+        alt: true,
+        blocks: [
+          { title: 'Audit structuré', items: ['Accès', 'Sécurité', 'Sauvegardes', 'Performance'] },
+          { title: 'Priorisation claire', text: "On distingue ce qui bloque, ce qui expose, et ce qui peut attendre." },
+          { title: 'Validation obligatoire', text: 'Aucune action sans validation. Aucun accès demandé sans cadre clair.' },
+        ],
+      },
+      {
+        id: 'audit-inaction',
+        title: 'Ce que l’attente peut coûter.',
+        intro: 'Un audit sert surtout à éviter que le problème soit découvert trop tard.',
+        items: [...inactionCosts],
+      },
       {
         id: 'audit-regarde',
         title: "Qu'est-ce qu'on regarde ?",
@@ -147,7 +213,24 @@ export const landings: Record<string, Landing> = {
         id: 'audit-repart',
         title: "Après l'audit, vous avez :",
         alt: true,
-        items: ['Rapport lisible', 'Priorités claires', 'Actions réalistes avec effort et complexité visibles', 'Recommandations précises par zone'],
+        items: ['Rapport lisible', 'Priorités claires', 'Actions réalistes avec effort et complexité visibles', 'Recommandations précises par zone', ...outcomeProjections],
+      },
+      {
+        id: 'audit-apres',
+        title: 'Ce qui se passe après votre demande.',
+        intro: "Vous savez à quoi vous attendre avant de cliquer.",
+        blocks: [
+          { title: 'Analyse', text: 'On lit votre situation et on vérifie les signaux prioritaires.' },
+          { title: 'Rapport', text: 'Vous recevez une synthèse claire, sans jargon inutile.' },
+          { title: 'Recommandations', text: 'On vous dit quoi corriger, dans quel ordre, et ce qui peut attendre.' },
+        ],
+      },
+      {
+        id: 'audit-garanties',
+        title: 'Vos accès restent sous contrôle.',
+        alt: true,
+        intro: 'Ce service est conçu pour des sites en production ou en difficulté. Nous intervenons sur des situations réelles, pas des projets exploratoires.',
+        items: [...trustGuarantees],
       },
     ],
   },

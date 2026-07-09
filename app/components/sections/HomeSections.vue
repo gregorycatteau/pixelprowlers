@@ -40,6 +40,33 @@
               <li v-for="point in offer.points" :key="point">{{ point }}</li>
             </ul>
             <AppButton class="card-action" :href="offer.href">{{ offer.cta }}</AppButton>
+            <p class="cta-note">{{ offer.ctaNote }}</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="preuves" class="section" aria-labelledby="proof-title">
+      <div class="container proof-grid">
+        <div class="section-heading">
+          <p class="eyebrow">Preuves concrètes</p>
+          <h2 id="proof-title">Des problèmes déjà vus, déjà repris.</h2>
+          <p>Vous ne cherchez pas une promesse. Vous voulez savoir si quelqu’un sait reprendre une situation technique sensible.</p>
+        </div>
+
+        <div class="proof-panels">
+          <article class="card">
+            <h3>Situations résolues</h3>
+            <ul>
+              <li v-for="proof in credibilityProofs" :key="proof">{{ proof }}</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Méthode de travail</h3>
+            <ul>
+              <li v-for="proof in methodProofs" :key="proof">{{ proof }}</li>
+            </ul>
           </article>
         </div>
       </div>
@@ -67,7 +94,7 @@
         <div class="section-heading">
           <p class="eyebrow">Méthode</p>
           <h2 id="method-title">On avance étape par étape.</h2>
-          <p>Comprendre, rendre visible, décider, puis transmettre.</p>
+          <p>Comprendre, rendre visible, décider, puis transmettre. Un site fragile finit souvent par casser au pire moment : plus tôt c’est pris, moins c’est coûteux.</p>
         </div>
 
         <div class="steps">
@@ -113,7 +140,8 @@
           <p class="eyebrow light">Premier échange</p>
           <h2 id="final-title">Vous êtes prêts ? On démarre.</h2>
           <p>Un diagnostic simple : comprendre ce que vous faites, ce qui vous stresse, par quoi commencer.</p>
-          <AppButton href="/diagnostic-situation">Lancer le diagnostic</AppButton>
+          <AppButton href="/diagnostic-situation">Obtenir un diagnostic clair</AppButton>
+          <p class="final-cta-note">Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
         </div>
       </div>
     </section>
@@ -123,7 +151,7 @@
 <script setup lang="ts">
 import headerWaveSvg from '~/assets/images/header-wave.svg?url';
 import AppButton from '~/components/ui/AppButton.vue';
-import { badFits, goodFits, offers, problems, steps } from '~/utils/siteContent';
+import { badFits, credibilityProofs, goodFits, methodProofs, offers, problems, steps } from '~/utils/siteContent';
 
 const headerWaveBackground = `url(${headerWaveSvg})`;
 
@@ -244,6 +272,26 @@ withDefaults(defineProps<{
   margin-top: auto;
 }
 
+.cta-note {
+  margin-top: 12px;
+  color: #596158;
+  font-size: 0.92rem;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.proof-panels {
+  display: grid;
+  gap: 18px;
+}
+
 .zone-impact {
   margin-top: 14px;
   color: #596158;
@@ -308,8 +356,17 @@ withDefaults(defineProps<{
   margin-top: 28px;
 }
 
+.final-cta-note {
+  max-width: 620px;
+  margin-top: 12px !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+  font-size: 0.96rem !important;
+  font-weight: 800;
+}
+
 @media (max-width: 900px) {
-  .method-grid {
+  .method-grid,
+  .proof-grid {
     grid-template-columns: 1fr;
   }
 }

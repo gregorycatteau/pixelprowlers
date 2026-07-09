@@ -7,7 +7,46 @@
     </section>
 
     <section class="RdvLayout" aria-label="Réservation de rendez-vous">
-      <section class="CalendarPanel" aria-labelledby="calendar-title">
+      <section v-if="isInitialLoading" class="CalendarPanel LoadingPanel" aria-live="polite">
+        <p class="RdvKicker">Chargement</p>
+        <h2>Recherche des disponibilités...</h2>
+        <p>Le calendrier et les motifs de rendez-vous sont en cours de chargement.</p>
+      </section>
+
+      <section v-else-if="bookingUnavailable" class="CalendarPanel FallbackPanel" aria-live="polite">
+        <p class="RdvKicker">Rendez-vous</p>
+        <h2>On peut quand même vous répondre rapidement</h2>
+        <p>Le calendrier ne charge pas pour le moment. Laissez trois informations : on revient vers vous sous 24h ouvrées.</p>
+        <div v-if="fallbackSubmitted" class="FallbackConfirmation" role="status">
+          <h3>Demande prête à envoyer.</h3>
+          <p>Votre message est ouvert dans votre messagerie. Dès réception, on vous répond sous 24h ouvrées avec une suite claire.</p>
+          <div class="FallbackActions">
+            <NuxtLink class="ButtonBase ButtonSecondary" to="/urgence">C'est urgent</NuxtLink>
+            <NuxtLink class="ButtonBase ButtonSecondary" to="/contact">Contact direct</NuxtLink>
+          </div>
+        </div>
+        <form v-else class="FallbackForm" @submit.prevent="submitFallback">
+          <label class="BookingField">
+            <span class="BookingLabel">Nom</span>
+            <input v-model="fallback.name" required class="BookingInput" type="text" autocomplete="name" placeholder="Votre nom">
+          </label>
+          <label class="BookingField">
+            <span class="BookingLabel">Email</span>
+            <input v-model="fallback.email" required class="BookingInput" type="email" autocomplete="email" placeholder="vous@exemple.fr">
+          </label>
+          <label class="BookingField">
+            <span class="BookingLabel">Message</span>
+            <textarea v-model="fallback.message" required class="BookingTextarea" rows="4" placeholder="Décrivez votre besoin en quelques lignes."></textarea>
+          </label>
+          <div class="FallbackActions">
+            <button class="ButtonBase ButtonPrimary" type="submit" :disabled="!canSubmitFallback">Envoyer la demande</button>
+            <NuxtLink class="ButtonBase ButtonSecondary" to="/contact">Contact</NuxtLink>
+            <NuxtLink class="ButtonBase ButtonSecondary" to="/urgence">Urgence</NuxtLink>
+          </div>
+        </form>
+      </section>
+
+      <section v-else class="CalendarPanel" aria-labelledby="calendar-title">
         <div class="CalendarHeader">
           <button class="CalendarNav" type="button" aria-label="Mois précédent" @click="moveMonth(-1)">‹</button>
           <h2 id="calendar-title" class="CalendarTitle">{{ monthLabel }}</h2>
@@ -41,8 +80,8 @@
         </div>
       </section>
 
-      <section class="BookingPanel" aria-labelledby="booking-title">
-        <p v-if="loadError" class="BookingError" role="alert">{{ loadError }}</p>
+      <section v-if="!isInitialLoading && !bookingUnavailable" class="BookingPanel" aria-labelledby="booking-title">
+        <p v-if="loadError" class="BookingError" role="alert">Chargement impossible pour le moment</p>
         <div v-if="confirmation" class="BookingConfirmation" role="status" aria-live="polite">
           <span class="ConfirmationBadge" aria-hidden="true"></span>
           <h2 id="booking-title" class="BookingTitle">Créneau réservé.</h2>
@@ -74,8 +113,8 @@
 
           <div class="SlotsBlock">
             <p class="BookingLabel">Créneaux disponibles le {{ selectedDateLabel }}</p>
-            <p v-if="!selectedMotifId" class="EmptyState">Choisissez un motif pour afficher les créneaux.</p>
-            <p v-else-if="isLoadingSlots" class="EmptyState">Chargement des créneaux...</p>
+            <p v-if="isLoadingSlots" class="EmptyState">Chargement des créneaux...</p>
+            <p v-else-if="!selectedMotifId" class="EmptyState">Choisissez un motif pour afficher les créneaux.</p>
             <p v-else-if="daySlots.length === 0" class="EmptyState">Aucun créneau disponible ce jour-là.</p>
             <div v-else class="SlotsGrid">
               <button
@@ -203,11 +242,19 @@ const motifs = ref<Motif[]>([]);
 const raisons = ref<Raison[]>([]);
 const monthStates = ref<DayState[]>([]);
 const slots = ref<Slot[]>([]);
+const isLoadingMonth = ref(false);
+const isLoadingMotifs = ref(true);
 const isLoadingSlots = ref(false);
 const isSubmitting = ref(false);
 const bookingError = ref('');
 const loadError = ref('');
 const confirmation = ref<BookingResponse | null>(null);
+const fallbackSubmitted = ref(false);
+const fallback = reactive({
+  name: '',
+  email: '',
+  message: '',
+});
 const form = reactive({
   prenom: '',
   nom: '',
@@ -222,6 +269,23 @@ const selectedDateLabel = computed(() => new Intl.DateTimeFormat('fr-FR', { day:
 const selectedMotif = computed(() => motifs.value.find((motif) => motif.id === Number(selectedMotifId.value)));
 const daySlots = computed(() => slots.value.filter((slot) => slot.date === selectedDate.value));
 const canSubmit = computed(() => Boolean(selectedMotif.value && selectedSlot.value && form.prenom && form.nom && form.email && form.telephone));
+const isInitialLoading = computed(() => isLoadingMonth.value || isLoadingMotifs.value);
+const bookingUnavailable = computed(() => Boolean(loadError.value) || (!isInitialLoading.value && (motifs.value.length === 0 || monthStates.value.length === 0)));
+const canSubmitFallback = computed(() => Boolean(
+  fallback.name.trim()
+  && fallback.email.includes('@')
+  && fallback.message.trim(),
+));
+const fallbackMailto = computed(() => {
+  const subject = encodeURIComponent('Demande de rendez-vous PixelProwlers');
+  const body = encodeURIComponent([
+    `Nom : ${fallback.name}`,
+    `Email : ${fallback.email}`,
+    '',
+    fallback.message || 'Bonjour, je souhaite être recontacté pour un rendez-vous.',
+  ].join('\n'));
+  return `mailto:contact@pixelprowlers.fr?subject=${subject}&body=${body}`;
+});
 const confirmationDate = computed(() => confirmation.value?.creneaux[0]
   ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(confirmation.value.creneaux[0].date))
   : '');
@@ -260,6 +324,7 @@ watch(selectedDate, () => {
 });
 
 onMounted(async () => {
+  isLoadingMotifs.value = true;
   try {
     const [motifsResponse, raisonsResponse] = await Promise.all([
       graphqlRequest<{
@@ -281,7 +346,9 @@ onMounted(async () => {
       nom: raison.nom,
     }));
   } catch (error) {
-    loadError.value = graphqlErrorMessage(error, 'Impossible de charger les données du rendez-vous.');
+    loadError.value = graphqlErrorMessage(error, 'Chargement impossible pour le moment');
+  } finally {
+    isLoadingMotifs.value = false;
   }
 });
 
@@ -311,12 +378,22 @@ function selectDate(iso: string) {
   selectedDate.value = iso;
 }
 
+function submitFallback() {
+  if (!canSubmitFallback.value) {
+    return;
+  }
+
+  fallbackSubmitted.value = true;
+  window.location.href = fallbackMailto.value;
+}
+
 function slotKey(slot: Slot) {
   return `${slot.date}-${slot.heure_debut}-${slot.heure_fin}`;
 }
 
 async function loadMonth() {
   loadError.value = '';
+  isLoadingMonth.value = true;
   try {
     const response = await graphqlRequest<{
       calendrierMois: GraphQLDayState[];
@@ -330,8 +407,10 @@ async function loadMonth() {
       statut: day.statut || 'ferme',
     })).filter((day) => Boolean(day.date));
   } catch (error) {
-    loadError.value = graphqlErrorMessage(error, 'Impossible de charger le calendrier.');
+    loadError.value = graphqlErrorMessage(error, 'Chargement impossible pour le moment');
     monthStates.value = [];
+  } finally {
+    isLoadingMonth.value = false;
   }
 }
 
@@ -364,7 +443,7 @@ async function loadSlots() {
         label: `${slot.heure_debut} - ${slot.heure_fin}`,
       }));
   } catch (error) {
-    loadError.value = graphqlErrorMessage(error, 'Impossible de charger les créneaux disponibles.');
+    loadError.value = graphqlErrorMessage(error, 'Chargement impossible pour le moment');
     slots.value = [];
   } finally {
     isLoadingSlots.value = false;
@@ -418,7 +497,7 @@ async function submitBooking() {
 
 .RdvHero,
 .RdvLayout {
-  @apply mx-auto w-[min(1180px,calc(100%_-_32px))] max-w-full;
+  @apply mx-auto w-[min(1180px,calc(100vw_-_32px))] max-w-full;
 }
 
 .RdvHero {
@@ -432,6 +511,7 @@ async function submitBooking() {
 
 .RdvTitle {
   @apply max-w-[850px] text-[clamp(2.2rem,5vw,4.5rem)] font-black leading-tight;
+  overflow-wrap: anywhere;
 }
 
 .RdvIntro,
@@ -448,6 +528,30 @@ async function submitBooking() {
 .CalendarPanel,
 .BookingPanel {
   @apply min-w-0 rounded-lg border border-white/70 bg-[#fbfaf5]/90 p-4 shadow-[0_22px_60px_rgb(23_37_29/0.14)] backdrop-blur-xl;
+}
+
+.LoadingPanel,
+.FallbackPanel {
+  @apply grid gap-4;
+}
+
+.LoadingPanel h2,
+.FallbackPanel h2 {
+  @apply text-[clamp(1.6rem,4vw,2.4rem)] font-black leading-tight;
+  overflow-wrap: anywhere;
+}
+
+.LoadingPanel p:not(.RdvKicker),
+.FallbackPanel p:not(.RdvKicker) {
+  @apply max-w-[680px] text-base font-bold leading-relaxed text-[#435046];
+}
+
+.FallbackForm {
+  @apply mt-2 grid gap-4;
+}
+
+.FallbackActions {
+  @apply flex flex-wrap gap-3;
 }
 
 .BookingPanel {
@@ -667,6 +771,38 @@ async function submitBooking() {
 @media (min-width: 1020px) {
   .RdvLayout {
     @apply grid-cols-[minmax(0,1fr)_440px] items-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .RdvHero,
+  .RdvLayout {
+    width: min(calc(100vw - 32px), 320px);
+    margin-left: 16px;
+    margin-right: auto;
+  }
+
+  .RdvHero {
+    @apply py-10;
+  }
+
+  .RdvTitle {
+    font-size: 1.75rem;
+    line-height: 1.16;
+  }
+
+  .RdvIntro,
+  .BookingIntro,
+  .ReminderText,
+  .EmptyState,
+  .LoadingPanel p:not(.RdvKicker),
+  .FallbackPanel p:not(.RdvKicker) {
+    font-size: 0.98rem;
+  }
+
+  .LoadingPanel h2,
+  .FallbackPanel h2 {
+    font-size: 1.5rem;
   }
 }
 </style>

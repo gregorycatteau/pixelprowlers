@@ -85,13 +85,10 @@
             </NuxtLink>
           </div>
 
-          <!-- Boutons d'action -->
+          <!-- Bouton d'action principal -->
           <div v-if="!isHome" class="HeaderActions">
             <NuxtLink class="ActionButton ActionButtonGreen" to="/diagnostic-situation">
-              Diagnostic gratuit
-            </NuxtLink>
-            <NuxtLink class="ActionButton ActionButtonOrange" to="/rendez-vous">
-              Reprendre la main
+              Faire le diagnostic gratuit
             </NuxtLink>
           </div>
 
@@ -124,10 +121,7 @@
           </div>
           <div v-if="!isHome" class="MobileActions">
             <NuxtLink class="ActionButton ActionButtonGreen" to="/diagnostic-situation" @click="closeMenu">
-              Diagnostic gratuit
-            </NuxtLink>
-            <NuxtLink class="ActionButton ActionButtonOrange" to="/rendez-vous" @click="closeMenu">
-              Reprendre la main
+              Faire le diagnostic gratuit
             </NuxtLink>
           </div>
         </div>
@@ -214,7 +208,7 @@ const closeMenu = () => {
 
 /* --- CONTENU INTERNE --- */
 .HeaderInner {
-  @apply relative z-10 mx-auto flex min-h-[82px] items-center justify-between gap-5 py-3;
+  @apply relative z-10 mx-auto flex min-h-20.5 items-center justify-between gap-5 py-3;
 }
 
 /* --- LOGO --- */
@@ -306,7 +300,7 @@ const closeMenu = () => {
 }
 
 .ActionButton {
-  @apply inline-flex h-[50px] min-w-[200px] items-center justify-center rounded-full px-6 text-[1rem] font-bold text-white no-underline transition;
+  @apply inline-flex h-12.5 min-w-50 items-center justify-center rounded-full px-6 text-[1rem] font-bold text-white no-underline transition;
   box-shadow: 0 12px 30px rgba(2, 6, 23, 0.22);
 }
 
@@ -317,11 +311,6 @@ const closeMenu = () => {
 
 .ActionButtonGreen {
   background: linear-gradient(180deg, #10b981 0%, #047857 100%);
-}
-
-.ActionButtonOrange {
-  border: 2px solid rgba(224, 242, 254, 0.95);
-  background: linear-gradient(180deg, #06b6d4 0%, #1e3a8a 100%);
 }
 
 /* --- BOUTON MENU MOBILE --- */
@@ -347,13 +336,13 @@ const closeMenu = () => {
 }
 
 .RescueLadder {
-  @apply h-[180px] w-auto;
+  @apply h-45 w-auto;
   filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.3));
 }
 
 /* --- MENU MOBILE --- */
 .MobileMenuShell {
-  @apply relative z-10 mx-auto w-[min(100%_-_24px,1280px)];
+  @apply relative z-10 mx-auto w-[min(100%-24px,1280px)];
 }
 
 .MobileMenu {
@@ -361,7 +350,7 @@ const closeMenu = () => {
 }
 
 .MobileMenuOpen {
-  @apply max-h-[480px] gap-3 pb-4 opacity-100;
+  @apply max-h-120 gap-3 pb-4 opacity-100;
 }
 
 .MobileLink,
@@ -387,7 +376,7 @@ const closeMenu = () => {
 
 /* --- PLAGE DE SABLE FIN --- */
 .NavWave {
-  @apply h-[22px] w-full;
+  @apply h-5.5 w-full;
   background:
     linear-gradient(180deg,
       rgba(245, 230, 205, 0.8) 0%,
@@ -480,6 +469,21 @@ const closeMenu = () => {
   .HeaderNav::before, .HeaderNav::after { display: none; }
   .NavWave { height: 16px; animation: none; }
   .RescueProwler { display: none !important; }
+  .HeaderInner {
+    @apply min-w-0 gap-2;
+  }
+  .BrandLogo {
+    @apply w-[clamp(132px,42vw,160px)];
+  }
+  .UtilityIcons {
+    @apply gap-2;
+  }
+  .IconLink {
+    @apply h-7 w-7;
+  }
+  .IconSvg {
+    @apply h-6 w-6;
+  }
 }
 
 @media (max-width: 820px) {
@@ -487,6 +491,6 @@ const closeMenu = () => {
 }
 
 @media (min-width: 821px) and (max-width: 1279px) {
-  .ActionButton { @apply min-w-[170px]; }
+  .ActionButton { @apply min-w-42.5; }
 }
 </style>

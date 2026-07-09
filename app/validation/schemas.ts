@@ -41,12 +41,12 @@ export const humanNameSchema = z.string()
   .transform(normalizeName)
   .refine((value) => value.length >= 2 && value.length <= 50, 'Entre 2 et 50 caractères.')
   .refine(rejectInjectionChars, 'Pas de balise, guillemet, point-virgule, commentaire SQL ou template.')
-  .refine((value) => namePattern.test(value), "Un prénom, c'est fait pour être lu par des humains, pas par une base de données — que des lettres, s'il te plaît");
+  .refine((value) => namePattern.test(value), 'Lettres, espaces, apostrophes et tirets uniquement.');
 
 const normalizedEmailSchema = z.string()
-  .email("Ton email ressemble à s'y méprendre à un email raté, un petit @ quelque part ?")
+  .email('Indiquez une adresse email valide.')
   .refine((value) => value.length <= 254, '254 caractères maximum.')
-  .refine((value) => !/\s/.test(value) && (value.match(/@/g) || []).length === 1, "Ton email ressemble à s'y méprendre à un email raté, un petit @ quelque part ?");
+  .refine((value) => !/\s/.test(value) && (value.match(/@/g) || []).length === 1, 'Indiquez une adresse email valide.');
 
 export const emailSchema = z.preprocess(
   (value) => typeof value === 'string' ? normalizeEmail(value) : value,
@@ -56,7 +56,7 @@ export const emailSchema = z.preprocess(
 export const frenchPhoneSchema = z.string()
   .transform(normalizePhoneDigits)
   .refine((value) => phoneInputPattern.test(value), 'Uniquement des chiffres, espaces et éventuellement +33.')
-  .refine((value) => phoneStrictPattern.test(value), 'Ton téléphone doit ressembler à du 06 XX XX XX XX ou +33 6 XX XX XX XX');
+  .refine((value) => phoneStrictPattern.test(value), 'Indiquez un numéro au format 06 XX XX XX XX ou +33 6 XX XX XX XX.');
 
 export const personTypeSchema = z.enum(['individu', 'association', 'entreprise']);
 
