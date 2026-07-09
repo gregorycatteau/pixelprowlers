@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -7,6 +8,7 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
 DEV_INSECURE_SECRET_KEY = "pixelprowlers-dev-insecure-change-me"
+logger = logging.getLogger(__name__)
 
 
 def load_env_file() -> None:
@@ -59,10 +61,17 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-SECRET_KEY = env_first("DJANGO_SECRET_KEY", "SECRET_KEY", default=DEV_INSECURE_SECRET_KEY)
 DEBUG = env_bool("DJANGO_DEBUG", env_bool("DEBUG", True))
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 
-if not DEBUG and (not SECRET_KEY or SECRET_KEY == DEV_INSECURE_SECRET_KEY):
+if not SECRET_KEY and DEBUG:
+    SECRET_KEY = DEV_INSECURE_SECRET_KEY
+    logger.warning(
+        "DJANGO_SECRET_KEY is not set. Using local development fallback SECRET_KEY; "
+        "this must never be used with DJANGO_DEBUG=False."
+    )
+
+if not DEBUG and not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set in production.")
 
 ALLOWED_HOSTS = [
@@ -170,14 +179,23 @@ CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
     default="http://localhost:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
 )
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = env_bool("DJANGO_USE_X_FORWARDED_HOST", True)
-SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
-SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
-CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
-SECURE_HSTS_SECONDS = int(env("DJANGO_SECURE_HSTS_SECONDS", "0") or "0")
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
-SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
+
+if DEBUG:
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+    SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", False)
+    CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", False)
+    SECURE_HSTS_SECONDS = int(env("DJANGO_SECURE_HSTS_SECONDS", "0") or "0")
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+    SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
+else:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
