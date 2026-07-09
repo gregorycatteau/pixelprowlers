@@ -128,12 +128,16 @@ class RecordPageView(graphene.Mutation):
         if not serializer.is_valid():
             raise GraphQLError(_serializer_errors_to_message(serializer.errors))
 
-        page_view = PageView.objects.create(session=session, url=url, title=title or None)
+        page_view = PageView.objects.create(
+            session=session,
+            url=serializer.validated_data["url"],
+            title=serializer.validated_data.get("title"),
+        )
         TrackingEvent.objects.create(
             session=session,
             event_type="pageview",
-            page_url=url,
-            metadata={"page_title": title} if title else {},
+            page_url=serializer.validated_data["url"],
+            metadata={"page_title": serializer.validated_data.get("title")} if serializer.validated_data.get("title") else {},
         )
         return RecordPageView(pageview_id=page_view.id, page_view=page_view)
 

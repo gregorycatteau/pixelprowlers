@@ -3,8 +3,8 @@
     <section class="diagnostic-hero" aria-labelledby="result-title">
       <div class="form-container">
         <p class="eyebrow">Diagnostic personnalisé</p>
-        <h1 id="result-title">Voici ce qu'on voit.</h1>
-        <p>Basé sur vos réponses, voici notre analyse honnête.</p>
+        <h1 id="result-title">Votre demande est prise en charge.</h1>
+        <p>Vous savez maintenant par où commencer. Un expert va analyser votre situation.</p>
         <p v-if="ticket" class="ticket-pill">Ticket de suivi : {{ ticket.id }}</p>
       </div>
     </section>
@@ -42,7 +42,10 @@
               <ul>
                 <li v-for="item in content.pixelItems" :key="item">{{ item }}</li>
               </ul>
+              <p class="decision-copy">Chaque semaine sans correction augmente le risque de blocage ou de perte.</p>
+              <p class="decision-copy">Vous savez exactement quoi faire, dans le bon ordre.</p>
               <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
+              <p class="cta-note">Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
             </section>
 
             <section class="option-box muted">
@@ -58,8 +61,9 @@
             <h2>Vous voulez avancer ?</h2>
             <div class="result-actions">
               <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
-              <AppButton variant="secondary" href="/contact">Parlez-nous de votre situation</AppButton>
+              <AppButton variant="secondary" href="/contact">Être accompagné sur mon problème</AppButton>
             </div>
+            <p class="cta-note">Vous retrouvez le contrôle de votre site. Vous ne partagez jamais vos accès sans cadre clair. Aucune modification sans votre accord.</p>
             <p>
               Ticket de suivi : <strong>{{ ticket.id }}</strong><br>
               {{ emailConfirmationLabel(ticket) }} : {{ maskedEmail }}<br>
@@ -148,5 +152,20 @@ onMounted(() => {
   color: #2b4b39 !important;
   font-size: 0.95rem !important;
   font-weight: 900 !important;
+}
+
+.cta-note {
+  margin-top: 12px;
+  color: #596158;
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.decision-copy {
+  margin-top: 12px;
+  color: #27322a;
+  font-weight: 850;
+  line-height: 1.55;
 }
 </style>

@@ -4,6 +4,8 @@ from graphene_django import DjangoObjectType
 from audits.models import (
     AuditDossier,
     AuditReponse,
+    ClientDossier,
+    DossierLog,
     RefonteAudit,
     Citation,
     Motif,
@@ -13,6 +15,18 @@ from audits.models import (
     Rdv,
     RdvRappel,
 )
+
+
+class ClientDossierType(DjangoObjectType):
+    class Meta:
+        model = ClientDossier
+        fields = "__all__"
+
+
+class DossierLogType(DjangoObjectType):
+    class Meta:
+        model = DossierLog
+        fields = "__all__"
 
 
 class AuditDossierType(DjangoObjectType):

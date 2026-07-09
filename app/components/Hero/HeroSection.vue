@@ -10,6 +10,7 @@
       <h1 id="hero-title" v-html="title"></h1>
       <p>{{ subtitle }}</p>
       <a class="HeroCta" :href="ctaLink">{{ ctaText }}</a>
+      <p v-if="ctaNote" class="HeroCtaNote">{{ ctaNote }}</p>
     </div>
 
     <img class="HeroSauveteur" :src="sauveteurSvg" alt="" aria-hidden="true">
@@ -25,6 +26,7 @@ interface Props {
   subtitle: string;
   ctaText: string;
   ctaLink: string;
+  ctaNote?: string;
 }
 
 defineProps<Props>();
@@ -34,6 +36,8 @@ defineProps<Props>();
 .HeroSection {
   position: relative;
   display: flex;
+  width: 100vw;
+  max-width: 100vw;
   min-height: 85vh;
   flex-direction: column;
   align-items: center;
@@ -59,15 +63,18 @@ defineProps<Props>();
 .HeroContent {
   position: relative;
   z-index: 2;
+  width: min(100%, 62rem);
   max-width: 62rem;
   text-align: center;
 }
 
 .HeroContent h1 {
   margin-bottom: 1.5rem;
-  font-size: clamp(2.25rem, 6.4vw, 5.35rem);
+  max-width: 100%;
+  font-size: clamp(2.05rem, 6vw, 5.35rem);
   font-weight: 900;
   line-height: 1;
+  overflow-wrap: anywhere;
   text-shadow: 0 8px 26px rgba(2, 6, 23, 0.42);
 }
 
@@ -135,6 +142,15 @@ defineProps<Props>();
   left: 100%;
 }
 
+.HeroCtaNote {
+  max-width: 36rem !important;
+  margin: 1rem auto 0 !important;
+  color: rgba(224, 242, 254, 0.9) !important;
+  font-size: 0.98rem !important;
+  font-weight: 800;
+  line-height: 1.5 !important;
+}
+
 .HeroSauveteur {
   position: absolute;
   bottom: 0.8rem;
@@ -171,7 +187,31 @@ defineProps<Props>();
 @media (max-width: 767px) {
   .HeroSection {
     min-height: 78vh;
-    padding: 5rem 1rem 8rem;
+    padding: 4rem 0.75rem 8rem;
+  }
+
+  .HeroContent {
+    width: min(100%, 17rem);
+  }
+
+  .HeroContent h1 {
+    font-size: clamp(1.85rem, 8vw, 2.3rem);
+    line-height: 1.08;
+  }
+
+  .HeroContent h1 :deep(.HeroTitleLineSecondary) {
+    font-size: 0.72em;
+  }
+
+  .HeroContent p {
+    font-size: 1.05rem;
+    line-height: 1.5;
+  }
+
+  .HeroCta {
+    width: min(100%, 17rem);
+    padding-inline: 1rem;
+    text-align: center;
   }
 
   .HeroSauveteur {

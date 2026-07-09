@@ -22,7 +22,7 @@
                   :disabled="!isFieldEnabled('prenom')"
                   type="text"
                   maxlength="50"
-                  placeholder="Celui que ta mère criait dans le jardin"
+                  placeholder="Votre prénom"
                   autocomplete="given-name"
                   @blur="normalizeField('prenom')"
                 >
@@ -42,7 +42,7 @@
                   :disabled="!isFieldEnabled('nom')"
                   type="text"
                   maxlength="50"
-                  placeholder="Tout le monde a le droit de s'appeler Dupont en France"
+                  placeholder="Votre nom"
                   autocomplete="family-name"
                   @blur="normalizeField('nom')"
                 >
@@ -62,7 +62,7 @@
                   :disabled="!isFieldEnabled('email')"
                   type="email"
                   maxlength="254"
-                  placeholder="Celui que tu regardes vraiment, pas le spam"
+                  placeholder="vous@exemple.fr"
                   autocomplete="email"
                   @blur="normalizeField('email')"
                 >
@@ -82,7 +82,7 @@
                   :disabled="!isFieldEnabled('telephone')"
                   type="tel"
                   maxlength="24"
-                  placeholder="On ne t'appellera pas à 3h du matin, promis"
+                  placeholder="+33 6 12 34 56 78"
                   autocomplete="tel"
                   @blur="normalizeField('telephone')"
                 >
@@ -121,7 +121,7 @@
                   :disabled="!isFieldEnabled('nom_structure')"
                   type="text"
                   maxlength="100"
-                  placeholder="Le nom qui claque sur votre carte de visite"
+                  placeholder="Nom de votre structure"
                   autocomplete="organization"
                   @blur="normalizeField('nom_structure')"
                 >
@@ -145,13 +145,17 @@
 
           <div class="IdentificationActions">
             <AppButton variant="validate" type="submit" :disabled="!isComplete || isSubmitting" :loading="isSubmitting">
-              {{ isSubmitting ? 'On prépare le terrain...' : "C'est parti pour mon audit" }}
+              {{ isSubmitting ? 'Première étape vers la reprise de contrôle...' : 'Faire analyser mon site' }}
             </AppButton>
           </div>
 
+          <p class="PostActionNote">
+            Vous êtes en train de sécuriser votre situation. Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.
+          </p>
+
           <p class="PrivacyNote">
             <span class="PrivacyIcon" aria-hidden="true"></span>
-            Vos données restent entre nous. Aucun spam, promis.
+            Confidentialité stricte. Vous ne partagez jamais vos accès sans cadre clair. Aucune modification sans votre accord.
           </p>
 
           <p v-if="error" class="FormError" role="alert">{{ error }}</p>
@@ -458,6 +462,10 @@ const submitForm = handleSubmit((values) => {
 
 .PrivacyNote {
   @apply flex items-center gap-2 text-sm font-bold text-[#435046];
+}
+
+.PostActionNote {
+  @apply text-sm font-black leading-relaxed text-[#2b7053];
 }
 
 .PrivacyIcon {

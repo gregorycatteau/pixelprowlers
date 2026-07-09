@@ -1,7 +1,9 @@
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { isEmailLike, maskEmail } from '~/utils/formatDate';
+import { graphqlRequest, parseGraphqlJson } from '~/utils/graphql';
 
 type DiagnosticPath = 'CRITICAL' | 'AUDIT' | 'TRANSMISSION' | 'MAINTENANCE';
+type RiskLevel = 'faible' | 'moyen' | 'critique';
 
 type DiagnosticRadioStep = {
   id: 'structure' | 'stress' | 'siteState' | 'dependency';
@@ -10,13 +12,7 @@ type DiagnosticRadioStep = {
   options: Array<{ label: string; value: string }>;
 };
 
-type DiagnosticContactStep = {
-  id: 'contact';
-  type: 'contact';
-  question: string;
-};
-
-export type DiagnosticStep = DiagnosticRadioStep | DiagnosticContactStep;
+export type DiagnosticStep = DiagnosticRadioStep;
 
 export type DiagnosticTicket = {
   id: string;
@@ -53,6 +49,96 @@ export type ResultContent = {
   cta: string;
   ctaHref: string;
 };
+
+export type ImmediateDiagnosticResult = {
+  path: DiagnosticPath;
+  riskLevel: RiskLevel;
+  title: string;
+  context: string;
+  consequence: string;
+  recommendation: string;
+  nextStepReason: string;
+  urgencyMessage: string;
+  outcomeMessage: string;
+  selectionMessage: string;
+  cta: string;
+  ctaHref: string;
+  reasons: string[];
+  scores: DiagnosticTicket['diagnosticResult']['scores'];
+};
+
+type DiagnosticTicketGraphql = {
+  id: string;
+  ticketId: string;
+  organization: string;
+  email: string;
+  phone?: string;
+  message: string;
+  answers: string | Record<string, string>;
+  diagnosticResult: string | DiagnosticTicket['diagnosticResult'];
+  emailConfirmation?: string | DiagnosticTicket['emailConfirmation'];
+};
+
+const DIAGNOSTIC_TICKET_FIELDS = /* GraphQL */ `
+  {
+    id
+    ticketId
+    organization
+    email
+    phone
+    message
+    answers
+    diagnosticResult
+    emailConfirmation
+  }
+`;
+
+const CREATE_DIAGNOSTIC_TICKET_MUTATION = /* GraphQL */ `
+  mutation CreateDiagnosticTicket(
+    $organization: String!
+    $email: String!
+    $phone: String
+    $message: String!
+    $answers: JSONString!
+  ) {
+    createDiagnosticTicket(
+      organization: $organization
+      email: $email
+      phone: $phone
+      message: $message
+      answers: $answers
+    ) {
+      redirectTo
+      ticket ${DIAGNOSTIC_TICKET_FIELDS}
+    }
+  }
+`;
+
+const DIAGNOSTIC_TICKET_QUERY = /* GraphQL */ `
+  query DiagnosticTicket($ticketId: String!) {
+    diagnosticTicket(ticketId: $ticketId) ${DIAGNOSTIC_TICKET_FIELDS}
+  }
+`;
+
+const mapDiagnosticTicket = (ticket: DiagnosticTicketGraphql): DiagnosticTicket => ({
+  id: ticket.ticketId || ticket.id,
+  organization: ticket.organization,
+  email: ticket.email,
+  phone: ticket.phone || '',
+  message: ticket.message,
+  answers: parseGraphqlJson(ticket.answers, {}),
+  diagnosticResult: parseGraphqlJson(ticket.diagnosticResult, {
+    path: 'MAINTENANCE',
+    scores: {
+      urgency: 0,
+      fragility: 0,
+      dependency: 0,
+      total: 0,
+    },
+    timestamp: new Date().toISOString(),
+  }),
+  emailConfirmation: parseGraphqlJson(ticket.emailConfirmation, { status: 'not_configured' }),
+});
 
 export const diagnosticSteps: DiagnosticStep[] = [
   {
@@ -101,12 +187,132 @@ export const diagnosticSteps: DiagnosticStep[] = [
       { label: "Une petite équipe, c'est documenté", value: 'team-clear' },
     ],
   },
-  {
-    id: 'contact',
-    type: 'contact',
-    question: 'Comment on vous recontacte ?',
-  },
 ];
+
+const pathMeta: Record<DiagnosticPath, Pick<ImmediateDiagnosticResult, 'title' | 'recommendation' | 'consequence' | 'nextStepReason' | 'urgencyMessage' | 'outcomeMessage' | 'selectionMessage' | 'cta' | 'ctaHref'>> = {
+  CRITICAL: {
+    title: 'Risque critique',
+    consequence: 'Sans qualification rapide, vous risquez une panne visible, une perte de contrôle sur les accès ou une intervention faite dans l’urgence.',
+    recommendation: 'Priorité : qualifier l’urgence avant toute refonte ou sécurisation.',
+    nextStepReason: 'On commence par l’urgence parce qu’il faut d’abord stabiliser ce qui peut bloquer votre activité.',
+    urgencyMessage: 'Un site fragile finit souvent par casser au pire moment. Chaque semaine sans correction augmente le risque de blocage ou de perte.',
+    outcomeMessage: 'Vous retrouvez le contrôle de votre site, avec les urgences triées et les prochaines actions dans le bon ordre.',
+    selectionMessage: 'Ce service est conçu pour des sites en production ou en difficulté, pas pour des projets exploratoires.',
+    cta: 'Être accompagné sur mon problème',
+    ctaHref: '/urgence',
+  },
+  AUDIT: {
+    title: 'Risque moyen',
+    consequence: 'Sans vérification, les ralentissements, accès flous ou sauvegardes non testées peuvent provoquer une perte de trafic ou un blocage futur.',
+    recommendation: 'Priorité : lancer un audit pour distinguer les vrais risques des simples irritants.',
+    nextStepReason: 'L’audit est la bonne suite parce qu’il évite de corriger au hasard et classe les actions par impact.',
+    urgencyMessage: 'Les problèmes d’accès ou de sécurité empirent rarement seuls. Chaque semaine sans correction augmente le risque de blocage ou de perte.',
+    outcomeMessage: 'Vous savez exactement quoi faire, dans le bon ordre, sans dépendre d’un prestataire flou.',
+    selectionMessage: 'Nous intervenons sur des situations réelles, pas des projets exploratoires.',
+    cta: 'Faire analyser mon site',
+    ctaHref: '/audit-site-web',
+  },
+  TRANSMISSION: {
+    title: 'Risque moyen',
+    consequence: 'Si la personne clé n’est plus disponible, vous pouvez perdre du temps, des accès ou la capacité de maintenir votre site.',
+    recommendation: 'Priorité : reprendre la main sur les accès, les rôles et la documentation.',
+    nextStepReason: 'La transmission est la bonne suite parce que votre risque principal est organisationnel avant d’être technique.',
+    urgencyMessage: 'Les problèmes d’accès ou de sécurité empirent rarement seuls. Le jour où la personne clé manque, le coût devient immédiat.',
+    outcomeMessage: 'Vos accès sont sécurisés et centralisés. Vous n’êtes plus dépendant d’un prestataire flou.',
+    selectionMessage: 'Ce service est utile quand un site ou des accès existent déjà et doivent être clarifiés.',
+    cta: 'Sécuriser mon site maintenant',
+    ctaHref: '/transmission-acces',
+  },
+  MAINTENANCE: {
+    title: 'Risque faible',
+    consequence: 'Sans routine minimale, un site stable peut se dégrader lentement : mises à jour oubliées, sauvegardes non testées, accès anciens.',
+    recommendation: 'Priorité : valider une routine simple de maintenance et de contrôle.',
+    nextStepReason: 'Un rendez-vous court suffit parce que vos réponses ne montrent pas de signal critique immédiat.',
+    urgencyMessage: 'Les problèmes d’accès ou de sécurité empirent rarement seuls. Une vérification courte évite souvent une intervention plus coûteuse.',
+    outcomeMessage: 'Vous savez si tout tient vraiment, et quoi surveiller avant que cela devienne urgent.',
+    selectionMessage: 'Si tout fonctionne parfaitement, ce ne sera probablement pas utile.',
+    cta: 'Obtenir un diagnostic clair',
+    ctaHref: '/rendez-vous',
+  },
+};
+
+const buildImmediateContext = (answers: Record<string, string>, reasons: string[]) => {
+  const structure = describeStructure(answers);
+  const readableReasons = reasons.length
+    ? reasons.map((reason) => reason.toLowerCase()).join(', ')
+    : 'une situation globalement stable';
+
+  return `${structure} présente ${readableReasons}. On voit surtout ce qui peut gêner votre continuité : accès, maintenance, sauvegardes ou dépendance technique.`;
+};
+
+export const buildImmediateDiagnosticResult = (answers: Record<string, string>): ImmediateDiagnosticResult => {
+  let urgency = 0;
+  let fragility = 0;
+  let dependency = 0;
+  const reasons: string[] = [];
+
+  if (answers.stress === 'backups') {
+    urgency += 4;
+    fragility += 3;
+    reasons.push('Sauvegardes ou données incertaines');
+  } else if (answers.stress === 'site-slow') {
+    urgency += 3;
+    fragility += 3;
+    reasons.push('Ralentissement devenu récurrent');
+  } else if (answers.stress === 'single-person') {
+    dependency += 4;
+    reasons.push('Dépendance forte à une personne');
+  } else if (answers.stress === 'some') {
+    urgency += 1;
+    fragility += 1;
+  }
+
+  if (answers.siteState === 'fragile') {
+    fragility += 4;
+    reasons.push('Site perçu comme vieux, fragile ou lent');
+  } else if (answers.siteState === 'none') {
+    fragility += 2;
+    reasons.push('Présence web à structurer');
+  } else if (answers.siteState === 'doubt') {
+    fragility += 2;
+  }
+
+  if (answers.dependency === 'one') {
+    dependency += 4;
+    reasons.push('Une seule personne tient les accès ou la maintenance');
+  } else if (answers.dependency === 'unclear') {
+    dependency += 3;
+    reasons.push('Responsabilités numériques floues');
+  }
+
+  const total = urgency + fragility + dependency;
+  let path: DiagnosticPath = 'MAINTENANCE';
+
+  if (urgency >= 4 && fragility >= 4) {
+    path = 'CRITICAL';
+  } else if (dependency >= 5) {
+    path = 'TRANSMISSION';
+  } else if (total >= 4) {
+    path = 'AUDIT';
+  }
+
+  const riskLevel: RiskLevel = path === 'CRITICAL' ? 'critique' : path === 'MAINTENANCE' ? 'faible' : 'moyen';
+  const meta = pathMeta[path];
+
+  return {
+    path,
+    riskLevel,
+    ...meta,
+    context: buildImmediateContext({ ...answers }, reasons),
+    reasons: reasons.length ? reasons : ['Aucun signal critique dans vos réponses'],
+    scores: {
+      urgency,
+      fragility,
+      dependency,
+      total,
+    },
+  };
+};
 
 const describeStructure = (answers: Record<string, string>) => {
   if (answers.structure === 'association') return 'Votre association ou collectif';
@@ -164,7 +370,7 @@ export const buildResultContent = (ticket: DiagnosticTicket): ResultContent => {
       pixelItems: ['Audit initial : 2 jours', 'Refonte : 3-4 semaines', 'Formation : 2 jours', 'Cadrage humain avant toute intervention'],
       alternativeItems: ['Contacter une agence locale', 'Engager un freelance avec exigence de documentation', 'Le faire en interne si une personne a le temps réel'],
       honestAdvice: 'Évitez un freelance solo non documenté. Vous avez déjà ce problème. Pensez transmission et documentation, pas juste développement.',
-      cta: 'Parlons refonte',
+      cta: 'Être accompagné sur mon problème',
       ctaHref: '/refonte-site',
     };
   }
@@ -180,7 +386,7 @@ export const buildResultContent = (ticket: DiagnosticTicket): ResultContent => {
       pixelItems: ['Audit complet : 2-3 jours', 'Rapport lisible, pas du charabia', 'Priorités claires', 'Suite définie après échange humain'],
       alternativeItems: ['Faire un audit en interne avec une checklist', 'Engager un consultant sécurité local', 'Attendre et voir, avec le risque de gérer une panne plus lourde ensuite'],
       honestAdvice: 'Un audit pro prend 2-3 jours. Il évite souvent de gérer la situation dans la panique.',
-      cta: "Lancer l'audit",
+      cta: 'Faire analyser mon site',
       ctaHref: '/audit-site-web',
     };
   }
@@ -196,7 +402,7 @@ export const buildResultContent = (ticket: DiagnosticTicket): ResultContent => {
       pixelItems: ['Audit des accès : 1 jour', 'Documentation : 3-5 jours', 'Formation équipe : 2 jours', 'Suite définie après inventaire'],
       alternativeItems: ['Demander à la personne clé de tout documenter', 'Engager quelqu’un localement', 'Attendre une urgence et gérer sous pression'],
       honestAdvice: 'Documentez maintenant, ou vous le regretterez.',
-      cta: 'Reprendre la main',
+      cta: 'Sécuriser mon site maintenant',
       ctaHref: '/transmission-acces',
     };
   }
@@ -211,7 +417,7 @@ export const buildResultContent = (ticket: DiagnosticTicket): ResultContent => {
     pixelItems: ['Vérification ponctuelle : 1-2 jours', 'Retour clair sur les priorités', 'Suite adaptée selon le périmètre'],
     alternativeItems: ['Utiliser une checklist gratuite', 'Installer un monitoring simple', 'Rester attentifs aux accès et sauvegardes'],
     honestAdvice: "Vous êtes en bonne forme. Une vérification annuelle serait bien, mais ce n'est pas urgent.",
-    cta: 'Audit léger',
+    cta: 'Obtenir un diagnostic clair',
     ctaHref: '/audit-site-web',
   };
 };
@@ -233,6 +439,8 @@ export const emailConfirmationLabel = (ticket: DiagnosticTicket | null) => {
 export const useDiagnostic = () => {
   const router = useRouter();
   const currentStep = ref(0);
+  const immediateResult = ref<ImmediateDiagnosticResult | null>(null);
+  const progressSessionId = ref('');
   const answers = reactive<Record<string, string>>({
     structure: '',
     structureOther: '',
@@ -252,13 +460,24 @@ export const useDiagnostic = () => {
   const activeStep = computed(() => diagnosticSteps[currentStep.value]);
   const isLastStep = computed(() => currentStep.value === diagnosticSteps.length - 1);
   const progressPercent = computed(() => ((currentStep.value + 1) / diagnosticSteps.length) * 100);
+  const dossierStatus = computed(() => {
+    if (isSubmitting.value) {
+      return 'Analyse en cours';
+    }
+
+    if (immediateResult.value) {
+      return 'Analyse prête';
+    }
+
+    if (currentStep.value === 0) {
+      return 'Dossier créé';
+    }
+
+    return `Étape ${currentStep.value} complétée`;
+  });
 
   const canContinue = computed(() => {
     const step = activeStep.value;
-
-    if (!step || step.type !== 'radio') {
-      return true;
-    }
 
     const value = answers[step.id];
     return Boolean(value && (value !== 'other' || answers.structureOther.trim()));
@@ -271,19 +490,27 @@ export const useDiagnostic = () => {
   ));
 
   const nextStep = () => {
-    if (canContinue.value && currentStep.value < diagnosticSteps.length - 1) {
-      currentStep.value += 1;
+    if (!canContinue.value) {
+      return;
     }
+
+    if (currentStep.value < diagnosticSteps.length - 1) {
+      currentStep.value += 1;
+      return;
+    }
+
+    immediateResult.value = buildImmediateDiagnosticResult({ ...answers });
   };
 
   const previousStep = () => {
+    immediateResult.value = null;
     if (currentStep.value > 0) {
       currentStep.value -= 1;
     }
   };
 
   const submit = async () => {
-    if (!canSubmit.value || isSubmitting.value) {
+    if (!canSubmit.value || isSubmitting.value || !immediateResult.value) {
       return;
     }
 
@@ -291,11 +518,18 @@ export const useDiagnostic = () => {
     submitError.value = '';
 
     try {
-      const result = await $fetch<{ redirectTo: string }>('/api/diagnostic', {
-        method: 'POST',
-        body: { answers, contact },
+      const result = await graphqlRequest<{ createDiagnosticTicket: { redirectTo: string } }>(CREATE_DIAGNOSTIC_TICKET_MUTATION, {
+        organization: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        message: contact.message,
+        answers: JSON.stringify({
+          ...answers,
+          immediateResult: immediateResult.value,
+          progressSessionId: progressSessionId.value,
+        }),
       });
-      router.push(result.redirectTo);
+      router.push(result.createDiagnosticTicket.redirectTo);
     } catch {
       submitError.value = "Impossible d'enregistrer le diagnostic pour le moment. Vous pouvez réessayer dans quelques instants.";
     } finally {
@@ -303,10 +537,33 @@ export const useDiagnostic = () => {
     }
   };
 
+  onMounted(() => {
+    const storageKey = 'pixelprowlers:diagnostic-session';
+    const existing = window.localStorage.getItem(storageKey);
+    const sessionId = existing || crypto.randomUUID();
+    progressSessionId.value = sessionId;
+    window.localStorage.setItem(storageKey, sessionId);
+
+    const saved = window.localStorage.getItem(`${storageKey}:answers`);
+    if (saved) {
+      Object.assign(answers, parseGraphqlJson(saved, {}));
+    }
+  });
+
+  watch(answers, () => {
+    if (!progressSessionId.value) {
+      return;
+    }
+    window.localStorage.setItem('pixelprowlers:diagnostic-session:answers', JSON.stringify({ ...answers }));
+  }, { deep: true });
+
   return {
     currentStep,
     answers,
     contact,
+    immediateResult,
+    progressSessionId,
+    dossierStatus,
     activeStep,
     isLastStep,
     progressPercent,
@@ -337,7 +594,8 @@ export const useDiagnosticResult = () => {
     error.value = '';
 
     try {
-      ticket.value = await $fetch<DiagnosticTicket>(`/api/diagnostic/${ticketId}`);
+      const result = await graphqlRequest<{ diagnosticTicket: DiagnosticTicketGraphql }>(DIAGNOSTIC_TICKET_QUERY, { ticketId });
+      ticket.value = mapDiagnosticTicket(result.diagnosticTicket);
     } catch {
       ticket.value = null;
       error.value = 'Le ticket est absent ou a expiré côté serveur.';

@@ -10,9 +10,10 @@
       </div>
 
       <div v-if="result" class="urgency-success" role="status" aria-live="polite">
-        <p class="eyebrow">Demande reçue</p>
+        <p class="eyebrow">Votre demande est prise en charge</p>
         <h2>Référence : {{ result.reference }}</h2>
-        <p>Votre demande a bien été transmise. Conservez cette référence de dossier pour le suivi.</p>
+        <p>Vous êtes en train de sécuriser votre situation. Un expert va analyser votre situation.</p>
+        <p>Réponse sous 24h selon le niveau d’impact et le créneau indiqué. Conservez cette référence de dossier pour le suivi.</p>
         <p>
           Ne transmettez aucun mot de passe, token, clé privée ou accès administrateur. Les modalités
           d’intervention seront vues après un premier échange humain.

@@ -4,6 +4,98 @@ import hashlib
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+
+class ClientDossier(models.Model):
+    class Phase(models.IntegerChoices):
+        CONTACT = 0, "Contact"
+        DIAGNOSTIC = 1, "Diagnostic"
+        PROPOSITION = 2, "Proposition"
+        CONTRAT = 3, "Contrat"
+        EN_COURS = 4, "En cours"
+        TESTS_RECETTE = 5, "Tests / recette"
+        LIVRAISON = 6, "Livraison"
+        SUIVI = 7, "Suivi"
+        ARCHIVE = 8, "Archivé"
+
+    dossier_id = models.CharField(max_length=16, unique=True, db_index=True)
+    sequence_month = models.CharField(max_length=4, db_index=True)
+    sequence_number = models.PositiveIntegerField()
+    phase = models.PositiveSmallIntegerField(choices=Phase.choices, default=Phase.CONTACT)
+    email = models.EmailField(max_length=180, blank=True, db_index=True)
+    name = models.CharField(max_length=180, blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    source = models.CharField(max_length=40, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sequence_month", "sequence_number"],
+                name="client_dossier_month_sequence_unique",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.dossier_id
+
+    def refresh_dossier_id(self) -> None:
+        self.dossier_id = f"{self.sequence_month}{self.sequence_number:03d}-{self.phase}"
+
+    def increment_phase(self, new_phase: int | None = None, changed_by=None, reason: str = "") -> "ClientDossier":
+        old_phase = self.phase
+        target_phase = self.phase + 1 if new_phase is None else int(new_phase)
+        max_phase = max(choice.value for choice in self.Phase)
+        target_phase = max(self.Phase.CONTACT, min(target_phase, max_phase))
+
+        if target_phase == old_phase:
+            return self
+
+        self.phase = target_phase
+        self.refresh_dossier_id()
+        self.save(update_fields=["phase", "dossier_id", "updated_at"])
+        DossierLog.objects.create(
+            dossier=self,
+            old_phase=old_phase,
+            new_phase=target_phase,
+            changed_by=changed_by if getattr(changed_by, "is_authenticated", False) else None,
+            reason=reason,
+        )
+        return self
+
+
+class ClientDossierCounter(models.Model):
+    sequence_month = models.CharField(max_length=4, unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-sequence_month"]
+
+    def __str__(self) -> str:
+        return f"{self.sequence_month}: {self.last_number}"
+
+
+class DossierLog(models.Model):
+    dossier = models.ForeignKey(ClientDossier, on_delete=models.CASCADE, related_name="logs")
+    old_phase = models.PositiveSmallIntegerField(choices=ClientDossier.Phase.choices)
+    new_phase = models.PositiveSmallIntegerField(choices=ClientDossier.Phase.choices)
+    timestamp = models.DateTimeField(default=timezone.now)
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="client_dossier_logs",
+    )
+    reason = models.CharField(max_length=180, blank=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
 
 
 class AuditDossier(models.Model):
@@ -27,6 +119,9 @@ class AuditDossier(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
     statut = models.CharField(max_length=32, choices=Status.choices, default=Status.IDENTIFIE)
     notification_status = models.JSONField(default=dict, blank=True)
+    client_dossier = models.ForeignKey(
+        ClientDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="audit_dossiers"
+    )
 
     class Meta:
         ordering = ["-date_creation"]
@@ -123,6 +218,9 @@ class RefonteAudit(models.Model):
     analysis_error = models.TextField(blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_maj = models.DateTimeField(auto_now=True)
+    client_dossier = models.ForeignKey(
+        ClientDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="refonte_audits"
+    )
 
     class Meta:
         ordering = ["-date_creation"]
@@ -216,6 +314,9 @@ class RdvContact(models.Model):
     audit_dossier = models.ForeignKey(
         AuditDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="rdv_contacts"
     )
+    client_dossier = models.ForeignKey(
+        ClientDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="rdv_contacts"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -268,6 +369,9 @@ class Rdv(models.Model):
     message = models.TextField(blank=True)
     statut = models.CharField(max_length=16, choices=Statut.choices, default=Statut.CONFIRME)
     notification_status = models.JSONField(default=dict, blank=True)
+    client_dossier = models.ForeignKey(
+        ClientDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="rdvs"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

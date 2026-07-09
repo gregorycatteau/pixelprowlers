@@ -4,9 +4,17 @@ version = "0.1.0"
 requires-python = "==3.13.*"
 dependencies = [
   "Django==6.0.6",
-  "djangorestframework>=3.16,<4",
   "psycopg[binary]==3.2.13",
   "django-environ==0.12.0",
+  "django-cors-headers==4.9.0",
+  "django-jazzmin==3.0.5",
+  "graphene-django==3.2.3",
+  "gunicorn==23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest-django==4.12.0",
 ]
 
 [tool.pytest.ini_options]

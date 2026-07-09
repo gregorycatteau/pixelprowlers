@@ -9,6 +9,7 @@
           <AppButton :href="landing.primaryHref">{{ landing.heroCta }}</AppButton>
           <AppButton variant="secondary" :href="landing.secondaryHref">{{ landing.secondaryCta }}</AppButton>
         </div>
+        <p v-if="landing.heroCtaNote" class="cta-note">{{ landing.heroCtaNote }}</p>
       </div>
     </section>
 
@@ -48,6 +49,7 @@
           <AppButton :href="landing.primaryHref">{{ landing.finalCta }}</AppButton>
           <AppButton variant="secondary" :href="landing.secondaryHref">{{ landing.secondaryCta }}</AppButton>
         </div>
+        <p v-if="landing.finalCtaNote" class="cta-note final-note">{{ landing.finalCtaNote }}</p>
       </div>
     </section>
   </main>
@@ -71,5 +73,18 @@ defineProps<{ landing: Landing }>();
 
 .landing-block {
   flex: 1 1 260px;
+}
+
+.cta-note {
+  max-width: 640px;
+  margin-top: 14px;
+  color: #435046;
+  font-size: 0.96rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.final-note {
+  color: rgba(255, 255, 255, 0.86);
 }
 </style>

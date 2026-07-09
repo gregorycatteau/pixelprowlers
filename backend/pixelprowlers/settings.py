@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -7,24 +8,27 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
 DEV_INSECURE_SECRET_KEY = "pixelprowlers-dev-insecure-change-me"
+logger = logging.getLogger(__name__)
 
 
 def load_env_file() -> None:
-    env_path = PROJECT_DIR / ".env"
-    if not env_path.exists():
-        return
+    env_paths = (PROJECT_DIR / ".env", BASE_DIR / ".env")
 
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    for env_path in env_paths:
+        if not env_path.exists():
             continue
 
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
 
-        if key:
-            os.environ.setdefault(key, value)
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+
+            if key:
+                os.environ.setdefault(key, value)
 
 
 load_env_file()
@@ -57,10 +61,17 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-SECRET_KEY = env_first("DJANGO_SECRET_KEY", "SECRET_KEY", default=DEV_INSECURE_SECRET_KEY)
 DEBUG = env_bool("DJANGO_DEBUG", env_bool("DEBUG", True))
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 
-if not DEBUG and (not SECRET_KEY or SECRET_KEY == DEV_INSECURE_SECRET_KEY):
+if not SECRET_KEY and DEBUG:
+    SECRET_KEY = DEV_INSECURE_SECRET_KEY
+    logger.warning(
+        "DJANGO_SECRET_KEY is not set. Using local development fallback SECRET_KEY; "
+        "this must never be used with DJANGO_DEBUG=False."
+    )
+
+if not DEBUG and not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set in production.")
 
 ALLOWED_HOSTS = [
@@ -78,9 +89,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
-    "rest_framework",
     "graphene_django",
     "audits",
+    "crm",
     "urgencies",
     "tracking",
 ]
@@ -168,14 +179,23 @@ CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
     default="http://localhost:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
 )
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = env_bool("DJANGO_USE_X_FORWARDED_HOST", True)
-SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
-SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
-CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
-SECURE_HSTS_SECONDS = int(env("DJANGO_SECURE_HSTS_SECONDS", "0") or "0")
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
-SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
+
+if DEBUG:
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+    SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", False)
+    CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", False)
+    SECURE_HSTS_SECONDS = int(env("DJANGO_SECURE_HSTS_SECONDS", "0") or "0")
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+    SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
+else:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
@@ -188,7 +208,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if env("SMTP_HOST") else "django.core.mail.backends.console.EmailBackend",
+)
 EMAIL_HOST = env("SMTP_HOST", "localhost")
 EMAIL_PORT = int(env("SMTP_PORT", "25") or "25")
 EMAIL_HOST_USER = env("SMTP_USER")
@@ -198,6 +221,13 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", env("CONTACT_FROM"))
 CONTACT_TO = env("CONTACT_TO")
 AUDIT_INTERNAL_EMAIL = env("AUDIT_INTERNAL_EMAIL")
 URGENCY_INTERNAL_EMAIL = env("URGENCY_INTERNAL_EMAIL")
+INTERNAL_SMS_TO = env("INTERNAL_SMS_TO")
+SMS_DRY_RUN = env_bool("SMS_DRY_RUN", True)
+TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = env("TWILIO_FROM_NUMBER")
+WEBHOOK_URL = env_first("WEBHOOK_URL", "URGENCY_WEBHOOK_URL")
+WEBHOOK_TOKEN = env_first("WEBHOOK_TOKEN", "URGENCY_WEBHOOK_TOKEN")
 
 # Clé secrète HMAC pour la signature légale des réponses d'audit (AuditReponse.compute_signature)
 AUDIT_SIGNATURE_KEY = env("AUDIT_SIGNATURE_KEY")
