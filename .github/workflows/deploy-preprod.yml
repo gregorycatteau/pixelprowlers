@@ -13,7 +13,7 @@ concurrency:
 env:
   VPS_HOST: 46.202.131.25
   VPS_USER: root
-  VPS_PORT: 22
+  VPS_PORT: 2222
   REMOTE_DIR: /root/pixelprowlers
   SSH_KEY_PATH: /tmp/pixelprowlers_vps_key
 
@@ -125,4 +125,4 @@ jobs:
         if: success()
         run: |
           echo "✅ DEPLOYMENT SUCCESSFUL"
-          echo "🌐 https://
+          echo "🌐 https://pixelprowlers.io"
