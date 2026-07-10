@@ -141,10 +141,13 @@ jobs:
             "set -euo pipefail
              cd '${REMOTE_DIR}'
              test -f .env
+             test -f nginx/default.conf
              chmod 600 .env
              docker compose config >/tmp/pixelprowlers-compose-config.yml
-             docker compose up -d --build postgres django nuxt
+             docker compose build nuxt
+             docker compose up -d --build
              docker compose ps
+             docker compose exec -T nginx nginx -t
              docker compose exec -T django python manage.py check
              docker compose exec -T django python manage.py migrate
              curl -fsS -H 'Host: pixelprowlers.io' http://127.0.0.1:8080/api/health/"
@@ -159,7 +162,7 @@ jobs:
             -o StrictHostKeyChecking=yes \
             "${VPS_USER}@${VPS_HOST}" \
             "set -euo pipefail
-             systemctl status caddy --no-pager
+             docker inspect -f '{{.State.Status}}' caddy
              curl -fsSI https://pixelprowlers.io
              curl -fsSI https://www.pixelprowlers.io || true
              curl -fsS https://pixelprowlers.io/api/health/"

@@ -3,57 +3,82 @@ services:
     image: postgres:15-alpine
     container_name: pixelprowlers-postgres
     environment:
-      POSTGRES_DB: pixelprowlers
-      POSTGRES_USER: pixelprowlers
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD:-pixelprowlers_dev}}
+      POSTGRES_DB: ${POSTGRES_DB:-pixelprowlers}
+      POSTGRES_USER: ${POSTGRES_USER:-pixelprowlers}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers_dev}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pixelprowlers -d pixelprowlers"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pixelprowlers} -d ${POSTGRES_DB:-pixelprowlers}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   django:
     build:
       context: ./backend
-    image: pixelprowlers-django
+      dockerfile: Dockerfile
+    image: pixelprowlers-django:latest
     container_name: pixelprowlers-django
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
-      DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,pixelprowlers-django}}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:8001}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,pixelprowlers.io,www.pixelprowlers.io}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://pixelprowlers.io,https://www.pixelprowlers.io}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://pixelprowlers.io,https://www.pixelprowlers.io}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-False}
       POSTGRES_DB: ${POSTGRES_DB:-pixelprowlers}
       POSTGRES_USER: ${POSTGRES_USER:-pixelprowlers}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD:-pixelprowlers_dev}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers_dev}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://pixelprowlers:pixelprowlers_dev@postgres:5432/pixelprowlers}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
-      SMS_DRY_RUN: ${SMS_DRY_RUN:-true}
-    ports:
-      - "8001:8000"
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-False}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@pixelprowlers.io}
+      SMS_DRY_RUN: ${SMS_DRY_RUN:-True}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER}
+      DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST:-True}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
 
   nuxt:
-    image: node:24-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pixelprowlers-nuxt:latest
     container_name: pixelprowlers-nuxt
-    working_dir: /app
     depends_on:
-      - django
+      django:
+        condition: service_healthy
     environment:
-      GRAPHQL_API_URL: http://pixelprowlers-django:8000/graphql/
-      NUXT_PUBLIC_GRAPHQL_API_URL: http://localhost:8001/graphql/
-    volumes:
-      - ./:/app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
-    ports:
-      - "3000:3000"
+      NODE_ENV: ${NODE_ENV:-production}
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: "3000"
+      NUXT_PUBLIC_GRAPHQL_API_URL: ${NUXT_PUBLIC_GRAPHQL_API_URL:-/graphql/}
+    expose:
+      - "3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
