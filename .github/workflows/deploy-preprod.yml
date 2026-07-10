@@ -34,34 +34,17 @@ jobs:
           install -m 700 -d "${HOME}/.ssh"
           printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > "${SSH_KEY_PATH}"
           chmod 600 "${SSH_KEY_PATH}"
-          test -s "${SSH_KEY_PATH}"
-          echo "✓ SSH key prepared"
-
-      - name: Setup known_hosts
-        shell: bash
-        run: |
-          set -euo pipefail
-          : > "${HOME}/.ssh/known_hosts"
-          for attempt in 1 2 3; do
-            echo "ssh-keyscan attempt ${attempt}/3"
-            if ssh-keyscan -T 20 -p "${VPS_PORT}" -H "${VPS_HOST}" >> "${HOME}/.ssh/known_hosts" 2>/dev/null; then
-              if test -s "${HOME}/.ssh/known_hosts"; then
-                echo "✓ known_hosts prepared"
-                break
-              fi
-            fi
-            sleep 3
-          done
-          test -s "${HOME}/.ssh/known_hosts"
+          test -s "${SSH_KEY_PATH}" && echo "✓ SSH key prepared"
 
       - name: Test SSH connection
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o ConnectTimeout=10 \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
             "echo '✓ SSH connection successful'"
 
@@ -69,163 +52,77 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "set -euo pipefail
-             cd '${REMOTE_DIR}'
-             git fetch origin master
-             git checkout master
-             git pull origin master
-             echo '✓ Code pulled successfully'"
+            "cd '${REMOTE_DIR}' && git fetch origin master && git checkout master && git pull origin master && echo '✓ Code pulled'"
 
       - name: Verify .env file
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "test -f '${REMOTE_DIR}/.env' && echo '✓ .env file exists' || (echo '✗ .env file not found!' && exit 1)"
+            "test -f '${REMOTE_DIR}/.env' && echo '✓ .env exists' || (echo '✗ .env missing' && exit 1)"
 
       - name: Build and start Docker containers
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "set -euo pipefail
-             cd '${REMOTE_DIR}'
-             
-             echo '=== Building Docker images ==='
-             docker compose build
-             
-             echo '=== Starting containers ==='
-             docker compose up -d
-             
-             echo '=== Waiting for PostgreSQL ==='
-             max_attempts=30
-             attempt=0
-             while [ \$attempt -lt \$max_attempts ]; do
-               if docker compose exec -T postgres pg_isready -U pixelprowlers > /dev/null 2>&1; then
-                 echo '✓ PostgreSQL is healthy'
-                 break
-               fi
-               attempt=\$((attempt + 1))
-               echo \"Waiting... (\$attempt/\$max_attempts)\"
-               sleep 2
-             done
-             
-             if [ \$attempt -eq \$max_attempts ]; then
-               echo '✗ PostgreSQL failed to become healthy'
-               docker compose logs postgres | tail -30
-               exit 1
-             fi
-             
-             echo '=== Waiting for Django ==='
-             max_attempts=30
-             attempt=0
-             while [ \$attempt -lt \$max_attempts ]; do
-               if docker compose exec -T django curl -sf http://localhost:8000/health/ > /dev/null 2>&1; then
-                 echo '✓ Django is healthy'
-                 break
-               fi
-               attempt=\$((attempt + 1))
-               echo \"Waiting... (\$attempt/\$max_attempts)\"
-               sleep 2
-             done
-             
-             if [ \$attempt -eq \$max_attempts ]; then
-               echo '✗ Django failed to become healthy'
-               docker compose logs django | tail -50
-               exit 1
-             fi
-             
-             echo '=== Container Status ==='
+            "cd '${REMOTE_DIR}' && \
+             echo '=== Building Docker images ===' && \
+             docker compose build && \
+             echo '=== Starting containers ===' && \
+             docker compose up -d && \
+             echo '=== Waiting for PostgreSQL ===' && \
+             for i in {1..30}; do docker compose exec -T postgres pg_isready -U pixelprowlers >/dev/null 2>&1 && echo '✓ PostgreSQL ready' && break; sleep 2; done && \
+             echo '=== Waiting for Django ===' && \
+             for i in {1..30}; do docker compose exec -T django curl -sf http://localhost:8000/health/ >/dev/null 2>&1 && echo '✓ Django ready' && break; sleep 2; done && \
              docker compose ps"
 
       - name: Run Django migrations
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "set -euo pipefail
-             cd '${REMOTE_DIR}'
-             echo '=== Django System Check ==='
-             docker compose exec -T django python manage.py check
-             echo '=== Running Migrations ==='
-             docker compose exec -T django python manage.py migrate
-             echo '✓ Migrations completed'"
+            "cd '${REMOTE_DIR}' && \
+             echo '=== Django checks ===' && \
+             docker compose exec -T django python manage.py check && \
+             echo '=== Running migrations ===' && \
+             docker compose exec -T django python manage.py migrate && \
+             echo '✓ Migrations done'"
 
-      - name: Verify deployment health
+      - name: Verify deployment
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "set -euo pipefail
-             cd '${REMOTE_DIR}'
-             echo '=== Docker Container Status ==='
-             docker compose ps
-             echo '=== Testing Django API ==='
-             docker compose exec -T django curl -sf http://localhost:8000/health/ || echo 'Note: Health endpoint may not be configured'
-             echo '✓ Deployment health check passed'"
-
-      - name: Verify Caddy routing
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
-            "${VPS_USER}@${VPS_HOST}" \
-            "set -euo pipefail
-             echo '=== Caddy Status ==='
-             docker ps | grep caddy
-             echo '=== Testing HTTPS ==='
-             curl -sf https://pixelprowlers.io/ > /dev/null && echo '✓ pixelprowlers.io is reachable' || echo 'Note: May take a moment to become available'
-             echo '=== Recent Logs ==='
-             docker compose logs --tail=20 django"
+            "cd '${REMOTE_DIR}' && docker compose ps && docker compose logs --tail=20 django"
 
       - name: Cleanup SSH key
         if: always()
-        shell: bash
-        run: |
-          rm -f "${SSH_KEY_PATH}"
+        run: rm -f "${SSH_KEY_PATH}"
 
-      - name: Deployment success
+      - name: Success
         if: success()
-        shell: bash
         run: |
-          echo ""
-          echo "✅ DEPLOYMENT SUCCESSFUL ✅"
-          echo ""
-          echo "🌐 Site: https://pixelprowlers.io"
-          echo "📊 Admin: https://pixelprowlers.io/admin/"
-          echo "📝 GraphQL: https://pixelprowlers.io/graphql/"
-          echo ""
-
-      - name: Deployment failure
-        if: failure()
-        shell: bash
-        run: |
-          echo ""
-          echo "❌ DEPLOYMENT FAILED ❌"
-          echo ""
-          echo "Check the logs above for error details"
-          exit 1
+          echo "✅ DEPLOYMENT SUCCESSFUL"
+          echo "🌐 https://
