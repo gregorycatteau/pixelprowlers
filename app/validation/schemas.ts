@@ -58,6 +58,83 @@ export const frenchPhoneSchema = z.string()
   .refine((value) => phoneInputPattern.test(value), 'Uniquement des chiffres, espaces et éventuellement +33.')
   .refine((value) => phoneStrictPattern.test(value), 'Indiquez un numéro au format 06 XX XX XX XX ou +33 6 XX XX XX XX.');
 
+const frenchMobilePresentations = [
+  /^0[67][0-9]{8}$/,
+  /^0[67](?: [0-9]{2}){4}$/,
+  /^\+33[67][0-9]{8}$/,
+  /^\+33 [67](?: [0-9]{2}){4}$/,
+];
+
+export const normalizeFrenchMobile = (value: string): string | null => {
+  if (typeof value !== 'string' || !frenchMobilePresentations.some((pattern) => pattern.test(value))) {
+    return null;
+  }
+  const compact = value.replaceAll(' ', '');
+  return compact.startsWith('+33') ? `0${compact.slice(3)}` : compact;
+};
+
+export const contactPhoneSchema = z.string()
+  .superRefine((value, context) => {
+    if (normalizeFrenchMobile(value)) {
+      return;
+    }
+    const foreign = /^\+(?!33)|^00/.test(value);
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: foreign
+        ? 'PixelProwlers intervient localement : indique un numéro de mobile français.'
+        : 'Indique un numéro de mobile français valide, par exemple 06 12 34 56 78.',
+    });
+  })
+  .transform((value) => normalizeFrenchMobile(value) as string);
+
+export const contactDemandTypeSchema = z.enum([
+  'diagnostic',
+  'urgency',
+  'audit',
+  'refonte',
+  'transmission',
+  'partnership',
+]);
+
+export const contactMethodSchema = z.enum(['email', 'telephone', 'les_deux']);
+
+const requiredContactText = (label: string, maxLength: number) => z.string()
+  .transform((value) => value.normalize('NFC').trim())
+  .refine((value) => value.length >= 2, `${label} est obligatoire.`)
+  .refine((value) => value.length <= maxLength, `${maxLength} caractères maximum.`)
+  .refine((value) => value.search(controlCharactersPattern) === -1, 'Vérifie ce champ : il semble manquer une information.');
+
+export const contactFormSchema = z.object({
+  demandType: contactDemandTypeSchema,
+  prenom: requiredContactText('Le prénom', 100),
+  nom: requiredContactText('Le nom', 100),
+  organization: requiredContactText("L'organisation", 180),
+  email: emailSchema,
+  phone: contactPhoneSchema,
+  objet: requiredContactText("L'objet", 200),
+  methodeContact: contactMethodSchema,
+  message: z.string()
+    .transform((value) => value.normalize('NFC').trim())
+    .refine((value) => value.length >= 20, 'Décris ta demande en au moins 20 caractères.')
+    .refine((value) => value.length <= 4000, '4000 caractères maximum.')
+    .refine((value) => !value.includes('\u0000'), 'Vérifie ce champ : il semble manquer une information.'),
+}).strict();
+
+export const contactRequiredFieldStates = (values: Partial<ContactFormInput>) => [
+  { key: 'demandType', label: 'Type de demande', valid: contactDemandTypeSchema.safeParse(values.demandType).success },
+  { key: 'prenom', label: 'Prénom', valid: contactFormSchema.shape.prenom.safeParse(values.prenom ?? '').success },
+  { key: 'nom', label: 'Nom', valid: contactFormSchema.shape.nom.safeParse(values.nom ?? '').success },
+  { key: 'organization', label: 'Organisation', valid: contactFormSchema.shape.organization.safeParse(values.organization ?? '').success },
+  { key: 'email', label: 'Adresse email', valid: emailSchema.safeParse(values.email ?? '').success },
+  { key: 'phone', label: 'Numéro de téléphone', valid: contactPhoneSchema.safeParse(values.phone ?? '').success },
+  { key: 'methodeContact', label: 'Méthode de contact', valid: contactMethodSchema.safeParse(values.methodeContact).success },
+  { key: 'objet', label: 'Objet de la demande', valid: contactFormSchema.shape.objet.safeParse(values.objet ?? '').success },
+  { key: 'message', label: 'Message', valid: contactFormSchema.shape.message.safeParse(values.message ?? '').success },
+] as const;
+
+export const isContactFormComplete = (values: unknown) => contactFormSchema.safeParse(values).success;
+
 export const personTypeSchema = z.enum(['individu', 'association', 'entreprise']);
 
 export const structureNameSchema = z.string()
@@ -131,3 +208,5 @@ export type AuditIdentityInput = z.input<typeof auditIdentitySchema>;
 export type AuditIdentity = z.output<typeof auditIdentitySchema>;
 export type RefonteIdentityInput = z.input<typeof refonteIdentitySchema>;
 export type RefonteIdentity = z.output<typeof refonteIdentitySchema>;
+export type ContactFormInput = z.input<typeof contactFormSchema>;
+export type ContactFormData = z.output<typeof contactFormSchema>;

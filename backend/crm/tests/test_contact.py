@@ -10,7 +10,9 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.core import mail
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import DatabaseError, close_old_connections, connection, transaction
+from django.db.migrations.executor import MigrationExecutor
 from django.test import Client, TransactionTestCase, override_settings
 
 from crm.contact_services import (
@@ -20,6 +22,7 @@ from crm.contact_services import (
     canonical_contact_payload,
     compute_contact_hmac,
     create_contact_dossier,
+    normalize_french_mobile,
     verify_contact_hmac,
 )
 from crm.models import Contact, ContactDailyCounter
@@ -40,7 +43,7 @@ def contact_data(index=1, **changes):
         "nom": "Martin",
         "prenom": f"Alice{index}",
         "email": f"alice{index}@example.com",
-        "telephone": "",
+        "telephone": "0612345678",
         "objet": "Audit du site",
         "message": "Nous souhaitons faire auditer notre site avant une refonte.",
         "methode_contact": "email",
@@ -62,8 +65,9 @@ class ContactGraphQLTests(TransactionTestCase):
         variables = {
             "nom": "Martin",
             "prenom": "Alice",
+            "company": "Association Exemple",
             "email": "alice@example.com",
-            "telephone": "",
+            "telephone": "0612345678",
             "objet": "Audit du site",
             "methodeContact": "email",
             "serviceType": "audit_site",
@@ -74,12 +78,12 @@ class ContactGraphQLTests(TransactionTestCase):
         variables.update(changes)
         query = """
             mutation Contact(
-              $nom: String!, $prenom: String!, $email: String!, $telephone: String,
+              $nom: String!, $prenom: String!, $company: String!, $email: String!, $telephone: String!,
               $objet: String!, $methodeContact: String!, $serviceType: String!,
               $demandType: String, $message: String!, $startedAt: Float!
             ) {
               createContact(
-                nom: $nom, prenom: $prenom, email: $email, telephone: $telephone,
+                nom: $nom, prenom: $prenom, company: $company, email: $email, telephone: $telephone,
                 objet: $objet, methodeContact: $methodeContact, serviceType: $serviceType,
                 demandType: $demandType, message: $message, privacyConsent: true,
                 startedAt: $startedAt
@@ -121,8 +125,10 @@ class ContactGraphQLTests(TransactionTestCase):
             {"email": "invalid"},
             {"email": "alice@example.com\r\nBcc: victim@example.com"},
             {"email": "alice@example.com\x00"},
+            {"methodeContact": "email", "telephone": ""},
             {"methodeContact": "telephone", "telephone": ""},
             {"methodeContact": "les_deux", "telephone": ""},
+            {"telephone": "123"},
             {"methodeContact": "fax"},
             {"nom": "   "},
             {"nom": None},
@@ -130,15 +136,61 @@ class ContactGraphQLTests(TransactionTestCase):
             {"prenom": "Alice\r\nBcc: victim@example.com"},
             {"prenom": "Alice\x00Martin"},
             {"objet": "   "},
+            {"company": "   "},
+            {"company": "Exemple\r\nInjection"},
+            {"company": "Exemple\x00"},
             {"message": "Message assez long mais avec un caractère\x00interdit."},
         ]
         for changes in cases:
             with self.subTest(changes=changes):
                 self.assert_rejected(**changes)
 
-    def test_phone_is_optional_for_email(self):
-        response = self.submit(telephone="", methodeContact="email")
+    def test_phone_is_required_for_email(self):
+        self.assert_rejected(telephone="", methodeContact="email")
+
+    def test_graphql_rejects_foreign_phone(self):
+        self.assert_rejected(telephone="+32470123456", methodeContact="telephone")
+
+    def test_graphql_stores_and_signs_only_the_canonical_phone(self):
+        response = self.submit(telephone="+33 6 12 34 56 78", methodeContact="email")
         self.assertIsNone(response.json().get("errors"))
+        contact = Contact.objects.get()
+        self.assertEqual(contact.phone, "0612345678")
+        payload = canonical_contact_payload(contact)
+        self.assertIn(b'"telephone":"0612345678"', payload)
+        self.assertNotIn(b"+33 6 12 34 56 78", payload)
+        self.assertTrue(verify_contact_hmac(contact))
+
+    def test_graphql_normalizes_organization_and_accepts_particulier(self):
+        response = self.submit(company="  Particulier  ")
+        self.assertIsNone(response.json().get("errors"))
+        self.assertEqual(Contact.objects.get().company, "Particulier")
+
+    def test_graphql_rejects_a_request_without_telephone_argument(self):
+        query = """
+            mutation {
+              createContact(
+                nom: "Martin", prenom: "Alice", email: "alice@example.com",
+                company: "Association Exemple", objet: "Audit du site",
+                methodeContact: "email", serviceType: "audit_site", demandType: "audit",
+                message: "Nous souhaitons faire auditer notre site avant une refonte.",
+                privacyConsent: true, startedAt: 1
+              ) { success }
+            }
+        """
+        response = self.client.post(
+            "/graphql/",
+            data=json.dumps({"query": query}),
+            content_type="application/json",
+        )
+        self.assertIsNotNone(response.json().get("errors"))
+        self.assertFalse(Contact.objects.exists())
+
+    def test_service_rejects_missing_phone_for_every_contact_method(self):
+        for method in ("email", "telephone", "les_deux"):
+            with self.subTest(method=method):
+                with self.assertRaisesRegex(ValueError, "telephone"):
+                    create_contact_dossier(contact_data(telephone="", methode_contact=method))
 
     def test_invalid_json_is_rejected(self):
         response = self.client.post("/graphql/", data=b"{", content_type="application/json")
@@ -178,6 +230,57 @@ class ContactGraphQLTests(TransactionTestCase):
 @override_settings(**TEST_SETTINGS)
 class ContactServiceTests(TransactionTestCase):
     reset_sequences = True
+
+    def test_french_mobile_normalization(self):
+        accepted = {
+            "0612345678": "0612345678",
+            "06 12 34 56 78": "0612345678",
+            "+33612345678": "0612345678",
+            "+33 6 12 34 56 78": "0612345678",
+            "0712345678": "0712345678",
+            "07 12 34 56 78": "0712345678",
+            "+33712345678": "0712345678",
+            "+33 7 12 34 56 78": "0712345678",
+        }
+        for raw, canonical in accepted.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(normalize_french_mobile(raw), canonical)
+
+    def test_french_mobile_rejects_foreign_fixed_and_ambiguous_values(self):
+        rejected = [
+            "+32470123456", "+41791234567", "+34612345678", "0012345678",
+            "33612345678", "06AB345678", "+33", "061234567", "06123456789",
+            "0123456789", "", "   ", "0612345678\x00", "0612345678\r\n",
+        ]
+        for raw in rejected:
+            with self.subTest(raw=raw):
+                with self.assertRaisesRegex(ValueError, "French mobile"):
+                    normalize_french_mobile(raw)
+
+    def test_service_stores_canonical_phone_before_hmac(self):
+        contact = create_contact_dossier(contact_data(telephone="+33612345678"))
+        self.assertEqual(contact.phone, "0612345678")
+        self.assertIn(b'"telephone":"0612345678"', canonical_contact_payload(contact))
+        self.assertTrue(verify_contact_hmac(contact))
+
+    def test_model_rejects_noncanonical_phone_on_manual_creation(self):
+        contact = Contact(
+            numero_dossier="14072026999",
+            nom="Martin",
+            prenom="Alice",
+            name="Alice Martin",
+            email="alice@example.com",
+            company="Particulier",
+            phone="+33612345678",
+            service_type="audit_site",
+            demand_type="audit",
+            objet="Audit",
+            methode_contact="email",
+            message="Description suffisamment longue pour la demande.",
+            signature_hmac="a" * 64,
+        )
+        with self.assertRaises(ValidationError):
+            contact.save(force_insert=True)
 
     def test_number_format_sequence_and_calendar_boundaries(self):
         moments = [
@@ -379,3 +482,40 @@ class ContactServiceTests(TransactionTestCase):
         self.assertEqual(len(set(numbers)), 50)
         self.assertEqual(sorted(numbers), [f"20092026{index:03d}" for index in range(1, 51)])
         self.assertEqual(Contact.objects.filter(numero_dossier__startswith="20092026").count(), 50)
+
+
+class RequiredContactFieldsMigrationTests(TransactionTestCase):
+    migrate_from = [("crm", "0003_contact_dossier_authority")]
+    migrate_to = [("crm", "0004_remove_contact_crm_contact_phone_required_and_more")]
+
+    def test_incomplete_historical_contact_is_preserved_without_fake_phone(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        OldContact = old_apps.get_model("crm", "Contact")
+        OldContact.objects.create(
+            ticket_id="15072026001",
+            secret_token="historical-contact-token",
+            numero_dossier="15072026001",
+            nom="Historique",
+            prenom="Contact",
+            name="Contact Historique",
+            email="historique@example.com",
+            company="",
+            phone="",
+            service_type="audit_site",
+            demand_type="",
+            objet="Ancienne demande",
+            methode_contact="email",
+            message="Demande créée avant la politique téléphonique stricte.",
+            signature_hmac="a" * 64,
+        )
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        new_apps = executor.loader.project_state(self.migrate_to).apps
+        migrated = new_apps.get_model("crm", "Contact").objects.get(numero_dossier="15072026001")
+        self.assertEqual(migrated.phone, "")
+        self.assertEqual(migrated.company, "")
+        self.assertEqual(migrated.demand_type, "")
+        self.assertEqual(migrated.signature_hmac, "a" * 64)

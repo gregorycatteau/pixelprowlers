@@ -1,6 +1,15 @@
+import { toTypedSchema } from '@vee-validate/zod';
 import { computed, reactive, ref } from 'vue';
-import { isEmailLike } from '~/utils/formatDate';
+import { useForm } from 'vee-validate';
 import { graphqlRequest } from '~/utils/graphql';
+import {
+  contactFormSchema,
+  contactRequiredFieldStates,
+  contactPhoneSchema,
+  isContactFormComplete,
+  type ContactFormInput,
+} from '~/validation/schemas';
+import { formatFrenchPhone } from '~/validation/schemas';
 
 export type ContactDemandType = 'diagnostic' | 'urgency' | 'audit' | 'refonte' | 'transmission' | 'partnership';
 export type ContactStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed';
@@ -83,12 +92,12 @@ const CREATE_CONTACT_MUTATION = /* GraphQL */ `
     $nom: String!
     $prenom: String!
     $email: String!
-    $company: String
-    $telephone: String
+    $company: String!
+    $telephone: String!
     $objet: String!
     $methodeContact: String!
     $serviceType: String!
-    $demandType: String
+    $demandType: String!
     $message: String!
     $privacyConsent: Boolean
     $startedAt: Float
@@ -162,50 +171,86 @@ export const statusLabel = (status: ContactStatus) => ({
 }[status] || status);
 
 export const useContactForm = () => {
-  const form = reactive({
-    demandType: '' as ContactDemandType | '',
-    prenom: '',
-    nom: '',
-    organization: '',
-    email: '',
-    phone: '',
-    objet: '',
-    methodeContact: 'email' as 'email' | 'telephone' | 'les_deux',
-    message: '',
+  const { defineField, errors, meta, validate } = useForm<ContactFormInput>({
+    validationSchema: toTypedSchema(contactFormSchema),
+    initialValues: {
+      demandType: '' as ContactDemandType,
+      prenom: '',
+      nom: '',
+      organization: '',
+      email: '',
+      phone: '',
+      objet: '',
+      methodeContact: '' as ContactFormInput['methodeContact'],
+      message: '',
+    },
   });
+  const [demandType] = defineField('demandType');
+  const [prenom] = defineField('prenom');
+  const [nom] = defineField('nom');
+  const [organization] = defineField('organization');
+  const [email] = defineField('email');
+  const [phone] = defineField('phone');
+  const [objet] = defineField('objet');
+  const [methodeContact] = defineField('methodeContact');
+  const [message] = defineField('message');
+  const form = reactive({ demandType, prenom, nom, organization, email, phone, objet, methodeContact, message });
   const submitError = ref('');
   const isSubmitting = ref(false);
 
+  const requiredFields = computed(() => contactRequiredFieldStates(form));
+  const validFieldCount = computed(() => requiredFields.value.filter((field) => field.valid).length);
+  const progressMessage = computed(() => {
+    const remaining = requiredFields.value.length - validFieldCount.value;
+    return remaining === 0
+      ? 'Tout est prêt. Tu peux ouvrir ton ticket.'
+      : `Encore ${remaining} champ${remaining > 1 ? 's' : ''} à compléter avant de pouvoir ouvrir ton ticket.`;
+  });
   const canSubmit = computed(() => (
-    Boolean(form.demandType)
-    && form.prenom.trim().length > 0
-    && form.nom.trim().length > 0
-    && form.objet.trim().length > 0
-    && isEmailLike(form.email)
-    && (form.methodeContact === 'email' || form.phone.trim().length > 0)
-    && form.message.trim().length > 0
+    meta.value.dirty
+    && validFieldCount.value === requiredFields.value.length
+    && isContactFormComplete(form)
+    && !isSubmitting.value
   ));
+
+  const formatPhoneOnBlur = () => {
+    const parsed = contactPhoneSchema.safeParse(form.phone);
+    if (parsed.success) {
+      form.phone = formatFrenchPhone(parsed.data);
+    }
+  };
 
   const submit = async () => {
     if (!canSubmit.value || isSubmitting.value) {
+      submitError.value = form.phone.trim()
+        ? 'Vérifie les champs incomplets avant de pouvoir ouvrir ton ticket.'
+        : 'Indique ton numéro de téléphone pour que nous puissions identifier et suivre correctement ta demande.';
       return null;
     }
+
+    const validation = await validate();
+    const parsedForm = contactFormSchema.safeParse(form);
+    if (!validation.valid || !parsedForm.success) {
+      submitError.value = 'Vérifie ce formulaire : il semble manquer une information.';
+      return null;
+    }
+    const contact = parsedForm.data;
 
     isSubmitting.value = true;
     submitError.value = '';
 
     try {
       const response = await graphqlRequest<{ createContact: { success: boolean; numeroDossier: string; message: string } }>(CREATE_CONTACT_MUTATION, {
-        nom: form.nom,
-        prenom: form.prenom,
-        email: form.email,
-        company: form.organization,
-        telephone: form.phone,
-        objet: form.objet,
-        methodeContact: form.methodeContact,
-        serviceType: serviceTypeFromDemand(form.demandType),
-        demandType: form.demandType,
-        message: form.message,
+        nom: contact.nom,
+        prenom: contact.prenom,
+        email: contact.email,
+        company: contact.organization,
+        telephone: contact.phone,
+        objet: contact.objet,
+        methodeContact: contact.methodeContact,
+        serviceType: serviceTypeFromDemand(contact.demandType),
+        demandType: contact.demandType,
+        message: contact.message,
         privacyConsent: true,
         startedAt: Date.now() - 5000,
       });
@@ -227,7 +272,18 @@ export const useContactForm = () => {
     }
   };
 
-  return { form, submitError, isSubmitting, canSubmit, submit };
+  return {
+    form,
+    errors,
+    submitError,
+    isSubmitting,
+    canSubmit,
+    requiredFields,
+    validFieldCount,
+    progressMessage,
+    formatPhoneOnBlur,
+    submit,
+  };
 };
 
 export const useContactTicket = () => {

@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,8 +12,9 @@ from html import escape
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.mail import EmailMultiAlternatives
+from django.core.validators import validate_email
 from django.db import DatabaseError, transaction
 from django.utils import timezone
 
@@ -23,10 +25,24 @@ from .models import Contact, ContactDailyCounter, ContactMessage
 
 logger = logging.getLogger(__name__)
 PARIS = ZoneInfo("Europe/Paris")
+CONTACT_PHONE_PRESENTATIONS = (
+    re.compile(r"^0[67][0-9]{8}$"),
+    re.compile(r"^0[67](?: [0-9]{2}){4}$"),
+    re.compile(r"^\+33[67][0-9]{8}$"),
+    re.compile(r"^\+33 [67](?: [0-9]{2}){4}$"),
+)
 
 
 class DailyContactLimitReached(Exception):
     pass
+
+
+def normalize_french_mobile(value: str | None) -> str:
+    raw = value or ""
+    if not any(pattern.fullmatch(raw) for pattern in CONTACT_PHONE_PRESENTATIONS):
+        raise ValueError("telephone must be a valid French mobile number")
+    compact = raw.replace(" ", "")
+    return f"0{compact[3:]}" if compact.startswith("+33") else compact
 
 
 @dataclass(frozen=True)
@@ -91,6 +107,38 @@ def _next_dossier_number(now: datetime) -> str:
 
 @transaction.atomic
 def create_contact_dossier(data: ContactData, *, now: datetime | None = None) -> Contact:
+    required_text = {
+        "nom": data.nom,
+        "prenom": data.prenom,
+        "email": data.email,
+        "company": data.company,
+        "objet": data.objet,
+        "message": data.message,
+        "methode_contact": data.methode_contact,
+        "service_type": data.service_type,
+        "demand_type": data.demand_type,
+    }
+    missing = [field for field, value in required_text.items() if not (value or "").strip()]
+    if missing:
+        raise ValueError(f"required contact fields are missing: {', '.join(missing)}")
+    try:
+        validate_email(data.email)
+    except ValidationError as exc:
+        raise ValueError("email is invalid") from exc
+    if data.methode_contact not in {choice.value for choice in Contact.ContactMethod}:
+        raise ValueError("methode_contact is invalid")
+    if data.service_type not in {choice.value for choice in Contact.ServiceType}:
+        raise ValueError("service_type is invalid")
+    if data.demand_type not in {choice.value for choice in Contact.DemandType}:
+        raise ValueError("demand_type is invalid")
+    normalized_phone = normalize_french_mobile(data.telephone)
+    normalized_company = unicodedata.normalize("NFC", data.company or "").strip()
+    if (
+        len(normalized_company) < 2
+        or len(normalized_company) > 180
+        or any(char in (data.company or "") for char in ("\x00", "\r", "\n"))
+    ):
+        raise ValueError("company is invalid")
     creation_time = now or timezone.now()
     numero_dossier = _next_dossier_number(creation_time)
     contact = Contact(
@@ -98,10 +146,10 @@ def create_contact_dossier(data: ContactData, *, now: datetime | None = None) ->
         numero_dossier=numero_dossier,
         nom=data.nom,
         prenom=data.prenom,
-        name=f"{data.prenom} {data.nom}".strip(),
+        name=f"{data.prenom} {data.nom}".strip()[:160],
         email=data.email,
-        company=data.company,
-        phone=data.telephone,
+        company=normalized_company,
+        phone=normalized_phone,
         service_type=data.service_type,
         demand_type=data.demand_type,
         objet=data.objet,

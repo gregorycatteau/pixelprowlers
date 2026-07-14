@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+import unicodedata
 
 import graphene
 from django.conf import settings
@@ -18,7 +19,13 @@ from audits.dossier_services import attach_client_dossier
 from audits.models import ClientDossier
 from pixelprowlers.notifications import safe_send_mail
 
-from .contact_services import ContactData, DailyContactLimitReached, create_contact_dossier, send_contact_acknowledgement
+from .contact_services import (
+    ContactData,
+    DailyContactLimitReached,
+    create_contact_dossier,
+    normalize_french_mobile,
+    send_contact_acknowledgement,
+)
 from .models import Contact, ContactMessage, DiagnosticTicket, Formation, FormationRegistration, Lead, Service
 
 
@@ -30,11 +37,21 @@ CONTACT_RATE_LIMIT_WINDOW_SECONDS = 10 * 60
 logger = logging.getLogger(__name__)
 
 
-def _clean(value: str | None, max_length: int, field: str, *, required: bool = False) -> str:
-    cleaned = (value or "").strip()
+def _clean(
+    value: str | None,
+    max_length: int,
+    field: str,
+    *,
+    required: bool = False,
+    min_length: int = 0,
+) -> str:
+    normalized = unicodedata.normalize("NFC", value or "")
+    if any(char in normalized for char in SINGLE_LINE_FORBIDDEN):
+        raise GraphQLError(f"{field} est invalide.")
+    cleaned = normalized.strip()
     if required and not cleaned:
         raise GraphQLError(f"{field} est obligatoire.")
-    if len(cleaned) > max_length or any(char in cleaned for char in SINGLE_LINE_FORBIDDEN):
+    if len(cleaned) < min_length or len(cleaned) > max_length:
         raise GraphQLError(f"{field} est invalide.")
     return cleaned
 
@@ -53,6 +70,14 @@ def _clean_phone(value: str | None) -> str:
     if phone and not PHONE_PATTERN.fullmatch(phone):
         raise GraphQLError("phone est invalide.")
     return phone
+
+
+def _clean_contact_phone(value: str | None) -> str:
+    phone = _clean(value, 40, "telephone", required=True)
+    try:
+        return normalize_french_mobile(phone)
+    except ValueError as exc:
+        raise GraphQLError("Indique un numéro de téléphone français valide.") from exc
 
 
 def _check_choice(value: str, valid_values: set[str], field: str) -> str:
@@ -259,12 +284,12 @@ class CreateContact(graphene.Mutation):
         nom = graphene.String(required=True)
         prenom = graphene.String(required=True)
         email = graphene.String(required=True)
-        company = graphene.String(required=False)
-        telephone = graphene.String(required=False)
+        company = graphene.String(required=True)
+        telephone = graphene.String(required=True)
         objet = graphene.String(required=True)
         methode_contact = graphene.String(required=True)
         service_type = graphene.String(required=True)
-        demand_type = graphene.String(required=False)
+        demand_type = graphene.String(required=True)
         message = graphene.String(required=True)
         structure_type = graphene.String(required=False)
         urgency = graphene.String(required=False)
@@ -300,26 +325,28 @@ class CreateContact(graphene.Mutation):
             raise GraphQLError("message doit contenir entre 20 et 4000 caractères.")
 
         service_type = _check_choice(kwargs["service_type"], {choice.value for choice in Contact.ServiceType}, "serviceType")
-        demand_type = kwargs.get("demand_type") or ""
         method = _check_choice(
             kwargs["methode_contact"],
             {choice.value for choice in Contact.ContactMethod},
             "methodeContact",
         )
-        telephone = _clean_phone(kwargs.get("telephone"))
-        if method in {Contact.ContactMethod.TELEPHONE, Contact.ContactMethod.BOTH} and not telephone:
-            raise GraphQLError("telephone est obligatoire pour cette méthode de contact.")
+        telephone = _clean_contact_phone(kwargs.get("telephone"))
+        demand_type = _check_choice(
+            kwargs["demand_type"],
+            {choice.value for choice in Contact.DemandType},
+            "demandType",
+        )
         data = ContactData(
-            nom=_clean(kwargs["nom"], 100, "nom", required=True),
-            prenom=_clean(kwargs["prenom"], 100, "prenom", required=True),
+            nom=_clean(kwargs["nom"], 100, "nom", required=True, min_length=2),
+            prenom=_clean(kwargs["prenom"], 100, "prenom", required=True, min_length=2),
             email=_clean_email(kwargs["email"]),
             telephone=telephone,
-            objet=_clean(kwargs["objet"], 200, "objet", required=True),
+            objet=_clean(kwargs["objet"], 200, "objet", required=True, min_length=2),
             message=message,
             methode_contact=method,
-            company=_clean(kwargs.get("company"), 180, "company"),
+            company=_clean(kwargs["company"], 180, "company", required=True, min_length=2),
             service_type=service_type,
-            demand_type=demand_type if demand_type in {choice.value for choice in Contact.DemandType} else "",
+            demand_type=demand_type,
         )
         delivery_result = {}
         try:

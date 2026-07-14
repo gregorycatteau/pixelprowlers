@@ -409,6 +409,7 @@ class GraphQLSmokeTests(TestCase):
                 objet: "Audit avant refonte"
                 methodeContact: "email"
                 serviceType: "audit_site"
+                demandType: "audit"
                 message: "Nous voulons faire auditer notre site avant une refonte."
                 structureType: "TPE"
                 urgency: "Projet à cadrer"

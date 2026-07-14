@@ -1,5 +1,6 @@
 import secrets
 
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
@@ -55,10 +56,18 @@ class Contact(TimeStampedModel):
     prenom = models.CharField(max_length=100)
     name = models.CharField(max_length=160)
     email = models.EmailField(db_index=True)
-    company = models.CharField(max_length=180, blank=True)
-    phone = models.CharField(max_length=40, blank=True)
+    company = models.CharField(max_length=180)
+    phone = models.CharField(
+        max_length=40,
+        validators=[
+            RegexValidator(
+                regex=r"^0[67][0-9]{8}$",
+                message="Le numéro de téléphone doit être un numéro français valide.",
+            )
+        ],
+    )
     service_type = models.CharField(max_length=32, choices=ServiceType.choices)
-    demand_type = models.CharField(max_length=32, choices=DemandType.choices, blank=True)
+    demand_type = models.CharField(max_length=32, choices=DemandType.choices)
     objet = models.CharField(max_length=200)
     methode_contact = models.CharField(max_length=16, choices=ContactMethod.choices)
     status = models.CharField(max_length=32, choices=Status.choices, default=Status.OPEN)
@@ -93,16 +102,11 @@ class Contact(TimeStampedModel):
                 condition=models.Q(signature_hmac__regex=r"^[0-9a-f]{64}$"),
                 name="crm_contact_signature_hmac_format",
             ),
-            models.CheckConstraint(
-                condition=(
-                    models.Q(methode_contact="email")
-                    | models.Q(phone__regex=r".*\S.*")
-                ),
-                name="crm_contact_phone_required",
-            ),
         ]
 
     def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.full_clean()
         if not self.ticket_id:
             self.ticket_id = f"CT-{secrets.token_urlsafe(6).replace('-', '').replace('_', '').upper()[:8]}"
         if not self.secret_token:

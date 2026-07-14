@@ -36,7 +36,7 @@ type ContactType {
   company: String!
   phone: String!
   serviceType: CrmContactServiceTypeChoices!
-  demandType: CrmContactDemandTypeChoices
+  demandType: CrmContactDemandTypeChoices!
   objet: String!
   methodeContact: CrmContactMethodeContactChoices!
   status: CrmContactStatusChoices!
@@ -868,7 +868,7 @@ type Mutation {
   recordPageView(sessionId: UUID!, title: String, url: String!): RecordPageView
   recordQuestionInteraction(orderIndex: Int, questionId: String!, revisitCount: Int, serie: String, sessionId: UUID!, timeSpentSeconds: Float): RecordQuestionInteraction
   recordTrackingEvent(eventType: String!, metadata: JSONString, pageUrl: String!, sessionId: UUID): RecordTrackingEvent
-  createContact(access: String, backups: String, budget: String, cms: String, company: String, contactPreference: String, demandType: String, email: String!, foundUs: String, hosting: String, message: String!, methodeContact: String!, nom: String!, objet: String!, prenom: String!, privacyConsent: Boolean, serviceType: String!, startedAt: Float, structureType: String, telephone: String, urgency: String, websiteCompany: String, websiteUrl: String): CreateContact
+  createContact(access: String, backups: String, budget: String, cms: String, company: String!, contactPreference: String, demandType: String!, email: String!, foundUs: String, hosting: String, message: String!, methodeContact: String!, nom: String!, objet: String!, prenom: String!, privacyConsent: Boolean, serviceType: String!, startedAt: Float, structureType: String, telephone: String!, urgency: String, websiteCompany: String, websiteUrl: String): CreateContact
   addContactMessage(authorName: String!, message: String!, token: String!): AddContactMessage
   createDiagnosticTicket(answers: JSONString!, email: String!, message: String!, organization: String!, phone: String): CreateDiagnosticTicket
   createLead(budget: String, company: String, email: String!, leadType: String!, name: String!, phone: String, projectDescription: String!, timeline: String): CreateLead

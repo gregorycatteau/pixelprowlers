@@ -122,3 +122,44 @@ délai minimal ne suffisent plus.
 Le frontend et `/graphql/` doivent de préférence rester sous la même origine
 `https://pixelprowlers.io`; aucun CORS générique n'est nécessaire et les
 credentials ne doivent pas être combinés avec une origine `*`.
+
+## Champs obligatoires
+
+Ouvrir un ticket exige toujours les neuf champs métier du formulaire : type
+de demande, prénom, nom, organisation, adresse email, numéro de téléphone,
+méthode de contact préférée, objet et message. La méthode `email`,
+`telephone` ou `les_deux` indique seulement le canal préféré; elle ne rend
+jamais le téléphone facultatif.
+
+Le frontend applique le même schéma avec Zod et VeeValidate pour guider
+l'utilisateur. Son widget conserve une liste fixe de neuf champs, retire une
+coche dès qu'une valeur redevient invalide et maintient le bouton désactivé
+tant que le formulaire n'est pas modifié et entièrement valide. Django reste
+l'autorité : GraphQL exige `company`, `telephone` et `demandType`, puis le
+service revalide le téléphone même lorsqu'il est appelé sans passer par la
+mutation.
+
+### Téléphone mobile français
+
+Le contact accepte exclusivement les quatre présentations suivantes, pour les
+préfixes `06` et `07` : `0612345678`, `06 12 34 56 78`, `+33612345678` et
+`+33 6 12 34 56 78`. Les indicatifs étrangers, `0033`, les numéros fixes,
+les lettres et toute autre ponctuation sont refusés.
+
+Zod et Django normalisent indépendamment la saisie vers `0[67]XXXXXXXX`. Le
+frontend n'envoie que cette forme canonique à GraphQL. Django la recalcule
+avant de construire le modèle; PostgreSQL, le CRM et le HMAC utilisent donc
+exclusivement les dix chiffres canoniques. Au blur, le champ peut afficher la
+forme espacée pour la lecture sans changer cette valeur métier.
+
+Le champ porte le libellé `Organisation ou statut`, l'aide exacte `Indique le
+nom de ton organisation ou « Particulier » si tu ne fais pas partie d’une
+organisation.` et le placeholder `Nom de l’organisation ou Particulier`.
+`Particulier` n'est jamais prérempli. La valeur est saisie volontairement,
+normalisée en NFC, trimée et contrôlée comme champ monoligne de 2 à 180
+caractères.
+
+La migration `0004` ne remplit pas les champs historiques vides : elle retire
+la règle conditionnelle antérieure et conserve les valeurs ainsi que leur
+HMAC existant. Le modèle, GraphQL et le service imposent la nouvelle politique
+à toute création future, y compris via l'administration Django.
