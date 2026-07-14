@@ -1,5 +1,22 @@
 name: Deploy Preprod
 
+# Combinaison utilisateur/chemin/clé confirmée par connexion SSH directe et
+# documentée ici pour éviter toute nouvelle dérive (2026-07-14) :
+#   - Utilisateur VPS : striker (membre du groupe docker, PAS root — root
+#     rejette la clé de déploiement). ~/.ssh/authorized_keys de root sur ce
+#     VPS n'accepte pas cette clé, ne pas revenir à VPS_USER=root sans
+#     vérifier authorized_keys côté serveur au préalable.
+#   - Répertoire distant : /opt/pixelprowlers (appartient à striker,
+#     inscriptible). /root/pixelprowlers n'est pas accessible à striker.
+#   - Secret VPS_SSH_KEY : doit correspondre à la clé publique déjà présente
+#     dans ~/striker/.ssh/authorized_keys sur le VPS pour l'utilisateur
+#     striker. En local, cette clé privée est ~/.ssh/pixelprowlers_github_actions
+#     (plusieurs autres clés pixelprowlers* existent en local mais ne sont
+#     pas autorisées par le serveur — ne pas les réutiliser sans re-tester).
+#   - Le reverse proxy en prod est Caddy (hors de ce dépôt, géré séparément
+#     sur le VPS) : ne pas ajouter de service nginx/caddy dans compose.yml
+#     sans revalidation explicite (voir historique de ce fichier).
+
 on:
   push:
     branches:
@@ -12,9 +29,9 @@ concurrency:
 
 env:
   VPS_HOST: 46.202.131.25
-  VPS_USER: root
+  VPS_USER: striker
   VPS_PORT: 2222
-  REMOTE_DIR: /root/pixelprowlers
+  REMOTE_DIR: /opt/pixelprowlers
   SSH_KEY_PATH: /tmp/pixelprowlers_vps_key
 
 jobs:
