@@ -80,5 +80,42 @@ services:
       - "3000"
     restart: unless-stopped
 
+  # HYPOTHESE NON VALIDEE (2026-07-14) : aucun materiel TLS (certs, ACME,
+  # Caddyfile) n'existe dans ce depot. Ce service nginx sert donc UNIQUEMENT
+  # le port 80 en clair sur le reseau Docker interne du VPS. La terminaison
+  # TLS (443) est supposee geree en amont, HORS de ce compose.yml (reverse
+  # proxy systeme type Caddy/Nginx sur l'hote, ou load balancer externe) qui
+  # doit relayer vers 127.0.0.1:80 sur le VPS. Cette hypothese N'A PAS ETE
+  # VERIFIEE sur le VPS reel (aucun acces SSH effectue dans le cadre de cette
+  # tache) et DOIT etre confirmee par un humain avant tout deploiement :
+  # si aucun proxy systeme n'existe sur le VPS, le site restera inaccessible
+  # en HTTPS malgre ce service, et docker-proxy pourrait aussi entrer en
+  # conflit avec un service systeme deja lie au port 80.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pixelprowlers-nginx
+    depends_on:
+      django:
+        condition: service_healthy
+      nuxt:
+        condition: service_started
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--header=X-Forwarded-Proto: https", "--spider", "http://127.0.0.1/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
 volumes:
   postgres_data:

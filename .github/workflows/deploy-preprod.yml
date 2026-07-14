@@ -48,6 +48,20 @@ jobs:
             "${VPS_USER}@${VPS_HOST}" \
             "echo '✓ SSH connection successful'"
 
+      - name: Diagnose existing reverse proxy on host (informational, non-blocking)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
+            "${VPS_USER}@${VPS_HOST}" \
+            "echo '=== Listeners on 80/443 (host) ===' && \
+             (ss -ltnp 2>/dev/null | grep -E ':(80|443)\b' || echo 'aucun listener host detecte sur 80/443') && \
+             echo '=== Conteneurs Docker actifs (tous projets) ===' && \
+             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}' || true"
+
       - name: Pull latest code
         shell: bash
         run: |
@@ -88,6 +102,8 @@ jobs:
              for i in {1..30}; do docker compose exec -T postgres pg_isready -U pixelprowlers >/dev/null 2>&1 && echo '✓ PostgreSQL ready' && break; sleep 2; done && \
              echo '=== Waiting for Django ===' && \
              for i in {1..30}; do docker compose exec -T django curl -sf http://localhost:8000/health/ >/dev/null 2>&1 && echo '✓ Django ready' && break; sleep 2; done && \
+             echo '=== Waiting for Nginx (reverse proxy) ===' && \
+             for i in {1..30}; do docker compose exec -T nginx wget -q --header='X-Forwarded-Proto: https' --spider http://127.0.0.1/health/ >/dev/null 2>&1 && echo '✓ Nginx ready' && break; sleep 2; done && \
              docker compose ps"
 
       - name: Run Django migrations
@@ -106,7 +122,7 @@ jobs:
              docker compose exec -T django python manage.py migrate && \
              echo '✓ Migrations done'"
 
-      - name: Verify deployment
+      - name: Verify deployment (internal stack)
         shell: bash
         run: |
           set -euo pipefail
@@ -115,7 +131,21 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             -o UserKnownHostsFile=/dev/null \
             "${VPS_USER}@${VPS_HOST}" \
-            "cd '${REMOTE_DIR}' && docker compose ps && docker compose logs --tail=20 django"
+            "cd '${REMOTE_DIR}' && docker compose ps && docker compose logs --tail=20 django && docker compose logs --tail=20 nginx"
+
+      - name: Verify public HTTPS access
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "${SSH_KEY_PATH}" \
+            -p "${VPS_PORT}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/dev/null \
+            "${VPS_USER}@${VPS_HOST}" \
+            "echo '=== Reverse proxy interne (container nginx, port 80) ===' && \
+             curl -fsS -H 'Host: pixelprowlers.io' -H 'X-Forwarded-Proto: https' http://127.0.0.1:80/health/ && echo '✓ nginx interne repond' && \
+             echo '=== Acces public HTTPS (dependant d un proxy TLS externe a ce depot, voir compose.yml) ===' && \
+             curl -fsSI https://pixelprowlers.io && echo '✓ HTTPS public repond' || echo '⚠ HTTPS public injoignable: verifier la terminaison TLS en amont (hors de ce depot)'"
 
       - name: Cleanup SSH key
         if: always()
