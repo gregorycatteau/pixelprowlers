@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import time
 
@@ -8,6 +9,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 from graphene_django import DjangoObjectType
 from graphql import GraphQLError
@@ -16,14 +18,16 @@ from audits.dossier_services import attach_client_dossier
 from audits.models import ClientDossier
 from pixelprowlers.notifications import safe_send_mail
 
+from .contact_services import ContactData, DailyContactLimitReached, create_contact_dossier, send_contact_acknowledgement
 from .models import Contact, ContactMessage, DiagnosticTicket, Formation, FormationRegistration, Lead, Service
 
 
-SINGLE_LINE_FORBIDDEN = {"\r", "\n", "<", ">", "`"}
+SINGLE_LINE_FORBIDDEN = {"\x00", "\r", "\n", "<", ">", "`"}
 PHONE_PATTERN = re.compile(r"^[0-9+().\s-]{6,30}$")
 CONTACT_MIN_FILL_SECONDS = 3
 CONTACT_RATE_LIMIT_MAX = 5
 CONTACT_RATE_LIMIT_WINDOW_SECONDS = 10 * 60
+logger = logging.getLogger(__name__)
 
 
 def _clean(value: str | None, max_length: int, field: str, *, required: bool = False) -> str:
@@ -61,19 +65,22 @@ def _client_ip(info) -> str:
     request = getattr(getattr(info, "context", None), "request", getattr(info, "context", None))
     if request is None:
         return "unknown"
+    remote_addr = request.META.get("REMOTE_ADDR", "unknown")
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",", 1)[0].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
+    if forwarded and remote_addr in getattr(settings, "TRUSTED_PROXY_IPS", set()):
+        return forwarded.rsplit(",", 1)[-1].strip()
+    return remote_addr
 
 
 def _rate_limit(info, action: str, limit: int, window: int) -> bool:
     key = f"crm:{action}:{_client_ip(info)}"
-    count = cache.get(key, 0)
-    if count >= limit:
-        return False
-    cache.set(key, count + 1, timeout=window)
-    return True
+    if cache.add(key, 1, timeout=window):
+        return True
+    try:
+        return cache.incr(key) <= limit
+    except ValueError:
+        cache.set(key, 1, timeout=window)
+        return True
 
 
 class ContactMessageType(DjangoObjectType):
@@ -84,20 +91,34 @@ class ContactMessageType(DjangoObjectType):
 
 class ContactType(DjangoObjectType):
     demand_label = graphene.String()
-    email_confirmation = graphene.JSONString()
     messages = graphene.List(ContactMessageType)
 
     class Meta:
         model = Contact
-        fields = "__all__"
+        fields = (
+            "id",
+            "ticket_id",
+            "secret_token",
+            "numero_dossier",
+            "nom",
+            "prenom",
+            "name",
+            "email",
+            "company",
+            "phone",
+            "service_type",
+            "demand_type",
+            "objet",
+            "methode_contact",
+            "status",
+            "message",
+            "created_at",
+            "updated_at",
+            "client_dossier",
+        )
 
     def resolve_demand_label(self, info):
         return self.get_demand_type_display() if self.demand_type else self.get_service_type_display()
-
-    def resolve_email_confirmation(self, info):
-        return {
-            "status": self.notification_status.get("client_email", "not_configured"),
-        }
 
     def resolve_messages(self, info):
         return self.messages.all()
@@ -171,30 +192,6 @@ def _notify_contact(contact: Contact, detail_fields: dict) -> dict[str, str]:
     return status
 
 
-def _notify_contact_client(contact: Contact, origin: str | None = None) -> str:
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "") or getattr(settings, "CONTACT_FROM", "")
-    if not from_email:
-        return "not_configured"
-
-    confirmation_url = f"{origin.rstrip('/')}/ticket/{contact.secret_token}" if origin else f"/ticket/{contact.secret_token}"
-    return safe_send_mail(
-        subject=f"Votre demande PixelProwlers - Ticket {contact.ticket_id}",
-        message="\n".join(
-            [
-                f"Bonjour {contact.name},",
-                "",
-                "Votre demande a bien ete recue.",
-                "",
-                f"Suivi du ticket : {confirmation_url}",
-                "",
-                "PixelProwlers",
-            ]
-        ),
-        from_email=from_email,
-        recipient_list=[contact.email],
-    )
-
-
 def _diagnostic_scores(answers: dict) -> dict:
     urgency = 0
     fragility = 0
@@ -259,10 +256,13 @@ def _notify_diagnostic_client(ticket: DiagnosticTicket, origin: str | None = Non
 
 class CreateContact(graphene.Mutation):
     class Arguments:
-        name = graphene.String(required=True)
+        nom = graphene.String(required=True)
+        prenom = graphene.String(required=True)
         email = graphene.String(required=True)
         company = graphene.String(required=False)
-        phone = graphene.String(required=False)
+        telephone = graphene.String(required=False)
+        objet = graphene.String(required=True)
+        methode_contact = graphene.String(required=True)
         service_type = graphene.String(required=True)
         demand_type = graphene.String(required=False)
         message = graphene.String(required=True)
@@ -280,38 +280,59 @@ class CreateContact(graphene.Mutation):
         website_company = graphene.String(required=False)
         started_at = graphene.Float(required=False)
 
-    contact = graphene.Field(ContactType)
-    detail = graphene.String()
+    success = graphene.Boolean()
+    numero_dossier = graphene.String()
+    message = graphene.String()
 
     def mutate(self, info, **kwargs):
         if not _rate_limit(info, "contact", CONTACT_RATE_LIMIT_MAX, CONTACT_RATE_LIMIT_WINDOW_SECONDS):
             raise GraphQLError("Trop de demandes rapprochées. Réessayez plus tard.")
         if kwargs.get("website_company"):
-            return CreateContact(contact=None, detail="Merci. Votre demande a bien été reçue.")
+            return CreateContact(success=True, message="Merci. Votre demande a bien été reçue.")
         started_at = kwargs.get("started_at")
         if not started_at or time.time() - (int(started_at) / 1000) < CONTACT_MIN_FILL_SECONDS:
-            return CreateContact(contact=None, detail="Merci. Votre demande a bien été reçue.")
+            return CreateContact(success=True, message="Merci. Votre demande a bien été reçue.")
         if kwargs.get("privacy_consent") is False:
             raise GraphQLError("Le consentement est requis.")
 
         message = (kwargs.get("message") or "").strip()
-        if len(message) < 20 or len(message) > 4000:
+        if len(message) < 20 or len(message) > 4000 or "\x00" in message:
             raise GraphQLError("message doit contenir entre 20 et 4000 caractères.")
 
         service_type = _check_choice(kwargs["service_type"], {choice.value for choice in Contact.ServiceType}, "serviceType")
         demand_type = kwargs.get("demand_type") or ""
-        contact = Contact.objects.create(
-            name=_clean(kwargs["name"], 160, "name", required=True),
+        method = _check_choice(
+            kwargs["methode_contact"],
+            {choice.value for choice in Contact.ContactMethod},
+            "methodeContact",
+        )
+        telephone = _clean_phone(kwargs.get("telephone"))
+        if method in {Contact.ContactMethod.TELEPHONE, Contact.ContactMethod.BOTH} and not telephone:
+            raise GraphQLError("telephone est obligatoire pour cette méthode de contact.")
+        data = ContactData(
+            nom=_clean(kwargs["nom"], 100, "nom", required=True),
+            prenom=_clean(kwargs["prenom"], 100, "prenom", required=True),
             email=_clean_email(kwargs["email"]),
+            telephone=telephone,
+            objet=_clean(kwargs["objet"], 200, "objet", required=True),
+            message=message,
+            methode_contact=method,
             company=_clean(kwargs.get("company"), 180, "company"),
-            phone=_clean_phone(kwargs.get("phone")),
             service_type=service_type,
             demand_type=demand_type if demand_type in {choice.value for choice in Contact.DemandType} else "",
-            message=message,
         )
-        ContactMessage.objects.create(contact=contact, author=ContactMessage.Author.CUSTOMER, author_name=contact.name, message=message)
-        attach_client_dossier(contact, phase=ClientDossier.Phase.CONTACT, source="contact", metadata={"contact_id": contact.id})
-        contact.notification_status = _notify_contact(
+        delivery_result = {}
+        try:
+            with transaction.atomic():
+                contact = create_contact_dossier(data)
+                transaction.on_commit(
+                    lambda: delivery_result.update(client_status=send_contact_acknowledgement(contact))
+                )
+        except DailyContactLimitReached as exc:
+            raise GraphQLError("La capacité quotidienne de demandes est atteinte. Réessayez demain.") from exc
+
+        client_status = delivery_result.get("client_status", Contact.NotificationStatus.PENDING)
+        internal_status = _notify_contact(
             contact,
             {
                 "structure_type": _clean(kwargs.get("structure_type"), 80, "structureType"),
@@ -326,11 +347,30 @@ class CreateContact(graphene.Mutation):
                 "found_us": _clean(kwargs.get("found_us"), 80, "foundUs"),
             },
         )
-        request = getattr(getattr(info, "context", None), "request", getattr(info, "context", None))
-        origin = request.headers.get("origin") if request is not None and hasattr(request, "headers") else None
-        contact.notification_status["client_email"] = _notify_contact_client(contact, origin=origin)
-        contact.save(update_fields=["notification_status"])
-        return CreateContact(contact=contact, detail="Merci. Votre demande a bien été reçue.")
+        contact.notification_status = {
+            "client_email": client_status,
+            **internal_status,
+        }
+        try:
+            Contact.objects.filter(pk=contact.pk).update(
+                statut_notification=client_status,
+                notification_status=contact.notification_status,
+            )
+        except DatabaseError as exc:
+            logger.error(
+                "contact_notification_summary_update_failed numero_dossier=%s error_type=%s",
+                contact.numero_dossier,
+                type(exc).__name__,
+            )
+        if client_status == Contact.NotificationStatus.SENT:
+            public_message = "Votre demande a bien été enregistrée. Un accusé de réception vous a été envoyé."
+        else:
+            public_message = "Votre demande a bien été enregistrée. Conservez votre numéro de dossier."
+        return CreateContact(
+            success=True,
+            numero_dossier=contact.numero_dossier,
+            message=public_message,
+        )
 
 
 class AddContactMessage(graphene.Mutation):

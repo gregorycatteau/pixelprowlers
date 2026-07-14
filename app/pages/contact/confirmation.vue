@@ -10,21 +10,17 @@
 
     <section class="manifest-section" aria-labelledby="confirmation-ticket-title">
       <div class="article-container">
-        <div v-if="isLoading" class="contact-panel">
-          <h2 id="confirmation-ticket-title">Chargement du ticket.</h2>
-        </div>
-        <div v-else-if="error" class="contact-panel">
-          <h2 id="confirmation-ticket-title">Ticket introuvable.</h2>
+        <div v-if="error" class="contact-panel">
+          <h2 id="confirmation-ticket-title">Confirmation indisponible.</h2>
           <p>{{ error }}</p>
           <AppButton href="/contact">Réessayer</AppButton>
         </div>
-        <div v-else-if="ticket" class="contact-panel">
-          <h2 id="confirmation-ticket-title">Ticket ID : {{ ticket.ticketId }}</h2>
-          <p>{{ contactEmailLabel(ticket) }} : {{ maskEmail(ticket.email) }}</p>
+        <div v-else-if="confirmation" class="contact-panel">
+          <h2 id="confirmation-ticket-title">Numéro de dossier : {{ confirmation.numeroDossier }}</h2>
+          <p>{{ confirmation.message }}</p>
           <p>Vous savez maintenant par où commencer : votre site, vos accès et vos priorités vont être clarifiés.</p>
           <p>Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
           <div class="result-actions">
-            <AppButton :href="`/ticket/${ticket.secretToken}`">Consulter votre ticket</AppButton>
             <AppButton variant="secondary" href="/">Retour à l'accueil</AppButton>
             <AppButton variant="secondary" href="/diagnostic-situation">Faire le diagnostic</AppButton>
           </div>
@@ -35,15 +31,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
-import { contactEmailLabel, useContactTicket } from '~/composables/useContact';
-import { maskEmail } from '~/utils/formatDate';
 
-const route = useRoute();
-const { ticket, error, isLoading, load } = useContactTicket();
+type ContactConfirmation = { numeroDossier: string; message: string };
+
+const confirmation = ref<ContactConfirmation | null>(null);
+const error = ref('');
 
 onMounted(() => {
-  load(typeof route.query.token === 'string' ? route.query.token : '');
+  try {
+    const stored = sessionStorage.getItem('pixelprowlers-contact-confirmation');
+    const parsed = stored ? JSON.parse(stored) as ContactConfirmation : null;
+    if (!parsed?.numeroDossier || !/^\d{11}$/.test(parsed.numeroDossier) || !parsed.message) {
+      throw new Error('invalid confirmation');
+    }
+    confirmation.value = parsed;
+  } catch {
+    error.value = "Le numéro de dossier n'est plus disponible dans cette session.";
+  }
 });
 </script>

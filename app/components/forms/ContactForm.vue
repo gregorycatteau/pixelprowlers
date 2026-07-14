@@ -10,23 +10,51 @@
 
     <div class="contact-grid contact-form-grid">
       <label class="text-field">
-        <span>Votre prénom / organisation</span>
-        <input v-model="form.organization" required type="text" placeholder="Vous êtes ?" autocomplete="organization">
+        <span>Votre prénom</span>
+        <input v-model="form.prenom" required maxlength="100" type="text" autocomplete="given-name">
+      </label>
+      <label class="text-field">
+        <span>Votre nom</span>
+        <input v-model="form.nom" required maxlength="100" type="text" autocomplete="family-name">
+      </label>
+      <label class="text-field">
+        <span>Votre organisation <small>(optionnel)</small></span>
+        <input v-model="form.organization" maxlength="180" type="text" autocomplete="organization">
       </label>
       <label class="text-field">
         <span>Votre email</span>
         <input v-model="form.email" required type="email" placeholder="Pour qu'on vous recontacte" autocomplete="email">
       </label>
       <label class="text-field">
-        <span>Téléphone <small>(optionnel)</small></span>
+        <span>Téléphone <small>(obligatoire si rappel demandé)</small></span>
         <input v-model="form.phone" type="tel" placeholder="+33 6 ..." autocomplete="tel">
       </label>
+      <label class="text-field full-field">
+        <span>Objet</span>
+        <input v-model="form.objet" required maxlength="200" type="text" placeholder="Objet de votre demande">
+      </label>
+      <fieldset class="full-field">
+        <legend>Méthode de contact souhaitée</legend>
+        <label class="radio-choice">
+          <input v-model="form.methodeContact" type="radio" value="email">
+          <span>Email</span>
+        </label>
+        <label class="radio-choice">
+          <input v-model="form.methodeContact" type="radio" value="telephone">
+          <span>Téléphone</span>
+        </label>
+        <label class="radio-choice">
+          <input v-model="form.methodeContact" type="radio" value="les_deux">
+          <span>Email et téléphone</span>
+        </label>
+      </fieldset>
       <label class="text-field full-field">
         <span>Votre situation / problématique</span>
         <textarea
           v-model="form.message"
           required
-          maxlength="500"
+          minlength="20"
+          maxlength="4000"
           rows="6"
           placeholder="Décrivez en quelques lignes ce qui vous amène ici"
         ></textarea>
@@ -38,7 +66,7 @@
         {{ isSubmitting ? 'Ouverture...' : 'Ouvrir un ticket' }}
       </AppButton>
     </div>
-    <p v-if="submitError" class="form-error">{{ submitError }}</p>
+    <p v-if="submitError" class="form-error" role="alert" aria-live="polite">{{ submitError }}</p>
   </form>
 </template>
 

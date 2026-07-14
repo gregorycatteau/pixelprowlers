@@ -1,12 +1,13 @@
 import { computed, reactive, ref } from 'vue';
 import { isEmailLike } from '~/utils/formatDate';
-import { graphqlRequest, parseGraphqlJson } from '~/utils/graphql';
+import { graphqlRequest } from '~/utils/graphql';
 
 export type ContactDemandType = 'diagnostic' | 'urgency' | 'audit' | 'refonte' | 'transmission' | 'partnership';
 export type ContactStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed';
 
 export type ContactTicket = {
   ticketId: string;
+  numeroDossier: string;
   secretToken: string;
   organization: string;
   email: string;
@@ -22,9 +23,6 @@ export type ContactTicket = {
     message: string;
     createdAt: string;
   }>;
-  emailConfirmation: {
-    status: 'sent' | 'not_configured' | 'failed';
-  };
   createdAt: string;
   updatedAt: string;
 };
@@ -40,6 +38,7 @@ export const contactDemandOptions: Array<{ label: string; value: ContactDemandTy
 
 type ContactGraphql = {
   ticketId: string;
+  numeroDossier: string;
   secretToken: string;
   name: string;
   email: string;
@@ -50,7 +49,6 @@ type ContactGraphql = {
   message: string;
   status: ContactStatus;
   messages: ContactTicket['messages'];
-  emailConfirmation: string | ContactTicket['emailConfirmation'];
   createdAt: string;
   updatedAt: string;
 };
@@ -58,6 +56,7 @@ type ContactGraphql = {
 const CONTACT_FIELDS = /* GraphQL */ `
   {
     ticketId
+    numeroDossier
     secretToken
     name
     email
@@ -74,7 +73,6 @@ const CONTACT_FIELDS = /* GraphQL */ `
       message
       createdAt
     }
-    emailConfirmation
     createdAt
     updatedAt
   }
@@ -82,10 +80,13 @@ const CONTACT_FIELDS = /* GraphQL */ `
 
 const CREATE_CONTACT_MUTATION = /* GraphQL */ `
   mutation CreateContact(
-    $name: String!
+    $nom: String!
+    $prenom: String!
     $email: String!
     $company: String
-    $phone: String
+    $telephone: String
+    $objet: String!
+    $methodeContact: String!
     $serviceType: String!
     $demandType: String
     $message: String!
@@ -93,17 +94,22 @@ const CREATE_CONTACT_MUTATION = /* GraphQL */ `
     $startedAt: Float
   ) {
     createContact(
-      name: $name
+      nom: $nom
+      prenom: $prenom
       email: $email
       company: $company
-      phone: $phone
+      telephone: $telephone
+      objet: $objet
+      methodeContact: $methodeContact
       serviceType: $serviceType
       demandType: $demandType
       message: $message
       privacyConsent: $privacyConsent
       startedAt: $startedAt
     ) {
-      contact ${CONTACT_FIELDS}
+      success
+      numeroDossier
+      message
     }
   }
 `;
@@ -133,6 +139,7 @@ const serviceTypeFromDemand = (demandType: ContactDemandType | '') => {
 
 const mapContact = (contact: ContactGraphql): ContactTicket => ({
   ticketId: contact.ticketId,
+  numeroDossier: contact.numeroDossier,
   secretToken: contact.secretToken,
   organization: contact.company || contact.name,
   email: contact.email,
@@ -142,24 +149,9 @@ const mapContact = (contact: ContactGraphql): ContactTicket => ({
   message: contact.message,
   status: contact.status,
   messages: contact.messages || [],
-  emailConfirmation: parseGraphqlJson(contact.emailConfirmation, { status: 'not_configured' }),
   createdAt: contact.createdAt,
   updatedAt: contact.updatedAt,
 });
-
-export const contactEmailLabel = (ticket: ContactTicket | null) => {
-  const status = ticket?.emailConfirmation?.status;
-
-  if (status === 'sent') {
-    return 'Email de confirmation envoyé à';
-  }
-
-  if (status === 'failed') {
-    return "Email de confirmation non envoyé, adresse prévue";
-  }
-
-  return 'Email de confirmation prêt pour';
-};
 
 export const statusLabel = (status: ContactStatus) => ({
   open: 'Ouvert',
@@ -172,19 +164,25 @@ export const statusLabel = (status: ContactStatus) => ({
 export const useContactForm = () => {
   const form = reactive({
     demandType: '' as ContactDemandType | '',
+    prenom: '',
+    nom: '',
     organization: '',
     email: '',
     phone: '',
+    objet: '',
+    methodeContact: 'email' as 'email' | 'telephone' | 'les_deux',
     message: '',
   });
-  const ticket = ref<ContactTicket | null>(null);
   const submitError = ref('');
   const isSubmitting = ref(false);
 
   const canSubmit = computed(() => (
     Boolean(form.demandType)
-    && form.organization.trim().length > 0
+    && form.prenom.trim().length > 0
+    && form.nom.trim().length > 0
+    && form.objet.trim().length > 0
     && isEmailLike(form.email)
+    && (form.methodeContact === 'email' || form.phone.trim().length > 0)
     && form.message.trim().length > 0
   ));
 
@@ -197,25 +195,29 @@ export const useContactForm = () => {
     submitError.value = '';
 
     try {
-      const response = await graphqlRequest<{ createContact: { contact: ContactGraphql | null } }>(CREATE_CONTACT_MUTATION, {
-        name: form.organization,
+      const response = await graphqlRequest<{ createContact: { success: boolean; numeroDossier: string; message: string } }>(CREATE_CONTACT_MUTATION, {
+        nom: form.nom,
+        prenom: form.prenom,
         email: form.email,
         company: form.organization,
-        phone: form.phone,
+        telephone: form.phone,
+        objet: form.objet,
+        methodeContact: form.methodeContact,
         serviceType: serviceTypeFromDemand(form.demandType),
         demandType: form.demandType,
         message: form.message,
         privacyConsent: true,
         startedAt: Date.now() - 5000,
       });
-      if (!response.createContact.contact) {
+      if (!response.createContact.success || !response.createContact.numeroDossier) {
         throw new Error('Contact rejected');
       }
       const created = {
-        ...mapContact(response.createContact.contact),
-        confirmationUrl: `/ticket/${response.createContact.contact.secretToken}`,
+        numeroDossier: response.createContact.numeroDossier,
+        message: response.createContact.message,
+        confirmationUrl: '/contact/confirmation',
       };
-      ticket.value = created;
+      sessionStorage.setItem('pixelprowlers-contact-confirmation', JSON.stringify(created));
       return created;
     } catch {
       submitError.value = "Impossible d'ouvrir le ticket pour le moment. Vous pouvez réessayer dans quelques instants.";
@@ -225,7 +227,7 @@ export const useContactForm = () => {
     }
   };
 
-  return { form, ticket, submitError, isSubmitting, canSubmit, submit };
+  return { form, submitError, isSubmitting, canSubmit, submit };
 };
 
 export const useContactTicket = () => {

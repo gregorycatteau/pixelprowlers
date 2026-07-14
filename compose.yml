@@ -34,24 +34,28 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://pixelprowlers.io,https://www.pixelprowlers.io}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://pixelprowlers.io,https://www.pixelprowlers.io}
       CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-False}
+      DATABASE_URL: ${DATABASE_URL}
       POSTGRES_DB: ${POSTGRES_DB:-pixelprowlers}
       POSTGRES_USER: ${POSTGRES_USER:-pixelprowlers}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers_dev}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      # Pas de DATABASE_URL ici : settings.py le priorise sur POSTGRES_*
-      # quand il est présent. Une ancienne valeur par défaut codée en dur
-      # ici (mot de passe "pixelprowlers_dev") divergeait silencieusement
-      # de POSTGRES_PASSWORD et cassait la connexion en prod. Ne réintroduire
-      # DATABASE_URL que via le .env réel si un jour nécessaire (ex: DB
-      # managée externe), jamais avec une valeur par défaut codée ici.
-      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT:-25}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      SMTP_USE_TLS: ${SMTP_USE_TLS:-False}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@pixelprowlers.io}
+      # DATABASE_URL est obligatoire avec DJANGO_DEBUG=False. Ne jamais lui
+      # fournir de valeur par défaut codée dans le dépôt.
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-False}
+      EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-5}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      SERVER_EMAIL: ${SERVER_EMAIL}
+      CONTACT_NOTIFICATION_RECIPIENT: ${CONTACT_NOTIFICATION_RECIPIENT}
+      CONTACT_HMAC_SECRET: ${CONTACT_HMAC_SECRET}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS}
+      DJANGO_MAX_REQUEST_BODY_BYTES: ${DJANGO_MAX_REQUEST_BODY_BYTES:-1048576}
       SMS_DRY_RUN: ${SMS_DRY_RUN:-True}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
