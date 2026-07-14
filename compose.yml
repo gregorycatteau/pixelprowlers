@@ -39,7 +39,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers_dev}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      DATABASE_URL: ${DATABASE_URL:-postgresql://pixelprowlers:pixelprowlers_dev@postgres:5432/pixelprowlers}
+      # Pas de DATABASE_URL ici : settings.py le priorise sur POSTGRES_*
+      # quand il est présent. Une ancienne valeur par défaut codée en dur
+      # ici (mot de passe "pixelprowlers_dev") divergeait silencieusement
+      # de POSTGRES_PASSWORD et cassait la connexion en prod. Ne réintroduire
+      # DATABASE_URL que via le .env réel si un jour nécessaire (ex: DB
+      # managée externe), jamais avec une valeur par défaut codée ici.
       EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-25}
