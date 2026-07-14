@@ -176,32 +176,37 @@ def create_contact_dossier(data: ContactData, *, now: datetime | None = None) ->
 
 
 def send_contact_acknowledgement(contact: Contact) -> str:
-    received_at = timezone.localtime(contact.date_creation, PARIS).strftime("%d/%m/%Y à %H:%M")
+    current_status = (
+        Contact.objects.filter(pk=contact.pk)
+        .values_list("statut_notification", flat=True)
+        .first()
+    )
+    if current_status == Contact.NotificationStatus.SENT:
+        logger.info(
+            "contact_email_already_sent numero_dossier=%s action=skipped",
+            contact.numero_dossier,
+        )
+        contact.statut_notification = current_status
+        return current_status
+
     subject = f"PixelProwlers — réception de votre demande n° {contact.numero_dossier}"
     text = "\n".join(
         [
             f"Bonjour {contact.prenom},",
             "",
-            "Votre demande a bien été reçue.",
-            f"Numéro de dossier : {contact.numero_dossier}",
-            f"Date de réception : {received_at}",
-            f"Objet : {contact.objet}",
+            "Nous avons bien reçu votre message et ne manquerons pas de revenir vers vous rapidement.",
             "",
-            "Elle sera traitée dans les meilleurs délais.",
-            "Cet email est un accusé de réception automatique.",
+            f"Votre numéro de dossier est : {contact.numero_dossier}",
             "",
-            "PixelProwlers",
+            "Cordialement,",
+            "L’équipe PixelProwlers.",
         ]
     )
     html = (
         f"<p>Bonjour {escape(contact.prenom)},</p>"
-        "<p>Votre demande a bien été reçue.</p>"
-        f"<ul><li>Numéro de dossier : <strong>{contact.numero_dossier}</strong></li>"
-        f"<li>Date de réception : {escape(received_at)}</li>"
-        f"<li>Objet : {escape(contact.objet)}</li></ul>"
-        "<p>Elle sera traitée dans les meilleurs délais.</p>"
-        "<p><small>Cet email est un accusé de réception automatique.</small></p>"
-        "<p>PixelProwlers</p>"
+        "<p>Nous avons bien reçu votre message et ne manquerons pas de revenir vers vous rapidement.</p>"
+        f"<p>Votre numéro de dossier est : <strong>{contact.numero_dossier}</strong></p>"
+        "<p>Cordialement,<br>L’équipe PixelProwlers.</p>"
     )
     try:
         email = EmailMultiAlternatives(

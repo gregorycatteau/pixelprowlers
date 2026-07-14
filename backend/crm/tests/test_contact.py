@@ -136,6 +136,7 @@ class ContactGraphQLTests(TransactionTestCase):
             {"prenom": "Alice\r\nBcc: victim@example.com"},
             {"prenom": "Alice\x00Martin"},
             {"objet": "   "},
+            {"objet": "Audit\r\nBcc: victim@example.com"},
             {"company": "   "},
             {"company": "Exemple\r\nInjection"},
             {"company": "Exemple\x00"},
@@ -225,6 +226,17 @@ class ContactGraphQLTests(TransactionTestCase):
         contact = Contact.objects.get()
         self.assertEqual(contact.statut_notification, Contact.NotificationStatus.FAILED)
         self.assertNotIn("smtp", response.content.decode().lower())
+
+    def test_one_mutation_schedules_one_customer_acknowledgement(self):
+        with mock.patch(
+            "crm.schema.send_contact_acknowledgement",
+            return_value=Contact.NotificationStatus.SENT,
+        ) as acknowledgement:
+            response = self.submit()
+
+        self.assertIsNone(response.json().get("errors"))
+        acknowledgement.assert_called_once()
+        self.assertEqual(Contact.objects.count(), 1)
 
 
 @override_settings(**TEST_SETTINGS)
@@ -416,7 +428,35 @@ class ContactServiceTests(TransactionTestCase):
         self.assertEqual(status, Contact.NotificationStatus.FAILED)
         contact.refresh_from_db()
         self.assertEqual(contact.statut_notification, Contact.NotificationStatus.FAILED)
+        self.assertIsNone(contact.date_notification)
         self.assertTrue(Contact.objects.filter(pk=contact.pk).exists())
+
+    def test_already_sent_contact_is_not_sent_twice(self):
+        from crm.contact_services import send_contact_acknowledgement
+
+        contact = create_contact_dossier(contact_data())
+        contact.statut_notification = Contact.NotificationStatus.SENT
+        contact.date_notification = datetime.now(tz=ZoneInfo("UTC"))
+        contact.save(update_fields=["statut_notification", "date_notification", "updated_at"])
+
+        with self.assertLogs("crm.contact_services", level="INFO") as captured:
+            with mock.patch("crm.contact_services.EmailMultiAlternatives.send") as smtp_send:
+                status = send_contact_acknowledgement(contact)
+
+        smtp_send.assert_not_called()
+        self.assertEqual(status, Contact.NotificationStatus.SENT)
+        self.assertEqual(Contact.objects.count(), 1)
+        self.assertIn("action=skipped", "\n".join(captured.output))
+
+    def test_success_sets_notification_date(self):
+        from crm.contact_services import send_contact_acknowledgement
+
+        contact = create_contact_dossier(contact_data())
+        status = send_contact_acknowledgement(contact)
+        contact.refresh_from_db()
+        self.assertEqual(status, Contact.NotificationStatus.SENT)
+        self.assertEqual(contact.statut_notification, Contact.NotificationStatus.SENT)
+        self.assertIsNotNone(contact.date_notification)
 
     def test_status_update_failure_does_not_hide_successful_delivery(self):
         from crm.contact_services import send_contact_acknowledgement
@@ -443,10 +483,30 @@ class ContactServiceTests(TransactionTestCase):
         self.assertIn(contact.numero_dossier, message.body)
         self.assertEqual(message.alternatives[0].mimetype, "text/html")
         complete_content = message.body + message.alternatives[0].content
+        self.assertIn(f"Bonjour {contact.prenom},", complete_content)
+        self.assertIn(
+            "Nous avons bien reçu votre message et ne manquerons pas de revenir vers vous rapidement.",
+            complete_content,
+        )
+        self.assertIn("Cordialement,", complete_content)
+        self.assertIn("L’équipe PixelProwlers.", complete_content)
         self.assertNotIn(contact.signature_hmac, complete_content)
+        self.assertNotIn(contact.phone, complete_content)
+        self.assertNotIn(contact.email, complete_content)
+        self.assertNotIn(contact.message, complete_content)
         self.assertNotIn("SMTP", complete_content)
         self.assertNotIn("Brevo", complete_content)
         self.assertNotIn("CONTACT_HMAC_SECRET", complete_content)
+
+    def test_email_html_escapes_customer_name(self):
+        from crm.contact_services import send_contact_acknowledgement
+
+        contact = create_contact_dossier(contact_data(prenom="Alice & Bob"))
+        send_contact_acknowledgement(contact)
+        message = next(item for item in mail.outbox if item.to == [contact.email])
+        html = message.alternatives[0].content
+        self.assertIn("Bonjour Alice &amp; Bob,", html)
+        self.assertNotIn("Bonjour Alice & Bob,", html)
 
     def test_email_failure_log_does_not_include_secret_or_recipient(self):
         from crm.contact_services import send_contact_acknowledgement

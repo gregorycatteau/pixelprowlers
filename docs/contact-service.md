@@ -48,6 +48,12 @@ pas qu'un email a été envoyé. Les logs contiennent le numéro de dossier et l
 type technique de l'erreur, jamais le formulaire, le destinataire ou un
 secret.
 
+Il n'existe aucun retry automatique. Un appel répété sur un dossier déjà
+marqué `envoyee` est ignoré et journalisé sans donnée personnelle. La courte
+fenêtre entre l'acceptation SMTP et l'enregistrement du statut ne peut pas être
+rendue atomique avec SMTP : un renvoi manuel d'un dossier `en_attente` ou
+`echec` doit donc rester une opération explicitement autorisée et contrôlée.
+
 ## Relais transactionnel Brevo
 
 Brevo est l'unique fournisseur transactionnel autorisé. Django utilise son
@@ -66,6 +72,19 @@ L'adresse exacte d'expédition n'est pas fixée dans le dépôt : elle doit êtr
 une identité déjà autorisée dans le compte Brevo et être injectée par
 l'environnement. L'adresse utilisateur n'est jamais utilisée comme `From` ou
 comme en-tête contrôlant le sujet.
+
+Les variables canoniques sont `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`,
+`EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `EMAIL_USE_SSL`,
+`EMAIL_TIMEOUT`, `DEFAULT_FROM_EMAIL` et `SERVER_EMAIL`. Les anciens alias
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_USE_TLS` et
+`SMTP_SECURE` restent lus uniquement pour compatibilité. Une variable
+canonique non vide gagne toujours; une contradiction est journalisée par les
+noms de variables seulement, sans aucune valeur.
+
+Le login SMTP Brevo n'est pas nécessairement l'adresse visible d'expédition.
+`EMAIL_HOST_PASSWORD` doit contenir une clé SMTP dédiée à Django, et non une
+clé API ni le mot de passe du compte Brevo. Les secrets viennent uniquement
+de l'environnement. Authelia et Django n'ont pas à partager la même clé SMTP.
 
 `CONTACT_NOTIFICATION_RECIPIENT` est uniquement le destinataire facultatif de
 la notification interne PixelProwlers. Il ne remplace jamais l'adresse

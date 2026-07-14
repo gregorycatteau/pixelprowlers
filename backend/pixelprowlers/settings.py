@@ -214,6 +214,35 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+def warn_email_alias_conflict(canonical: str, legacy: str, *, boolean: bool = False) -> None:
+    canonical_value = env(canonical)
+    legacy_value = env(legacy)
+    if not canonical_value or not legacy_value:
+        return
+    if boolean:
+        conflicts = env_bool(canonical) != env_bool(legacy)
+    else:
+        conflicts = canonical_value != legacy_value
+    if conflicts:
+        logger.warning(
+            "email_configuration_conflict canonical=%s legacy=%s action=canonical_wins",
+            canonical,
+            legacy,
+        )
+
+
+for canonical_name, legacy_name, is_boolean in (
+    ("EMAIL_HOST", "SMTP_HOST", False),
+    ("EMAIL_PORT", "SMTP_PORT", False),
+    ("EMAIL_HOST_USER", "SMTP_USER", False),
+    ("EMAIL_HOST_PASSWORD", "SMTP_PASS", False),
+    ("EMAIL_USE_TLS", "SMTP_USE_TLS", True),
+    ("EMAIL_USE_TLS", "SMTP_SECURE", True),
+):
+    warn_email_alias_conflict(canonical_name, legacy_name, boolean=is_boolean)
+
+
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend"
@@ -260,6 +289,8 @@ if not DEBUG:
         )
     if EMAIL_USE_TLS == EMAIL_USE_SSL:
         raise ImproperlyConfigured("Exactly one of EMAIL_USE_TLS or EMAIL_USE_SSL must be enabled in production.")
+    if EMAIL_PORT <= 0 or EMAIL_TIMEOUT <= 0:
+        raise ImproperlyConfigured("EMAIL_PORT and EMAIL_TIMEOUT must be positive in production.")
     for setting_name, address in (("DEFAULT_FROM_EMAIL", DEFAULT_FROM_EMAIL), ("SERVER_EMAIL", SERVER_EMAIL)):
         if "\r" in address or "\n" in address:
             raise ImproperlyConfigured(f"{setting_name} contains invalid header characters.")
