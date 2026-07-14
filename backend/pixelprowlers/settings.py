@@ -171,13 +171,13 @@ GRAPHENE = {
 # Production values come from the repo deployment docs.
 CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
+    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
 )
 CORS_ALLOW_CREDENTIALS = env_bool("CORS_ALLOW_CREDENTIALS", False)
 
 CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default="http://localhost:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
+    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,https://pixelprowlers.io,https://www.pixelprowlers.io",
 )
 USE_X_FORWARDED_HOST = env_bool("DJANGO_USE_X_FORWARDED_HOST", True)
 

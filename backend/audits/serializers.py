@@ -308,7 +308,7 @@ class RdvReservationSerializer(BaseInputValidator):
         attrs["heure_debut"] = parse_time(str(attrs["heure_debut"]))
         attrs["heure_fin"] = parse_time(str(attrs["heure_fin"]))
         attrs["raison_ids"] = [int(value) for value in attrs.get("raison_ids", [])]
-        attrs["message"] = normalize_text(attrs.get("message", ""))[:1200]
+        attrs["message"] = normalize_text(attrs.get("message") or "")[:1200]
         attrs["email"] = normalize_text(attrs.get("email", "")).lower()
         try:
             validate_email(attrs["email"])

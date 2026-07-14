@@ -163,12 +163,20 @@ export const graphqlErrorMessage = (error: unknown, fallback: string) => {
     }
 
     if (error.kind === 'network') {
-      return "Impossible de joindre le service d'audit. Vérifiez votre connexion ou réessayez dans quelques instants.";
+      return "Le service de création des audits est momentanément indisponible. Vos informations sont conservées dans le formulaire : vous pouvez réessayer dans quelques instants.";
     }
 
     if (error.kind === 'http') {
       if (error.status === 400) {
-        return error.message || 'Certains champs sont invalides. Vérifiez les informations saisies.';
+        return error.message || 'Certaines informations doivent être corrigées avant de créer le dossier.';
+      }
+
+      if (error.status === 403) {
+        return "La demande a été refusée par le service d'audit. Rechargez la page puis réessayez.";
+      }
+
+      if (error.status === 404) {
+        return "Le point d'entrée du service d'audit est introuvable. La configuration locale de l'API doit être vérifiée.";
       }
 
       if (error.status && error.status >= 500) {
