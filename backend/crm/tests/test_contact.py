@@ -25,7 +25,7 @@ from crm.contact_services import (
     normalize_french_mobile,
     verify_contact_hmac,
 )
-from crm.models import Contact, ContactDailyCounter
+from crm.models import Contact, ContactDailyCounter, ContactMessage
 
 
 TEST_SETTINGS = {
@@ -117,6 +117,19 @@ class ContactGraphQLTests(TransactionTestCase):
         self.assertEqual(set(result), {"success", "numeroDossier", "message"})
         self.assertNotIn("hmac", response.content.decode().lower())
         contact = Contact.objects.get()
+        self.assertEqual(contact.demand_type, "audit")
+        self.assertEqual(contact.prenom, "Alice")
+        self.assertEqual(contact.nom, "Martin")
+        self.assertEqual(contact.company, "Association Exemple")
+        self.assertEqual(contact.email, "alice@example.com")
+        self.assertEqual(contact.phone, "0612345678")
+        self.assertEqual(contact.methode_contact, "email")
+        self.assertEqual(contact.objet, "Audit du site")
+        self.assertEqual(contact.message, "Nous souhaitons faire auditer notre site avant une refonte.")
+        self.assertIsNotNone(contact.client_dossier_id)
+        first_message = ContactMessage.objects.get(contact=contact)
+        self.assertEqual(first_message.author, ContactMessage.Author.CUSTOMER)
+        self.assertEqual(first_message.message, contact.message)
         self.assertEqual(len(contact.signature_hmac), 64)
         self.assertTrue(verify_contact_hmac(contact))
 

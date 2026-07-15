@@ -108,14 +108,27 @@ CORS_ALLOWED_ORIGINS=https://pixelprowlers.io,https://www.pixelprowlers.io
 POSTGRES_DB=pixelprowlers
 POSTGRES_USER=pixelprowlers
 POSTGRES_PASSWORD=<mot de passe fort>
-CONTACT_TO=<adresse destination>
-CONTACT_FROM=<adresse expediteur autorisee>
-SMTP_HOST=<serveur smtp>
-SMTP_PORT=587
-SMTP_USER=<utilisateur smtp>
-SMTP_PASS=<mot de passe smtp>
-SMTP_SECURE=false
+DATABASE_URL=postgresql://<utilisateur>:<mot-de-passe>@postgres:5432/<base>
+CONTACT_HMAC_SECRET=<secret HMAC long et unique>
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=<login SMTP Brevo>
+EMAIL_HOST_PASSWORD=<cle SMTP Brevo dediee a Django>
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+EMAIL_TIMEOUT=5
+DEFAULT_FROM_EMAIL=<identite expediteur autorisee sous pixelprowlers.io>
+SERVER_EMAIL=<identite serveur autorisee sous pixelprowlers.io>
+CONTACT_NOTIFICATION_RECIPIENT=<adresse interne facultative>
 ```
+
+Les anciens noms `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+`SMTP_USE_TLS`, `SMTP_SECURE`, `CONTACT_FROM` et `CONTACT_TO` sont uniquement
+des alias historiques. Les variables canoniques `EMAIL_*`,
+`DEFAULT_FROM_EMAIL`, `SERVER_EMAIL` et `CONTACT_NOTIFICATION_RECIPIENT`
+doivent être utilisées pour tout nouveau déploiement. Ne jamais utiliser une
+clé API Brevo ou le mot de passe du compte à la place de la clé SMTP.
 
 Ne pas activer `DJANGO_SECURE_SSL_REDIRECT=true` tant que Caddy transmet correctement `X-Forwarded-Proto` et que les tests HTTPS ne confirment aucune boucle. Caddy termine TLS, puis proxifie vers `127.0.0.1:8080` en HTTP local.
 
