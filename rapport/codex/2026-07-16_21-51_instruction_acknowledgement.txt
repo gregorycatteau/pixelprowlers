@@ -1,0 +1,6 @@
+RUN: instruction_acknowledgement
+AGENT: codex
+STATUS: OK
+
+MESSAGE:
+je suis ok pour envoyer mes rapports par document txt dans le bon dossier. Go pour ce programme.
