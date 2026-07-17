@@ -25,7 +25,7 @@ def safe_send_mail(*, subject: str, message: str, from_email: str, recipient_lis
         )
         return "sent"
     except Exception as exc:
-        logger.exception("Email notification failed: %s", exc)
+        logger.error("email_notification_failed error_type=%s", type(exc).__name__)
         return "failed"
 
 

@@ -21,7 +21,11 @@ def create_client_dossier(
     metadata: dict | None = None,
 ) -> ClientDossier:
     month = _month_key()
-    counter, _created = ClientDossierCounter.objects.select_for_update().get_or_create(sequence_month=month)
+    ClientDossierCounter.objects.bulk_create(
+        [ClientDossierCounter(sequence_month=month, last_number=0)],
+        ignore_conflicts=True,
+    )
+    counter = ClientDossierCounter.objects.select_for_update().get(sequence_month=month)
     counter.last_number += 1
     counter.save(update_fields=["last_number", "updated_at"])
 

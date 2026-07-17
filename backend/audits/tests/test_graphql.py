@@ -20,6 +20,8 @@ from urgencies.models import UrgencyRequest
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
     DEFAULT_FROM_EMAIL="test@example.com",
     CONTACT_TO="test@example.com",
+    CONTACT_HMAC_SECRET="test-contact-hmac-secret-at-least-32-characters",
+    CORS_ALLOWED_ORIGINS=["http://localhost:3000"],
     AUDIT_INTERNAL_EMAIL="test@example.com",
     URGENCY_INTERNAL_EMAIL="test@example.com",
 )
@@ -399,11 +401,15 @@ class GraphQLSmokeTests(TestCase):
             """
             mutation CreateContact($startedAt: Float!) {
               createContact(
-                name: "Alice Martin"
+                nom: "Martin"
+                prenom: "Alice"
                 email: "crm-contact@example.com"
                 company: "ACME"
-                phone: "0612345678"
+                telephone: "0612345678"
+                objet: "Audit avant refonte"
+                methodeContact: "email"
                 serviceType: "audit_site"
+                demandType: "audit"
                 message: "Nous voulons faire auditer notre site avant une refonte."
                 structureType: "TPE"
                 urgency: "Projet à cadrer"
@@ -413,15 +419,9 @@ class GraphQLSmokeTests(TestCase):
                 privacyConsent: true
                 startedAt: $startedAt
               ) {
-                detail
-                contact {
-                  id
-                  serviceType
-                  notificationStatus
-                  clientDossier {
-                    dossierId
-                  }
-                }
+                success
+                numeroDossier
+                message
               }
             }
             """,
@@ -430,7 +430,8 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(contact.status_code, 200)
         self.assertIsNone(contact.json().get("errors"))
         self.assertEqual(Contact.objects.count(), 1)
-        self.assertRegex(contact.json()["data"]["createContact"]["contact"]["clientDossier"]["dossierId"], r"^\d{7}-0$")
+        created_contact = Contact.objects.get()
+        self.assertRegex(created_contact.client_dossier.dossier_id, r"^\d{7}-0$")
 
         lead = self.graphql(
             """
@@ -535,23 +536,22 @@ class GraphQLSmokeTests(TestCase):
             """
             mutation CreateContact($startedAt: Float!) {
               createContact(
-                name: "Ticket Client"
+                nom: "Client"
+                prenom: "Ticket"
                 email: "ticket@example.com"
                 company: "Ticket Org"
-                phone: "0612345678"
+                telephone: "0612345678"
+                objet: "Demande audit"
+                methodeContact: "email"
                 serviceType: "audit_site"
                 demandType: "audit"
                 message: "Nous avons besoin d'un suivi clair pour notre demande d'audit."
                 privacyConsent: true
                 startedAt: $startedAt
               ) {
-                contact {
-                  ticketId
-                  secretToken
-                  demandLabel
-                  emailConfirmation
-                  messages { author authorName message }
-                }
+                success
+                numeroDossier
+                message
               }
             }
             """,
@@ -559,11 +559,12 @@ class GraphQLSmokeTests(TestCase):
         )
         self.assertEqual(created.status_code, 200)
         self.assertIsNone(created.json().get("errors"))
-        contact_data = created.json()["data"]["createContact"]["contact"]
+        contact_data = created.json()["data"]["createContact"]
         self.assertEqual(Contact.objects.count(), 1)
         self.assertEqual(ContactMessage.objects.count(), 1)
-        self.assertTrue(contact_data["secretToken"])
-        self.assertEqual(contact_data["messages"][0]["author"], "CUSTOMER")
+        self.assertTrue(contact_data["success"])
+        tracking_token = Contact.objects.get().secret_token
+        self.assertEqual(ContactMessage.objects.get().author, ContactMessage.Author.CUSTOMER)
 
         loaded = self.graphql(
             """
@@ -575,11 +576,11 @@ class GraphQLSmokeTests(TestCase):
               }
             }
             """,
-            variables={"token": contact_data["secretToken"]},
+            variables={"token": tracking_token},
         )
         self.assertEqual(loaded.status_code, 200)
         self.assertIsNone(loaded.json().get("errors"))
-        self.assertEqual(loaded.json()["data"]["contactByToken"]["ticketId"], contact_data["ticketId"])
+        self.assertEqual(loaded.json()["data"]["contactByToken"]["ticketId"], contact_data["numeroDossier"])
 
         replied = self.graphql(
             """
@@ -596,7 +597,7 @@ class GraphQLSmokeTests(TestCase):
               }
             }
             """,
-            variables={"token": contact_data["secretToken"]},
+            variables={"token": tracking_token},
         )
         self.assertEqual(replied.status_code, 200)
         self.assertIsNone(replied.json().get("errors"))

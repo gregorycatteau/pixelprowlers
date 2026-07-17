@@ -284,7 +284,7 @@ const fallbackMailto = computed(() => {
     '',
     fallback.message || 'Bonjour, je souhaite être recontacté pour un rendez-vous.',
   ].join('\n'));
-  return `mailto:contact@pixelprowlers.fr?subject=${subject}&body=${body}`;
+  return `mailto:contact@pixelprowlers.io?subject=${subject}&body=${body}`;
 });
 const confirmationDate = computed(() => confirmation.value?.creneaux[0]
   ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(confirmation.value.creneaux[0].date))

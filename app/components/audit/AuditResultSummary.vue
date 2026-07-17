@@ -4,7 +4,7 @@
       <p class="ResultKicker">Résultat transmis</p>
       <h2 id="audit-result-title" class="ResultTitle">Votre dossier est complet.</h2>
       <p class="ResultIntro">
-        Un consultant PixelProwlers reprendra votre dossier sous 48h avec une analyse détaillée et des recommandations personnalisées.
+        Votre dossier est enregistré. Son contenu doit être qualifié avant qu’une analyse ou une recommandation définitive puisse être formulée.
       </p>
     </div>
 

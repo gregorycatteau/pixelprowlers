@@ -1,13 +1,20 @@
 from django.contrib import admin
 
-from .models import Contact, ContactMessage, DiagnosticTicket, Formation, FormationRegistration, Lead, Service
+from .models import Contact, ContactDailyCounter, ContactMessage, DiagnosticTicket, Formation, FormationRegistration, Lead, Service
 
 
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):
-    list_display = ("ticket_id", "name", "email", "service_type", "status", "read", "created_at")
-    list_filter = ("service_type", "demand_type", "status", "read", "created_at")
-    search_fields = ("ticket_id", "name", "email", "company")
+    list_display = ("numero_dossier", "service_type", "status", "statut_notification", "read", "date_creation")
+    list_filter = ("service_type", "demand_type", "status", "statut_notification", "read", "date_creation")
+    search_fields = ("numero_dossier", "nom", "prenom", "email", "company")
+    readonly_fields = ("numero_dossier", "signature_hmac", "date_creation", "date_notification")
+
+
+@admin.register(ContactDailyCounter)
+class ContactDailyCounterAdmin(admin.ModelAdmin):
+    list_display = ("date", "value", "updated_at")
+    readonly_fields = ("date", "value", "updated_at")
 
 
 @admin.register(ContactMessage)

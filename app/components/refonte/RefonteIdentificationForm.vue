@@ -168,15 +168,15 @@ const submitForm = handleSubmit((values) => {
 .RefonteIdentificationKicker,
 .RefonteFieldLabel,
 .RefonteSideKicker {
-  @apply text-sm font-black uppercase tracking-wide text-[#2b7053];
+  @apply text-sm font-black uppercase tracking-wide text-pxp-green;
 }
 
 .RefonteIdentificationTitle {
-  @apply text-[clamp(1.75rem,3vw,2.5rem)] font-black leading-tight text-[#17251d];
+  @apply text-[clamp(1.75rem,3vw,2.5rem)] font-black leading-tight text-pxp-ink;
 }
 
 .RefonteIdentificationIntro {
-  @apply max-w-[680px] text-base font-bold leading-relaxed text-[#435046];
+  @apply max-w-170 text-base font-bold leading-relaxed text-[#435046];
 }
 
 .RefonteIdentificationForm {
@@ -188,7 +188,7 @@ const submitForm = handleSubmit((values) => {
 }
 
 .RefonteTextField input {
-  @apply min-h-14 w-full min-w-0 rounded-lg border border-[#2b7053]/18 bg-white px-4 text-[#17251d] outline-none transition focus:border-[#2b7053] focus:ring-2 focus:ring-[#2b7053]/20;
+  @apply min-h-14 w-full min-w-0 rounded-lg border border-pxp-green/18 bg-white px-4 text-pxp-ink outline-none transition focus:border-pxp-green focus:ring-2 focus:ring-pxp-green/20;
 }
 
 .RefonteTextField input::placeholder {
@@ -197,7 +197,7 @@ const submitForm = handleSubmit((values) => {
 
 .RefonteRadioChoice,
 .RefonteConsentChoice {
-  @apply flex items-start gap-3 rounded-lg border border-[#2b7053]/15 bg-white/95 p-4 font-bold text-[#27322a];
+  @apply flex items-start gap-3 rounded-lg border border-pxp-green/15 bg-white/95 p-4 font-bold text-[#27322a];
 }
 
 .RefonteFieldError,

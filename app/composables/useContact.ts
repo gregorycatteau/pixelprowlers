@@ -1,12 +1,41 @@
-import { computed, reactive, ref } from 'vue';
-import { isEmailLike } from '~/utils/formatDate';
-import { graphqlRequest, parseGraphqlJson } from '~/utils/graphql';
+import { toTypedSchema } from '@vee-validate/zod';
+import {
+  computed,
+  onMounted,
+  reactive,
+  ref,
+} from 'vue';
+import { useForm } from 'vee-validate';
 
-export type ContactDemandType = 'diagnostic' | 'urgency' | 'audit' | 'refonte' | 'transmission' | 'partnership';
-export type ContactStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed';
+import { graphqlRequest } from '~/utils/graphql';
+
+import {
+  contactFormSchema,
+  contactPhoneSchema,
+  contactRequiredFieldStates,
+  formatFrenchPhone,
+  privacyAcknowledgementSchema,
+  type ContactFormInput,
+} from '~/validation/schemas';
+
+export type ContactDemandType =
+  | 'diagnostic'
+  | 'urgency'
+  | 'audit'
+  | 'refonte'
+  | 'transmission'
+  | 'partnership';
+
+export type ContactStatus =
+  | 'open'
+  | 'in_progress'
+  | 'waiting_customer'
+  | 'resolved'
+  | 'closed';
 
 export type ContactTicket = {
   ticketId: string;
+  numeroDossier: string;
   secretToken: string;
   organization: string;
   email: string;
@@ -22,24 +51,13 @@ export type ContactTicket = {
     message: string;
     createdAt: string;
   }>;
-  emailConfirmation: {
-    status: 'sent' | 'not_configured' | 'failed';
-  };
   createdAt: string;
   updatedAt: string;
 };
 
-export const contactDemandOptions: Array<{ label: string; value: ContactDemandType }> = [
-  { label: 'Je veux un diagnostic', value: 'diagnostic' },
-  { label: "J'ai une urgence maintenant", value: 'urgency' },
-  { label: "Je veux parler d'un audit", value: 'audit' },
-  { label: "Je veux parler d'une refonte", value: 'refonte' },
-  { label: 'Je veux parler de transmission', value: 'transmission' },
-  { label: 'Partenariat / autre', value: 'partnership' },
-];
-
 type ContactGraphql = {
   ticketId: string;
+  numeroDossier: string;
   secretToken: string;
   name: string;
   email: string;
@@ -50,14 +68,50 @@ type ContactGraphql = {
   message: string;
   status: ContactStatus;
   messages: ContactTicket['messages'];
-  emailConfirmation: string | ContactTicket['emailConfirmation'];
   createdAt: string;
   updatedAt: string;
 };
 
+type ContactRequiredField = {
+  key: string;
+  label: string;
+  valid: boolean;
+};
+
+export const contactDemandOptions: Array<{
+  label: string;
+  value: ContactDemandType;
+}> = [
+  {
+    label: 'Je souhaite réaliser un pré-diagnostic',
+    value: 'diagnostic',
+  },
+  {
+    label: 'Je rencontre un incident ou une urgence',
+    value: 'urgency',
+  },
+  {
+    label: 'Je souhaite faire auditer un site',
+    value: 'audit',
+  },
+  {
+    label: 'Je souhaite réparer ou refondre un site',
+    value: 'refonte',
+  },
+  {
+    label: 'Je souhaite transmettre ou clarifier des accès',
+    value: 'transmission',
+  },
+  {
+    label: 'Partenariat ou autre demande',
+    value: 'partnership',
+  },
+];
+
 const CONTACT_FIELDS = /* GraphQL */ `
   {
     ticketId
+    numeroDossier
     secretToken
     name
     email
@@ -74,7 +128,6 @@ const CONTACT_FIELDS = /* GraphQL */ `
       message
       createdAt
     }
-    emailConfirmation
     createdAt
     updatedAt
   }
@@ -82,28 +135,36 @@ const CONTACT_FIELDS = /* GraphQL */ `
 
 const CREATE_CONTACT_MUTATION = /* GraphQL */ `
   mutation CreateContact(
-    $name: String!
+    $nom: String!
+    $prenom: String!
     $email: String!
-    $company: String
-    $phone: String
+    $company: String!
+    $telephone: String!
+    $objet: String!
+    $methodeContact: String!
     $serviceType: String!
-    $demandType: String
+    $demandType: String!
     $message: String!
     $privacyConsent: Boolean
     $startedAt: Float
   ) {
     createContact(
-      name: $name
+      nom: $nom
+      prenom: $prenom
       email: $email
       company: $company
-      phone: $phone
+      telephone: $telephone
+      objet: $objet
+      methodeContact: $methodeContact
       serviceType: $serviceType
       demandType: $demandType
       message: $message
       privacyConsent: $privacyConsent
       startedAt: $startedAt
     ) {
-      contact ${CONTACT_FIELDS}
+      success
+      numeroDossier
+      message
     }
   }
 `;
@@ -115,24 +176,56 @@ const CONTACT_BY_TOKEN_QUERY = /* GraphQL */ `
 `;
 
 const ADD_CONTACT_MESSAGE_MUTATION = /* GraphQL */ `
-  mutation AddContactMessage($token: String!, $message: String!, $authorName: String!) {
-    addContactMessage(token: $token, message: $message, authorName: $authorName) {
+  mutation AddContactMessage(
+    $token: String!
+    $message: String!
+    $authorName: String!
+  ) {
+    addContactMessage(
+      token: $token
+      message: $message
+      authorName: $authorName
+    ) {
       contact ${CONTACT_FIELDS}
     }
   }
 `;
 
-const serviceTypeFromDemand = (demandType: ContactDemandType | '') => {
-  if (demandType === 'urgency') return 'urgence';
-  if (demandType === 'audit') return 'audit_site';
-  if (demandType === 'refonte') return 'site_maintenable';
-  if (demandType === 'transmission') return 'maintenance_documentation';
-  if (demandType === 'diagnostic') return 'audit_site';
+const serviceTypeFromDemand = (
+  demandType: ContactDemandType | '',
+) => {
+  if (demandType === 'urgency') {
+    return 'urgence';
+  }
+
+  if (demandType === 'audit') {
+    return 'audit_site';
+  }
+
+  if (demandType === 'refonte') {
+    return 'site_maintenable';
+  }
+
+  if (demandType === 'transmission') {
+    return 'maintenance_documentation';
+  }
+
+  /*
+   * La valeur existante est conservée pour rester compatible avec
+   * le classement attendu par le serveur.
+   */
+  if (demandType === 'diagnostic') {
+    return 'audit_site';
+  }
+
   return 'autre';
 };
 
-const mapContact = (contact: ContactGraphql): ContactTicket => ({
+const mapContact = (
+  contact: ContactGraphql,
+): ContactTicket => ({
   ticketId: contact.ticketId,
+  numeroDossier: contact.numeroDossier,
   secretToken: contact.secretToken,
   organization: contact.company || contact.name,
   email: contact.email,
@@ -142,90 +235,289 @@ const mapContact = (contact: ContactGraphql): ContactTicket => ({
   message: contact.message,
   status: contact.status,
   messages: contact.messages || [],
-  emailConfirmation: parseGraphqlJson(contact.emailConfirmation, { status: 'not_configured' }),
   createdAt: contact.createdAt,
   updatedAt: contact.updatedAt,
 });
 
-export const contactEmailLabel = (ticket: ContactTicket | null) => {
-  const status = ticket?.emailConfirmation?.status;
-
-  if (status === 'sent') {
-    return 'Email de confirmation envoyé à';
-  }
-
-  if (status === 'failed') {
-    return "Email de confirmation non envoyé, adresse prévue";
-  }
-
-  return 'Email de confirmation prêt pour';
-};
-
-export const statusLabel = (status: ContactStatus) => ({
+export const statusLabel = (
+  status: ContactStatus,
+) => ({
   open: 'Ouvert',
   in_progress: 'En cours',
-  waiting_customer: 'En attente client',
+  waiting_customer: 'En attente du client',
   resolved: 'Résolu',
   closed: 'Fermé',
 }[status] || status);
 
 export const useContactForm = () => {
-  const form = reactive({
-    demandType: '' as ContactDemandType | '',
-    organization: '',
-    email: '',
-    phone: '',
-    message: '',
+  const {
+    defineField,
+    errors,
+    meta,
+    validate,
+  } = useForm<ContactFormInput>({
+    validationSchema: toTypedSchema(contactFormSchema),
+
+    initialValues: {
+      demandType: '' as ContactDemandType,
+      prenom: '',
+      nom: '',
+      organization: '',
+      email: '',
+      phone: '',
+      objet: '',
+      methodeContact: '' as ContactFormInput['methodeContact'],
+      message: '',
+    },
   });
-  const ticket = ref<ContactTicket | null>(null);
+
+  const [demandType] = defineField('demandType');
+  const [prenom] = defineField('prenom');
+  const [nom] = defineField('nom');
+  const [organization] = defineField('organization');
+  const [email] = defineField('email');
+  const [phone] = defineField('phone');
+  const [objet] = defineField('objet');
+  const [methodeContact] = defineField('methodeContact');
+  const [message] = defineField('message');
+
+  const form = reactive({
+    demandType,
+    prenom,
+    nom,
+    organization,
+    email,
+    phone,
+    objet,
+    methodeContact,
+    message,
+  });
+
+  const privacyAcknowledged = ref(false);
+  const privacyError = ref('');
   const submitError = ref('');
   const isSubmitting = ref(false);
+  const formStartedAt = ref<number | null>(null);
+
+  onMounted(() => {
+    /*
+     * Heure réelle d’affichage du formulaire.
+     * Elle peut être utilisée par le serveur comme signal anti-robot.
+     */
+    formStartedAt.value = Date.now();
+  });
+
+  const requiredFields = computed<ContactRequiredField[]>(() => [
+    ...contactRequiredFieldStates(form),
+
+    {
+      key: 'privacyAcknowledged',
+      label: 'Information sur les données',
+      valid: privacyAcknowledgementSchema.safeParse(
+        privacyAcknowledged.value,
+      ).success,
+    },
+  ]);
+
+  const validFieldCount = computed(
+    () => requiredFields.value.filter(
+      (field) => field.valid,
+    ).length,
+  );
+
+  const progressMessage = computed(() => {
+    const remaining = (
+      requiredFields.value.length
+      - validFieldCount.value
+    );
+
+    if (remaining === 0) {
+      return 'Tous les champs obligatoires sont validés. Vous pouvez envoyer votre demande.';
+    }
+
+    return `Il reste ${remaining} champ${remaining > 1 ? 's' : ''} obligatoire${remaining > 1 ? 's' : ''} à compléter.`;
+  });
 
   const canSubmit = computed(() => (
-    Boolean(form.demandType)
-    && form.organization.trim().length > 0
-    && isEmailLike(form.email)
-    && form.message.trim().length > 0
+    meta.value.dirty
+    && validFieldCount.value === requiredFields.value.length
+    && contactFormSchema.safeParse(form).success
+    && privacyAcknowledgementSchema.safeParse(
+      privacyAcknowledged.value,
+    ).success
+    && !isSubmitting.value
   ));
 
+  const formatPhoneOnBlur = () => {
+    const parsed = contactPhoneSchema.safeParse(
+      form.phone,
+    );
+
+    if (parsed.success) {
+      form.phone = formatFrenchPhone(parsed.data);
+    }
+  };
+
+  const validatePrivacyAcknowledgement = () => {
+    const result = privacyAcknowledgementSchema.safeParse(
+      privacyAcknowledged.value,
+    );
+
+    privacyError.value = result.success
+      ? ''
+      : result.error.issues[0]?.message
+        || 'Veuillez prendre connaissance des informations relatives à vos données.';
+
+    return result.success;
+  };
+
   const submit = async () => {
-    if (!canSubmit.value || isSubmitting.value) {
+    if (isSubmitting.value) {
+      return null;
+    }
+
+    submitError.value = '';
+
+    const privacyIsValid = validatePrivacyAcknowledgement();
+
+    if (!form.phone.trim()) {
+      submitError.value =
+        'Indiquez votre numéro de téléphone pour permettre la qualification et le suivi de votre demande.';
+      return null;
+    }
+
+    if (!privacyIsValid) {
+      submitError.value =
+        'Vérifiez l’information relative à l’utilisation de vos données.';
+      return null;
+    }
+
+    if (!canSubmit.value) {
+      submitError.value =
+        'Vérifiez les champs obligatoires avant d’envoyer votre demande.';
+      return null;
+    }
+
+    if (formStartedAt.value === null) {
+      submitError.value =
+        'Le formulaire n’a pas été initialisé correctement. Rechargez la page avant de réessayer.';
       return null;
     }
 
     isSubmitting.value = true;
-    submitError.value = '';
 
     try {
-      const response = await graphqlRequest<{ createContact: { contact: ContactGraphql | null } }>(CREATE_CONTACT_MUTATION, {
-        name: form.organization,
-        email: form.email,
-        company: form.organization,
-        phone: form.phone,
-        serviceType: serviceTypeFromDemand(form.demandType),
-        demandType: form.demandType,
-        message: form.message,
-        privacyConsent: true,
-        startedAt: Date.now() - 5000,
-      });
-      if (!response.createContact.contact) {
-        throw new Error('Contact rejected');
+      const validation = await validate();
+
+      const parsedForm = contactFormSchema.safeParse(
+        form,
+      );
+
+      if (!validation.valid || !parsedForm.success) {
+        submitError.value =
+          'Vérifiez le formulaire : une information est manquante ou incorrecte.';
+        return null;
       }
+
+      const contact = parsedForm.data;
+
+      const response = await graphqlRequest<{
+        createContact: {
+          success: boolean;
+          numeroDossier: string;
+          message: string;
+        };
+      }>(
+        CREATE_CONTACT_MUTATION,
+        {
+          nom: contact.nom,
+          prenom: contact.prenom,
+          email: contact.email,
+          company: contact.organization,
+          telephone: contact.phone,
+          objet: contact.objet,
+          methodeContact: contact.methodeContact,
+          serviceType: serviceTypeFromDemand(
+            contact.demandType,
+          ),
+          demandType: contact.demandType,
+          message: contact.message,
+
+          /*
+           * Le serveur utilise encore le nom historique
+           * privacyConsent. La valeur signifie ici que la personne
+           * a pris connaissance de la notice, et non qu’elle consent
+           * à l’ensemble des traitements.
+           */
+          privacyConsent: privacyAcknowledged.value,
+
+          /*
+           * Envoi de la véritable heure d’ouverture du formulaire.
+           */
+          startedAt: formStartedAt.value,
+        },
+      );
+
+      if (
+        !response.createContact.success
+        || !response.createContact.numeroDossier
+      ) {
+        throw new Error('contact_creation_rejected');
+      }
+
       const created = {
-        ...mapContact(response.createContact.contact),
-        confirmationUrl: `/ticket/${response.createContact.contact.secretToken}`,
+        numeroDossier:
+          response.createContact.numeroDossier,
+
+        message:
+          response.createContact.message,
+
+        confirmationUrl:
+          '/contact/confirmation',
       };
-      ticket.value = created;
+
+      /*
+       * L’échec du stockage local ne doit pas transformer une
+       * création réussie en échec ni provoquer un doublon.
+       */
+      try {
+        window.sessionStorage.setItem(
+          'pixelprowlers-contact-confirmation',
+          JSON.stringify(created),
+        );
+      } catch {
+        /*
+         * Le ticket est déjà créé. La navigation vers la page de
+         * confirmation reste donc autorisée.
+         */
+      }
+
       return created;
     } catch {
-      submitError.value = "Impossible d'ouvrir le ticket pour le moment. Vous pouvez réessayer dans quelques instants.";
+      submitError.value =
+        'Impossible d’enregistrer votre demande pour le moment. Vous pouvez réessayer ou appeler PixelProwlers au 06 68 14 51 52.';
+
       return null;
     } finally {
       isSubmitting.value = false;
     }
   };
 
-  return { form, ticket, submitError, isSubmitting, canSubmit, submit };
+  return {
+    form,
+    errors,
+    privacyAcknowledged,
+    privacyError,
+    submitError,
+    isSubmitting,
+    canSubmit,
+    requiredFields,
+    validFieldCount,
+    progressMessage,
+    formatPhoneOnBlur,
+    validatePrivacyAcknowledgement,
+    submit,
+  };
 };
 
 export const useContactTicket = () => {
@@ -236,10 +528,13 @@ export const useContactTicket = () => {
   const replyError = ref('');
   const isAddingReply = ref(false);
 
-  const load = async (token: string) => {
+  const load = async (
+    token: string,
+  ) => {
     if (!token) {
       ticket.value = null;
-      error.value = 'Le lien ne contient pas de token de suivi.';
+      error.value =
+        'Ce lien de suivi est incomplet.';
       return;
     }
 
@@ -247,18 +542,45 @@ export const useContactTicket = () => {
     error.value = '';
 
     try {
-      const response = await graphqlRequest<{ contactByToken: ContactGraphql }>(CONTACT_BY_TOKEN_QUERY, { token });
-      ticket.value = mapContact(response.contactByToken);
+      const response = await graphqlRequest<{
+        contactByToken: ContactGraphql;
+      }>(
+        CONTACT_BY_TOKEN_QUERY,
+        {
+          token,
+        },
+      );
+
+      ticket.value = mapContact(
+        response.contactByToken,
+      );
     } catch {
       ticket.value = null;
-      error.value = 'Le ticket est absent ou a expiré côté serveur.';
+      error.value =
+        'Ce lien de suivi n’est plus disponible.';
     } finally {
       isLoading.value = false;
     }
   };
 
   const addMessage = async () => {
-    if (!ticket.value || !reply.value.trim() || isAddingReply.value) {
+    if (!ticket.value || isAddingReply.value) {
+      return;
+    }
+
+    const normalizedReply = reply.value
+      .normalize('NFC')
+      .trim();
+
+    if (normalizedReply.length < 2) {
+      replyError.value =
+        'Rédigez un message avant de l’envoyer.';
+      return;
+    }
+
+    if (normalizedReply.length > 4000) {
+      replyError.value =
+        'Votre message ne peut pas dépasser 4000 caractères.';
       return;
     }
 
@@ -266,19 +588,40 @@ export const useContactTicket = () => {
     replyError.value = '';
 
     try {
-      const response = await graphqlRequest<{ addContactMessage: { contact: ContactGraphql } }>(ADD_CONTACT_MESSAGE_MUTATION, {
-        token: ticket.value.secretToken,
-        message: reply.value,
-        authorName: ticket.value.organization,
-      });
-      ticket.value = mapContact(response.addContactMessage.contact);
+      const response = await graphqlRequest<{
+        addContactMessage: {
+          contact: ContactGraphql;
+        };
+      }>(
+        ADD_CONTACT_MESSAGE_MUTATION,
+        {
+          token: ticket.value.secretToken,
+          message: normalizedReply,
+          authorName: ticket.value.organization,
+        },
+      );
+
+      ticket.value = mapContact(
+        response.addContactMessage.contact,
+      );
+
       reply.value = '';
     } catch {
-      replyError.value = "Impossible d'ajouter ce message pour le moment.";
+      replyError.value =
+        'Impossible d’ajouter ce message pour le moment.';
     } finally {
       isAddingReply.value = false;
     }
   };
 
-  return { ticket, error, isLoading, reply, replyError, isAddingReply, load, addMessage };
+  return {
+    ticket,
+    error,
+    isLoading,
+    reply,
+    replyError,
+    isAddingReply,
+    load,
+    addMessage,
+  };
 };

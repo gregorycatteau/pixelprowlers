@@ -28,20 +28,22 @@ type ContactType {
   updatedAt: DateTime!
   ticketId: String!
   secretToken: String!
+  numeroDossier: String!
+  nom: String!
+  prenom: String!
   name: String!
   email: String!
   company: String!
   phone: String!
   serviceType: CrmContactServiceTypeChoices!
-  demandType: CrmContactDemandTypeChoices
+  demandType: CrmContactDemandTypeChoices!
+  objet: String!
+  methodeContact: CrmContactMethodeContactChoices!
   status: CrmContactStatusChoices!
   message: String!
-  read: Boolean!
-  notificationStatus: JSONString!
   clientDossier: ClientDossierType
-  messages: [ContactMessageType]
   demandLabel: String
-  emailConfirmation: JSONString
+  messages: [ContactMessageType]
 }
 
 """
@@ -100,6 +102,18 @@ enum CrmContactDemandTypeChoices {
 }
 
 """An enumeration."""
+enum CrmContactMethodeContactChoices {
+  """Email"""
+  EMAIL
+
+  """Téléphone"""
+  TELEPHONE
+
+  """Email et téléphone"""
+  LES_DEUX
+}
+
+"""An enumeration."""
 enum CrmContactStatusChoices {
   """Ouvert"""
   OPEN
@@ -116,14 +130,6 @@ enum CrmContactStatusChoices {
   """Clôturé"""
   CLOSED
 }
-
-"""
-Allows use of a JSON String for input / output from the GraphQL schema.
-
-Use of this type is *not recommended* as you lose the benefits of having a defined, static
-schema (one of the key benefits of GraphQL).
-"""
-scalar JSONString
 
 type ClientDossierType {
   id: ID!
@@ -180,6 +186,14 @@ enum AuditsClientDossierPhaseChoices {
   """Archivé"""
   A_8
 }
+
+"""
+Allows use of a JSON String for input / output from the GraphQL schema.
+
+Use of this type is *not recommended* as you lose the benefits of having a defined, static
+schema (one of the key benefits of GraphQL).
+"""
+scalar JSONString
 
 type DossierLogType {
   id: ID!
@@ -854,7 +868,7 @@ type Mutation {
   recordPageView(sessionId: UUID!, title: String, url: String!): RecordPageView
   recordQuestionInteraction(orderIndex: Int, questionId: String!, revisitCount: Int, serie: String, sessionId: UUID!, timeSpentSeconds: Float): RecordQuestionInteraction
   recordTrackingEvent(eventType: String!, metadata: JSONString, pageUrl: String!, sessionId: UUID): RecordTrackingEvent
-  createContact(access: String, backups: String, budget: String, cms: String, company: String, contactPreference: String, demandType: String, email: String!, foundUs: String, hosting: String, message: String!, name: String!, phone: String, privacyConsent: Boolean, serviceType: String!, startedAt: Float, structureType: String, urgency: String, websiteCompany: String, websiteUrl: String): CreateContact
+  createContact(access: String, backups: String, budget: String, cms: String, company: String!, contactPreference: String, demandType: String!, email: String!, foundUs: String, hosting: String, message: String!, methodeContact: String!, nom: String!, objet: String!, prenom: String!, privacyConsent: Boolean, serviceType: String!, startedAt: Float, structureType: String, telephone: String!, urgency: String, websiteCompany: String, websiteUrl: String): CreateContact
   addContactMessage(authorName: String!, message: String!, token: String!): AddContactMessage
   createDiagnosticTicket(answers: JSONString!, email: String!, message: String!, organization: String!, phone: String): CreateDiagnosticTicket
   createLead(budget: String, company: String, email: String!, leadType: String!, name: String!, phone: String, projectDescription: String!, timeline: String): CreateLead
@@ -947,8 +961,9 @@ enum TrackingTrackingEventEventTypeChoices {
 }
 
 type CreateContact {
-  contact: ContactType
-  detail: String
+  success: Boolean
+  numeroDossier: String
+  message: String
 }
 
 type AddContactMessage {

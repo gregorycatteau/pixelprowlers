@@ -1,5 +1,6 @@
 import secrets
 
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
@@ -38,17 +39,49 @@ class Contact(TimeStampedModel):
         TRANSMISSION = "transmission", "Transmission"
         PARTNERSHIP = "partnership", "Partenariat / autre"
 
+    class ContactMethod(models.TextChoices):
+        EMAIL = "email", "Email"
+        TELEPHONE = "telephone", "Téléphone"
+        BOTH = "les_deux", "Email et téléphone"
+
+    class NotificationStatus(models.TextChoices):
+        PENDING = "en_attente", "En attente"
+        SENT = "envoyee", "Envoyée"
+        FAILED = "echec", "Échec"
+
     ticket_id = models.CharField(max_length=32, unique=True, blank=True)
     secret_token = models.CharField(max_length=64, unique=True, blank=True)
+    numero_dossier = models.CharField(max_length=11, unique=True)
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
     name = models.CharField(max_length=160)
-    email = models.EmailField()
-    company = models.CharField(max_length=180, blank=True)
-    phone = models.CharField(max_length=40, blank=True)
+    email = models.EmailField(db_index=True)
+    company = models.CharField(max_length=180)
+    phone = models.CharField(
+        max_length=40,
+        validators=[
+            RegexValidator(
+                regex=r"^0[67][0-9]{8}$",
+                message="Le numéro de téléphone doit être un numéro français valide.",
+            )
+        ],
+    )
     service_type = models.CharField(max_length=32, choices=ServiceType.choices)
-    demand_type = models.CharField(max_length=32, choices=DemandType.choices, blank=True)
+    demand_type = models.CharField(max_length=32, choices=DemandType.choices)
+    objet = models.CharField(max_length=200)
+    methode_contact = models.CharField(max_length=16, choices=ContactMethod.choices)
     status = models.CharField(max_length=32, choices=Status.choices, default=Status.OPEN)
     message = models.TextField()
     read = models.BooleanField(default=False)
+    statut_notification = models.CharField(
+        max_length=16,
+        choices=NotificationStatus.choices,
+        default=NotificationStatus.PENDING,
+        db_index=True,
+    )
+    date_notification = models.DateTimeField(blank=True, null=True)
+    date_creation = models.DateTimeField(default=timezone.now, db_index=True)
+    signature_hmac = models.CharField(max_length=64)
     notification_status = models.JSONField(default=dict, blank=True)
     client_dossier = models.ForeignKey(
         "audits.ClientDossier",
@@ -60,8 +93,20 @@ class Contact(TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(numero_dossier__regex=r"^[0-9]{11}$"),
+                name="crm_contact_numero_dossier_format",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(signature_hmac__regex=r"^[0-9a-f]{64}$"),
+                name="crm_contact_signature_hmac_format",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.full_clean()
         if not self.ticket_id:
             self.ticket_id = f"CT-{secrets.token_urlsafe(6).replace('-', '').replace('_', '').upper()[:8]}"
         if not self.secret_token:
@@ -69,7 +114,25 @@ class Contact(TimeStampedModel):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return f"{self.name} - {self.email}"
+        return self.numero_dossier
+
+
+class ContactDailyCounter(models.Model):
+    date = models.DateField(unique=True)
+    value = models.PositiveSmallIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(value__lte=999),
+                name="crm_contact_daily_counter_max_999",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.date.isoformat()
 
 
 class ContactMessage(TimeStampedModel):

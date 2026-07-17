@@ -1,9 +1,11 @@
 import os
 import logging
+from email.utils import parseaddr
 from pathlib import Path
 from urllib.parse import urlparse
 
 from django.core.exceptions import ImproperlyConfigured
+from django.core.validators import validate_email
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
@@ -202,23 +204,63 @@ TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True
 
+# Explicit upper bound for request bodies parsed by Django. Caddy should apply
+# an equal or smaller limit at the public edge.
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(env("DJANGO_MAX_REQUEST_BODY_BYTES", "1048576") or "1048576")
+
 STATIC_URL = "static/"
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+def warn_email_alias_conflict(canonical: str, legacy: str, *, boolean: bool = False) -> None:
+    canonical_value = env(canonical)
+    legacy_value = env(legacy)
+    if not canonical_value or not legacy_value:
+        return
+    if boolean:
+        conflicts = env_bool(canonical) != env_bool(legacy)
+    else:
+        conflicts = canonical_value != legacy_value
+    if conflicts:
+        logger.warning(
+            "email_configuration_conflict canonical=%s legacy=%s action=canonical_wins",
+            canonical,
+            legacy,
+        )
+
+
+for canonical_name, legacy_name, is_boolean in (
+    ("EMAIL_HOST", "SMTP_HOST", False),
+    ("EMAIL_PORT", "SMTP_PORT", False),
+    ("EMAIL_HOST_USER", "SMTP_USER", False),
+    ("EMAIL_HOST_PASSWORD", "SMTP_PASS", False),
+    ("EMAIL_USE_TLS", "SMTP_USE_TLS", True),
+    ("EMAIL_USE_TLS", "SMTP_SECURE", True),
+):
+    warn_email_alias_conflict(canonical_name, legacy_name, boolean=is_boolean)
+
+
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
-    "django.core.mail.backends.smtp.EmailBackend" if env("SMTP_HOST") else "django.core.mail.backends.console.EmailBackend",
+    "django.core.mail.backends.smtp.EmailBackend"
+    if env_first("EMAIL_HOST", "SMTP_HOST")
+    else "django.core.mail.backends.console.EmailBackend",
 )
-EMAIL_HOST = env("SMTP_HOST", "localhost")
-EMAIL_PORT = int(env("SMTP_PORT", "25") or "25")
-EMAIL_HOST_USER = env("SMTP_USER")
-EMAIL_HOST_PASSWORD = env("SMTP_PASS")
-EMAIL_USE_TLS = env_bool("SMTP_USE_TLS", env_bool("SMTP_SECURE", False))
+EMAIL_HOST = env_first("EMAIL_HOST", "SMTP_HOST", default="localhost")
+EMAIL_PORT = int(env_first("EMAIL_PORT", "SMTP_PORT", default="25") or "25")
+EMAIL_HOST_USER = env_first("EMAIL_HOST_USER", "SMTP_USER")
+EMAIL_HOST_PASSWORD = env_first("EMAIL_HOST_PASSWORD", "SMTP_PASS")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", env_bool("SMTP_USE_TLS", env_bool("SMTP_SECURE", False)))
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_TIMEOUT = int(env("EMAIL_TIMEOUT", "5") or "5")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", env("CONTACT_FROM"))
-CONTACT_TO = env("CONTACT_TO")
+SERVER_EMAIL = env("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+CONTACT_TO = env_first("CONTACT_NOTIFICATION_RECIPIENT", "CONTACT_TO")
+CONTACT_HMAC_SECRET = env("CONTACT_HMAC_SECRET")
+TRUSTED_PROXY_IPS = set(env_list("TRUSTED_PROXY_IPS"))
 AUDIT_INTERNAL_EMAIL = env("AUDIT_INTERNAL_EMAIL")
 URGENCY_INTERNAL_EMAIL = env("URGENCY_INTERNAL_EMAIL")
 INTERNAL_SMS_TO = env("INTERNAL_SMS_TO")
@@ -231,6 +273,34 @@ WEBHOOK_TOKEN = env_first("WEBHOOK_TOKEN", "URGENCY_WEBHOOK_TOKEN")
 
 # Clé secrète HMAC pour la signature légale des réponses d'audit (AuditReponse.compute_signature)
 AUDIT_SIGNATURE_KEY = env("AUDIT_SIGNATURE_KEY")
+
+if not DEBUG:
+    if not env("DATABASE_URL"):
+        raise ImproperlyConfigured("DATABASE_URL must be set in production.")
+    if len(CONTACT_HMAC_SECRET) < 32:
+        raise ImproperlyConfigured("CONTACT_HMAC_SECRET must contain at least 32 characters in production.")
+    if EMAIL_BACKEND != "django.core.mail.backends.smtp.EmailBackend":
+        raise ImproperlyConfigured("The SMTP email backend is required in production.")
+    if EMAIL_HOST.lower() != "smtp-relay.brevo.com":
+        raise ImproperlyConfigured("EMAIL_HOST must use the approved Brevo SMTP relay in production.")
+    if not all([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL, SERVER_EMAIL]):
+        raise ImproperlyConfigured(
+            "EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL and SERVER_EMAIL are required in production."
+        )
+    if EMAIL_USE_TLS == EMAIL_USE_SSL:
+        raise ImproperlyConfigured("Exactly one of EMAIL_USE_TLS or EMAIL_USE_SSL must be enabled in production.")
+    if EMAIL_PORT <= 0 or EMAIL_TIMEOUT <= 0:
+        raise ImproperlyConfigured("EMAIL_PORT and EMAIL_TIMEOUT must be positive in production.")
+    for setting_name, address in (("DEFAULT_FROM_EMAIL", DEFAULT_FROM_EMAIL), ("SERVER_EMAIL", SERVER_EMAIL)):
+        if "\r" in address or "\n" in address:
+            raise ImproperlyConfigured(f"{setting_name} contains invalid header characters.")
+        parsed_address = parseaddr(address)[1]
+        try:
+            validate_email(parsed_address)
+        except Exception as exc:
+            raise ImproperlyConfigured(f"{setting_name} must contain a valid email address.") from exc
+        if parsed_address.rsplit("@", 1)[-1].lower() != "pixelprowlers.io":
+            raise ImproperlyConfigured(f"{setting_name} must use the authenticated pixelprowlers.io domain.")
 
 
 # ---------------------------------------------------------------------------
