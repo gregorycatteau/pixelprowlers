@@ -19,7 +19,7 @@
           <h2 id="confirmation-ticket-title">Numéro de dossier : {{ confirmation.numeroDossier }}</h2>
           <p>{{ confirmation.message }}</p>
           <p>Vous savez maintenant par où commencer : votre site, vos accès et vos priorités vont être clarifiés.</p>
-          <p>Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
+          <p>Votre demande est enregistrée. Conservez votre référence de dossier. Aucun accès ne sera demandé sans validation.</p>
           <div class="result-actions">
             <AppButton variant="secondary" href="/">Retour à l'accueil</AppButton>
             <AppButton variant="secondary" href="/diagnostic-situation">Faire le diagnostic</AppButton>

@@ -45,7 +45,7 @@
               <p class="decision-copy">Chaque semaine sans correction augmente le risque de blocage ou de perte.</p>
               <p class="decision-copy">Vous savez exactement quoi faire, dans le bon ordre.</p>
               <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
-              <p class="cta-note">Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
+              <p class="cta-note">Le résultat affiché est indicatif. Une qualification humaine est nécessaire avant toute recommandation définitive.</p>
             </section>
 
             <section class="option-box muted">

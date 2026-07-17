@@ -150,7 +150,7 @@
           </div>
 
           <p class="PostActionNote">
-            Vous êtes en train de sécuriser votre situation. Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.
+            Votre demande sera enregistrée avant qualification. Sans engagement. Aucun accès ne sera demandé sans validation.
           </p>
 
           <p class="PrivacyNote">

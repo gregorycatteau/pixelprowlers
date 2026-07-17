@@ -2,234 +2,249 @@
   <section
     class="HeroSection"
     aria-labelledby="hero-title"
-    :style="{ '--hero-waves-image': `url('${heroWavesSvg}')` }"
   >
-    <div class="HeroWaves" aria-hidden="true"></div>
+    <div class="container HeroInner">
+      <div class="HeroContent">
+        <p
+          v-if="eyebrow"
+          class="HeroEyebrow"
+        >
+          {{ eyebrow }}
+        </p>
 
-    <div class="HeroContent">
-      <h1 id="hero-title" v-html="title"></h1>
-      <p>{{ subtitle }}</p>
-      <a class="HeroCta" :href="ctaLink">{{ ctaText }}</a>
-      <p v-if="ctaNote" class="HeroCtaNote">{{ ctaNote }}</p>
+        <h1 id="hero-title">
+          <span class="HeroTitlePrimary">
+            {{ title }}
+          </span>
+
+          <span
+            v-if="secondaryTitle"
+            class="HeroTitleSecondary"
+          >
+            {{ secondaryTitle }}
+          </span>
+        </h1>
+
+        <p class="HeroSubtitle">
+          {{ subtitle }}
+        </p>
+
+        <div class="HeroActions">
+          <NuxtLink
+            class="ButtonBase ButtonPrimary"
+            :to="ctaLink"
+          >
+            {{ ctaText }}
+          </NuxtLink>
+
+          <NuxtLink
+            v-if="secondaryCtaText && secondaryCtaLink"
+            class="ButtonBase ButtonSecondary"
+            :to="secondaryCtaLink"
+          >
+            {{ secondaryCtaText }}
+          </NuxtLink>
+        </div>
+
+        <p
+          v-if="ctaNote"
+          class="HeroCtaNote"
+        >
+          {{ ctaNote }}
+        </p>
+
+        <ul
+          v-if="trustItems.length"
+          class="HeroTrustItems"
+          aria-label="Principes d’intervention"
+        >
+          <li
+            v-for="item in trustItems"
+            :key="item"
+          >
+            <span
+              class="HeroTrustIcon"
+              aria-hidden="true"
+            >
+              ✓
+            </span>
+
+            <span>
+              {{ item }}
+            </span>
+          </li>
+        </ul>
+      </div>
+
+      <aside
+        class="HeroFramework"
+        aria-labelledby="hero-framework-title"
+      >
+        <p class="HeroFrameworkEyebrow">
+          Cadre de confiance
+        </p>
+
+        <h2 id="hero-framework-title">
+          Votre activité reste maîtresse de ses choix
+        </h2>
+
+        <p class="HeroFrameworkIntroduction">
+          L’objectif n’est pas de remplacer une dépendance par une autre,
+          mais de vous laisser une situation plus claire, documentée et
+          transmissible.
+        </p>
+
+        <dl class="HeroFrameworkList">
+          <div>
+            <dt>Accès</dt>
+
+            <dd>
+              Identifiés, limités au besoin et transmis dans un cadre
+              préalablement validé.
+            </dd>
+          </div>
+
+          <div>
+            <dt>Décisions</dt>
+
+            <dd>
+              Expliquées avant toute modification importante.
+            </dd>
+          </div>
+
+          <div>
+            <dt>Documentation</dt>
+
+            <dd>
+              Prévue pour rester utilisable après l’intervention.
+            </dd>
+          </div>
+        </dl>
+      </aside>
     </div>
-
-    <img class="HeroSauveteur" :src="sauveteurSvg" alt="" aria-hidden="true">
   </section>
 </template>
 
 <script setup lang="ts">
-import heroWavesSvg from '~/assets/images/hero-waves.svg?url';
-import sauveteurSvg from '~/assets/images/sauveteur.svg?url';
-
 interface Props {
+  eyebrow?: string;
   title: string;
+  secondaryTitle?: string;
   subtitle: string;
   ctaText: string;
   ctaLink: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   ctaNote?: string;
+  trustItems?: string[];
 }
 
-defineProps<Props>();
+withDefaults(
+  defineProps<Props>(),
+  {
+    eyebrow: '',
+    secondaryTitle: '',
+    secondaryCtaText: '',
+    secondaryCtaLink: '',
+    ctaNote: '',
+    trustItems: () => [],
+  },
+);
 </script>
 
 <style scoped>
+@reference "../../assets/css/main.css";
+
 .HeroSection {
-  position: relative;
-  display: flex;
-  width: 100vw;
-  max-width: 100vw;
-  min-height: 85vh;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a 52%, #0891b2);
-  color: white;
-  padding: 6rem 1rem 7rem;
+  @apply relative overflow-hidden border-b border-pxp-green/15 bg-pxp-panel text-pxp-ink;
 }
 
-.HeroWaves {
-  position: absolute;
-  inset: auto 0 0;
-  height: 10rem;
-  background-image: var(--hero-waves-image);
-  background-repeat: repeat-x;
-  background-size: 2000px 160px;
-  opacity: 0.92;
-  animation: hero-wave 15s linear infinite reverse;
-  will-change: background-position;
+.HeroInner {
+  @apply grid gap-10 py-14 md:py-20 lg:grid-cols-3 lg:items-center;
 }
 
 .HeroContent {
-  position: relative;
-  z-index: 2;
-  width: min(100%, 62rem);
-  max-width: 62rem;
-  text-align: center;
+  @apply lg:col-span-2;
+}
+
+.HeroEyebrow,
+.HeroFrameworkEyebrow {
+  @apply mb-4 text-xs font-black uppercase tracking-widest text-pxp-green;
 }
 
 .HeroContent h1 {
-  margin-bottom: 1.5rem;
-  max-width: 100%;
-  font-size: clamp(2.05rem, 6vw, 5.35rem);
-  font-weight: 900;
-  line-height: 1;
+  @apply max-w-5xl leading-tight;
   overflow-wrap: anywhere;
-  text-shadow: 0 8px 26px rgba(2, 6, 23, 0.42);
 }
 
-.HeroContent h1 :deep(.HeroTitleLine) {
-  display: block;
+.HeroTitlePrimary {
+  @apply block text-4xl font-black text-pxp-ink md:text-6xl;
 }
 
-.HeroContent h1 :deep(.HeroTitleLineSecondary) {
-  margin-top: clamp(1.1rem, 2.4vw, 2rem);
-  color: rgba(224, 242, 254, 0.92);
-  font-size: 0.82em;
+.HeroTitleSecondary {
+  @apply mt-4 block max-w-4xl text-2xl font-black leading-tight text-pxp-green md:text-4xl;
 }
 
-.HeroContent h1 :deep(.HeroTitleAccent) {
-  color: #fbbf24;
-  text-shadow:
-    0 0 26px rgba(251, 191, 36, 0.44),
-    0 8px 26px rgba(2, 6, 23, 0.36);
-  white-space: nowrap;
+.HeroSubtitle {
+  @apply mt-6 max-w-3xl text-lg font-semibold leading-relaxed text-pxp-ink/80 md:text-xl;
 }
 
-.HeroContent p {
-  max-width: 48rem;
-  margin: 0 auto 2.5rem;
-  color: rgba(224, 242, 254, 0.92);
-  font-size: clamp(1.1rem, 2.6vw, 1.55rem);
-  line-height: 1.65;
-  text-shadow: 0 4px 18px rgba(2, 6, 23, 0.32);
-}
-
-.HeroCta {
-  position: relative;
-  display: inline-block;
-  overflow: hidden;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ff6b35, #e55a2b);
-  color: white;
-  padding: 1rem 2rem;
-  font-size: 1.15rem;
-  font-weight: 800;
-  text-decoration: none;
-  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.HeroCta::after {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 -100%;
-  width: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
-  transition: left 0.5s ease;
-}
-
-.HeroCta:hover,
-.HeroCta:focus-visible {
-  transform: translateY(-0.5rem);
-  box-shadow: 0 18px 36px rgba(255, 107, 53, 0.34);
-}
-
-.HeroCta:hover::after,
-.HeroCta:focus-visible::after {
-  left: 100%;
+.HeroActions {
+  @apply mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap;
 }
 
 .HeroCtaNote {
-  max-width: 36rem !important;
-  margin: 1rem auto 0 !important;
-  color: rgba(224, 242, 254, 0.9) !important;
-  font-size: 0.98rem !important;
-  font-weight: 800;
-  line-height: 1.5 !important;
+  @apply mt-4 max-w-3xl text-sm font-semibold leading-relaxed text-pxp-ink/70;
 }
 
-.HeroSauveteur {
-  position: absolute;
-  bottom: 0.8rem;
-  left: clamp(1rem, 6vw, 4rem);
-  z-index: 3;
-  width: clamp(8rem, 17vw, 13rem);
-  height: auto;
-  animation: hero-float 3.4s ease-in-out infinite;
-  filter: drop-shadow(0 20px 28px rgba(2, 6, 23, 0.32));
-  will-change: transform;
+.HeroTrustItems {
+  @apply mt-7 flex flex-col gap-3 p-0 sm:flex-row sm:flex-wrap;
+  list-style: none;
 }
 
-@keyframes hero-wave {
-  0% {
-    background-position-x: 0;
-  }
-
-  100% {
-    background-position-x: -2000px;
-  }
+.HeroTrustItems li {
+  @apply inline-flex items-center gap-2 rounded-full border border-pxp-green/20 bg-white px-4 py-2 text-sm font-extrabold text-pxp-ink;
 }
 
-@keyframes hero-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
+.HeroTrustIcon {
+  @apply font-black text-pxp-green;
 }
 
-@media (max-width: 767px) {
-  .HeroSection {
-    min-height: 78vh;
-    padding: 4rem 0.75rem 8rem;
-  }
-
-  .HeroContent {
-    width: min(100%, 17rem);
-  }
-
-  .HeroContent h1 {
-    font-size: clamp(1.85rem, 8vw, 2.3rem);
-    line-height: 1.08;
-  }
-
-  .HeroContent h1 :deep(.HeroTitleLineSecondary) {
-    font-size: 0.72em;
-  }
-
-  .HeroContent p {
-    font-size: 1.05rem;
-    line-height: 1.5;
-  }
-
-  .HeroCta {
-    width: min(100%, 17rem);
-    padding-inline: 1rem;
-    text-align: center;
-  }
-
-  .HeroSauveteur {
-    left: 50%;
-    transform: translateX(-50%);
-    width: 7rem;
-    animation-name: hero-float-mobile;
-  }
+.HeroFramework {
+  @apply rounded-xl border border-pxp-green/20 bg-pxp-ink p-6 text-white shadow-lg md:p-8;
 }
 
-@keyframes hero-float-mobile {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
+.HeroFrameworkEyebrow {
+  @apply text-primary-100;
+}
 
-  50% {
-    transform: translateX(-50%) translateY(-8px);
+.HeroFramework h2 {
+  @apply text-2xl font-black leading-tight text-white;
+}
+
+.HeroFrameworkIntroduction {
+  @apply mt-4 font-semibold leading-relaxed text-white/75;
+}
+
+.HeroFrameworkList {
+  @apply mt-6 grid gap-5;
+}
+
+.HeroFrameworkList > div {
+  @apply border-t border-white/15 pt-4;
+}
+
+.HeroFrameworkList dt {
+  @apply text-sm font-black uppercase tracking-wide text-primary-100;
+}
+
+.HeroFrameworkList dd {
+  @apply mt-1 font-semibold leading-relaxed text-white/85;
+}
+
+@media (max-width: 639px) {
+  .HeroActions .ButtonBase {
+    @apply w-full justify-center text-center;
   }
 }
 </style>

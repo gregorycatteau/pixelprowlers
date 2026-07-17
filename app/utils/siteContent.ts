@@ -12,7 +12,7 @@ export const offers = [
     ],
     href: '/audit-site-web',
     cta: 'Faire analyser mon site',
-    ctaNote: 'Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.',
+    ctaNote: 'Résultat indicatif immédiat. Sans engagement. Aucun accès demandé.',
   },
   {
     kicker: 'Refonte',
@@ -171,7 +171,7 @@ export const landings: Record<string, Landing> = {
     secondaryCta: "Parlons d'abord",
     primaryHref: '#audit-parcours',
     secondaryHref: '/rendez-vous',
-    heroCtaNote: 'Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.',
+    heroCtaNote: 'Résultat indicatif immédiat. Sans engagement. Aucun accès demandé.',
     finalTitle: 'Vous voulez savoir ce qui tient vraiment ?',
     finalText: "On vérifie, on classe les risques, puis on vous dit ce qui mérite d'être traité maintenant. Si tout fonctionne parfaitement, ce ne sera probablement pas utile.",
     finalCta: 'Obtenir un diagnostic clair',

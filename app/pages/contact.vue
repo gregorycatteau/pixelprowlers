@@ -4,7 +4,7 @@
       <div class="article-container">
         <p class="eyebrow">Contact</p>
         <h1 id="contact-title">Parlons-en.</h1>
-        <p>Urgence, question, partenariat. On écoute. Réponse en 24-48h.</p>
+        <p>Urgence, question ou partenariat : décrivez votre situation. Votre demande sera enregistrée avant qualification.</p>
       </div>
     </section>
 
