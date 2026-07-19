@@ -15,6 +15,8 @@ schéma GraphQL.
 | `refonteAudit` | `Query.resolve_refonte_audit` | audits | `PUBLIC_ANONYMOUS_REQUIRED` par référence-capacité | 30 / 15 min / IP | résultat de l'audit refonte |
 | `creneauxDisponibles` | `Query.resolve_creneaux_disponibles` | audits | `PUBLIC_ANONYMOUS_REQUIRED` | aucune | `rendez-vous.vue` |
 | `calendrierMois` | `Query.resolve_calendrier_mois` | audits | `PUBLIC_ANONYMOUS_REQUIRED` | aucune | `rendez-vous.vue` |
+| `availableMachines` | `Query.resolve_available_machines` | catalogue | `PUBLIC_ANONYMOUS_REQUIRED` | curseur opaque, 20 par défaut, maximum 50 | futur catalogue public |
+| `refurbishedMachine` | `Query.resolve_refurbished_machine` | catalogue | `PUBLIC_ANONYMOUS_REQUIRED` | uniquement les publications actuelles non archivées | future fiche machine |
 | `contactByToken` | `Query.resolve_contact_by_token` | crm | `PUBLIC_ANONYMOUS_REQUIRED` par jeton-capacité | 30 / 15 min / IP | suivi de ticket |
 | `diagnosticTicket` | `Query.resolve_diagnostic_ticket` | crm | `PUBLIC_ANONYMOUS_REQUIRED` par identifiant-capacité | 30 / 15 min / IP | résultat du diagnostic |
 | `createContact` | `CreateContact` | crm | `PUBLIC_ANONYMOUS_REQUIRED` | 5 / 10 min / IP | formulaire de contact |

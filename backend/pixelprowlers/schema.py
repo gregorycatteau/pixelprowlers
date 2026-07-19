@@ -1,6 +1,7 @@
 import graphene
 
 import audits.schema
+import catalogue.schema
 import crm.schema
 import tracking.schema
 import urgencies.schema
@@ -8,6 +9,7 @@ import urgencies.schema
 
 class Query(
     audits.schema.Query,
+    catalogue.schema.Query,
     crm.schema.Query,
     tracking.schema.Query,
     urgencies.schema.Query,
