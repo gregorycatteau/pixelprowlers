@@ -8,6 +8,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-07-04',
   srcDir: 'app',
   css: [mainCssPath],
+  app: {
+    pageTransition: { name: 'page', mode: 'out-in' },
+  },
   runtimeConfig: {
     graphqlApiUrl: process.env.GRAPHQL_API_URL || defaultGraphqlApiUrl,
     public: {

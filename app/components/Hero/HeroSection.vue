@@ -165,6 +165,24 @@ withDefaults(
 
 .HeroContent {
   @apply lg:col-span-2;
+  animation: hero-rise var(--motion-structural) var(--motion-ease-enter) both;
+}
+
+.HeroFramework {
+  animation: hero-rise var(--motion-structural) var(--motion-ease-enter) both;
+  animation-delay: 90ms;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .HeroEyebrow,

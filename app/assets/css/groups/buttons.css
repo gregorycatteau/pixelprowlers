@@ -6,7 +6,7 @@
   .ButtonGhost,
   .ButtonNav,
   .ButtonDanger {
-    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-4 py-2 text-center font-medium leading-tight no-underline transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-4 py-2 text-center font-medium leading-tight no-underline transition-[background-color,color,border-color,box-shadow,transform] duration-(--motion-feedback) ease-(--motion-ease-standard) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100;
   }
 
   .ButtonBase[aria-disabled="true"],
@@ -24,7 +24,7 @@
   }
 
   .ButtonSecondary {
-    @apply border border-secondary-200 bg-secondary-100 text-primary-900 hover:bg-secondary-200 focus-visible:ring-secondary-200;
+    @apply border border-secondary-200 bg-secondary-100 text-primary-900 hover:bg-secondary-200 focus-visible:ring-primary-600;
   }
 
   .ButtonValidate {

@@ -65,7 +65,7 @@
       <div class="article-container">
         <h2 id="repair-offer-title">Ce que couvre cette offre</h2>
 
-        <div class="repair-card-grid">
+        <div v-reveal class="repair-card-grid">
           <article class="repair-card">
             <h3>Diagnostic et réparation d’ordinateurs</h3>
             <p>
@@ -123,7 +123,7 @@
           Pourquoi réparer plutôt que remplacer
         </h2>
 
-        <ul class="repair-benefits">
+        <ul v-reveal class="repair-benefits">
           <li>Prolonger la vie de votre matériel plutôt que le remplacer par défaut.</li>
           <li>Retrouver un poste réellement utilisable pour vos usages du quotidien.</li>
           <li>Réduire votre dépendance à un éditeur ou à un cycle de renouvellement imposé.</li>
@@ -149,7 +149,7 @@
       <div class="article-container">
         <h2 id="repair-journey-title">Comment se déroule une demande</h2>
 
-        <ol class="repair-journey">
+        <ol v-reveal class="repair-journey">
           <li>
             <span class="repair-journey-index">01</span>
             <div>

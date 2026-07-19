@@ -6,7 +6,7 @@
       aria-labelledby="offers-title"
     >
       <div class="container">
-        <header class="SectionHeading">
+        <header v-reveal class="SectionHeading">
           <p class="eyebrow">
             Quatre situations, quatre réponses
           </p>
@@ -23,7 +23,7 @@
           </p>
         </header>
 
-        <div class="OfferGrid">
+        <div v-reveal class="OfferGrid">
           <article
             v-for="offer in offers"
             :key="offer.title"
@@ -104,7 +104,7 @@
       aria-labelledby="autonomy-title"
     >
       <div class="container">
-        <header class="SectionHeading">
+        <header v-reveal class="SectionHeading">
           <p class="eyebrow">
             Autonomie numérique
           </p>
@@ -120,7 +120,7 @@
           </p>
         </header>
 
-        <div class="PrincipleGrid">
+        <div v-reveal class="PrincipleGrid">
           <article
             v-for="principle in autonomyPrinciples"
             :key="principle.title"
@@ -151,7 +151,7 @@
       aria-labelledby="evidence-title"
     >
       <div class="container">
-        <header class="SectionHeading">
+        <header v-reveal class="SectionHeading">
           <p class="eyebrow">
             Confiance vérifiable
           </p>
@@ -167,7 +167,7 @@
           </p>
         </header>
 
-        <div class="EvidenceGrid">
+        <div v-reveal class="EvidenceGrid">
           <article
             v-for="evidence in evidenceItems"
             :key="evidence.title"
@@ -196,7 +196,7 @@
       aria-labelledby="method-title"
     >
       <div class="container MethodLayout">
-        <header class="SectionHeading">
+        <header v-reveal class="SectionHeading">
           <p class="eyebrow">
             Méthode d’intervention
           </p>
@@ -245,7 +245,7 @@
       aria-labelledby="collaboration-title"
     >
       <div class="container">
-        <header class="SectionHeading">
+        <header v-reveal class="SectionHeading">
           <p class="eyebrow">
             Cadre de collaboration
           </p>
@@ -260,7 +260,7 @@
           </p>
         </header>
 
-        <div class="CollaborationGrid">
+        <div v-reveal class="CollaborationGrid">
           <article class="CollaborationCard CollaborationCardPositive">
             <h3>
               Ce cadre est adapté si vous souhaitez…
@@ -302,7 +302,7 @@
       aria-labelledby="final-title"
     >
       <div class="container">
-        <div class="FinalPanel">
+        <div v-reveal class="FinalPanel">
           <div>
             <p class="FinalEyebrow">
               Première orientation

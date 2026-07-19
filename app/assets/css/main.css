@@ -20,6 +20,83 @@
   --color-red-600: #dc2626;
 }
 
+/*
+ * Langage de mouvement unique du site : un nombre restreint de durées et
+ * d’easings, réutilisés partout via var(...) plutôt que des valeurs
+ * arbitraires dispersées dans chaque composant.
+ *
+ * - instant     : retour de clic / pression
+ * - feedback    : hover, focus, changement d’état ponctuel
+ * - standard    : ouverture de menu, apparition au clic
+ * - structural  : révélation de section, arrivée de page
+ */
+:root {
+  --motion-instant: 100ms;
+  --motion-feedback: 160ms;
+  --motion-standard: 240ms;
+  --motion-structural: 380ms;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * Garde unique et globale : toute animation ou transition du site est
+ * neutralisée si l’utilisateur préfère un mouvement réduit. Remplace les
+ * gardes ponctuelles qui n’étaient posées que sur certains composants.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Révélation progressive au scroll (directive v-reveal). L’état initial
+ * n’est posé qu’au montage côté client : le rendu SSR est toujours
+ * pleinement visible.
+ */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity var(--motion-structural) var(--motion-ease-enter),
+    transform var(--motion-structural) var(--motion-ease-enter);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Transition de route discrète (app.pageTransition dans nuxt.config.ts) :
+ * un simple fondu court, jamais un déplacement, pour marquer le
+ * changement de page sans ralentir la navigation.
+ */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity var(--motion-feedback) var(--motion-ease-standard);
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+
 @layer base {
   html {
     overflow-x: hidden;
@@ -169,11 +246,11 @@
   }
 
   li {
-    margin-top: 10px;
-    border: 1px solid rgba(43, 112, 83, 0.12);
+    margin-top: 8px;
+    border: 1px solid rgba(43, 112, 83, 0.08);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.62);
-    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.4);
+    padding: 10px 14px;
     color: #2b4b39;
     font-weight: 700;
     line-height: 1.45;
@@ -256,6 +333,33 @@
     font-weight: 760;
     line-height: 1.45;
     cursor: pointer;
+    transition:
+      border-color var(--motion-feedback) var(--motion-ease-standard),
+      background-color var(--motion-feedback) var(--motion-ease-standard),
+      box-shadow var(--motion-feedback) var(--motion-ease-standard);
+  }
+
+  .radio-choice:hover,
+  .check-choice:hover {
+    border-color: rgba(43, 112, 83, 0.32);
+  }
+
+  /*
+   * Feedback de sélection : le conteneur entier réagit, pas seulement le
+   * point natif, pour rendre visible un choix qui détermine le reste du
+   * parcours (type de demande, méthode de contact...).
+   */
+  .radio-choice:has(:checked),
+  .check-choice:has(:checked) {
+    border-color: var(--color-pxp-green);
+    background: rgba(43, 112, 83, 0.06);
+    box-shadow: 0 0 0 1px rgba(43, 112, 83, 0.28) inset;
+  }
+
+  .radio-choice:has(:focus-visible),
+  .check-choice:has(:focus-visible) {
+    outline: 2px solid var(--color-pxp-green);
+    outline-offset: 2px;
   }
 
   .radio-choice input,
