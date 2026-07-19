@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-pixelprowlers}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pixelprowlers_dev}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -87,7 +87,17 @@ services:
       NUXT_PUBLIC_GRAPHQL_API_URL: ${NUXT_PUBLIC_GRAPHQL_API_URL:-/graphql/}
     expose:
       - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
+
+networks:
+  default:
+    name: pixelprowlers_default
 
 volumes:
   postgres_data:
