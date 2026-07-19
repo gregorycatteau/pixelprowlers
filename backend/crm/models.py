@@ -177,7 +177,7 @@ class DiagnosticTicket(TimeStampedModel):
 
     def save(self, *args, **kwargs):
         if not self.ticket_id:
-            self.ticket_id = f"PP-{timezone.now().year}-{secrets.token_urlsafe(4).replace('-', '').replace('_', '').upper()[:6]}"
+            self.ticket_id = f"PP-{secrets.token_urlsafe(20)[:27]}"
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:

@@ -10,9 +10,6 @@ from .serializers import (
     SessionInitSerializer,
     TrackingEventSerializer,
 )
-from .types import PageViewType, QuestionInteractionType, TrackingEventType, VisitorSessionType
-
-
 TRACKING_RATE_LIMIT = 60
 TRACKING_RATE_WINDOW_SECONDS = 60
 
@@ -78,7 +75,6 @@ class SessionInit(graphene.Mutation):
 
     session_id = graphene.UUID()
     created = graphene.DateTime()
-    session = graphene.Field(VisitorSessionType)
 
     def mutate(self, info, **kwargs):
         request = _request_from_info(info)
@@ -103,7 +99,7 @@ class SessionInit(graphene.Mutation):
         except VisitorSession.DoesNotExist:
             session = serializer.save()
 
-        return SessionInit(session_id=session.session_id, created=session.created_at, session=session)
+        return SessionInit(session_id=session.session_id, created=session.created_at)
 
 
 class RecordPageView(graphene.Mutation):
@@ -113,7 +109,6 @@ class RecordPageView(graphene.Mutation):
         title = graphene.String(required=False)
 
     pageview_id = graphene.UUID()
-    page_view = graphene.Field(PageViewType)
 
     def mutate(self, info, session_id, url, title=None):
         request = _request_from_info(info)
@@ -139,7 +134,7 @@ class RecordPageView(graphene.Mutation):
             page_url=serializer.validated_data["url"],
             metadata={"page_title": serializer.validated_data.get("title")} if serializer.validated_data.get("title") else {},
         )
-        return RecordPageView(pageview_id=page_view.id, page_view=page_view)
+        return RecordPageView(pageview_id=page_view.id)
 
 
 class RecordQuestionInteraction(graphene.Mutation):
@@ -153,7 +148,6 @@ class RecordQuestionInteraction(graphene.Mutation):
 
     interaction_id = graphene.UUID()
     revisit_count = graphene.Int()
-    interaction = graphene.Field(QuestionInteractionType)
 
     def mutate(self, info, session_id, question_id, serie=None, time_spent_seconds=0.0, revisit_count=0, order_index=0):
         request = _request_from_info(info)
@@ -181,7 +175,6 @@ class RecordQuestionInteraction(graphene.Mutation):
         return RecordQuestionInteraction(
             interaction_id=interaction.id,
             revisit_count=interaction.revisit_count,
-            interaction=interaction,
         )
 
 
@@ -193,7 +186,6 @@ class RecordTrackingEvent(graphene.Mutation):
         metadata = graphene.JSONString(required=False)
 
     event_id = graphene.UUID()
-    event = graphene.Field(TrackingEventType)
 
     def mutate(self, info, session_id=None, event_type=None, page_url=None, metadata=None):
         request = _request_from_info(info)
@@ -217,7 +209,7 @@ class RecordTrackingEvent(graphene.Mutation):
             page_url=serializer.validated_data["page_url"],
             metadata=serializer.validated_data.get("metadata", {}),
         )
-        return RecordTrackingEvent(event_id=event.id, event=event)
+        return RecordTrackingEvent(event_id=event.id)
 
 
 class Mutation(graphene.ObjectType):

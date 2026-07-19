@@ -1,7 +1,6 @@
 import re
 import unicodedata
-from datetime import datetime
-from secrets import token_hex
+from secrets import token_urlsafe
 from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
@@ -189,9 +188,8 @@ class CitationSerializer(BaseInputValidator):
 
 
 def create_refonte_reference() -> str:
-    today = datetime.now().strftime("%Y%m%d")
     for _attempt in range(10):
-        reference = f"PXP-REFONTE-{today}-{token_hex(2).upper()}"
+        reference = f"PXP-{token_urlsafe(18)[:24]}"
         if not RefonteAudit.objects.filter(reference=reference).exists():
             return reference
     raise ValidationError("Impossible de générer une référence unique.")

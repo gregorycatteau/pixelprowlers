@@ -1,89 +1,63 @@
-import graphene
 from graphene_django import DjangoObjectType
 
 from audits.models import (
     AuditDossier,
-    AuditReponse,
-    ClientDossier,
-    DossierLog,
     RefonteAudit,
     Citation,
     Motif,
     RaisonAppel,
-    RdvContact,
     CreneauCalendrier,
     Rdv,
-    RdvRappel,
 )
-
-
-class ClientDossierType(DjangoObjectType):
-    class Meta:
-        model = ClientDossier
-        fields = "__all__"
-
-
-class DossierLogType(DjangoObjectType):
-    class Meta:
-        model = DossierLog
-        fields = "__all__"
 
 
 class AuditDossierType(DjangoObjectType):
     class Meta:
         model = AuditDossier
-        fields = "__all__"
-
-
-class AuditReponseType(DjangoObjectType):
-    class Meta:
-        model = AuditReponse
-        fields = "__all__"
+        fields = ("numero_dossier", "statut")
 
 
 class RefonteAuditType(DjangoObjectType):
     class Meta:
         model = RefonteAudit
-        fields = "__all__"
+        fields = (
+            "reference",
+            "site_url",
+            "analysis_status",
+            "technical_report",
+            "pagespeed_report",
+            "heuristic_report",
+            "analysis_error",
+            "date_creation",
+            "date_maj",
+        )
 
 
 class CitationType(DjangoObjectType):
     class Meta:
         model = Citation
-        fields = "__all__"
+        fields = ("id", "texte", "auteur", "source")
 
 
 class MotifType(DjangoObjectType):
     class Meta:
         model = Motif
-        fields = "__all__"
+        fields = ("id", "nom", "duree_minutes", "creneau_type")
 
 
 class RaisonAppelType(DjangoObjectType):
     class Meta:
         model = RaisonAppel
-        fields = "__all__"
-
-
-class RdvContactType(DjangoObjectType):
-    class Meta:
-        model = RdvContact
-        fields = "__all__"
+        fields = ("id", "nom")
 
 
 class CreneauCalendrierType(DjangoObjectType):
     class Meta:
         model = CreneauCalendrier
-        fields = "__all__"
+        fields = ("date", "heure_debut", "heure_fin")
 
 
 class RdvType(DjangoObjectType):
     class Meta:
         model = Rdv
-        fields = "__all__"
-
-
-class RdvRappelType(DjangoObjectType):
-    class Meta:
-        model = RdvRappel
-        fields = "__all__"
+        fields = ("motif", "creneaux")

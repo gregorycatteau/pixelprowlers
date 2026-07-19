@@ -1,23 +1,10 @@
 type Query {
-  contacts(serviceType: String, read: Boolean): [ContactType]
-  contact(id: ID!): ContactType
   contactByToken(token: String!): ContactType
-  unreadContacts: [ContactType]
   diagnosticTicket(ticketId: String!): DiagnosticTicketType
-  leads(leadType: String, status: String, timeline: String): [LeadType]
-  lead(id: ID!): LeadType
-  formations(formatType: String, active: Boolean): [FormationType]
-  formation(id: ID!): FormationType
-  formationRegistrations(formationId: ID, status: String): [FormationRegistrationType]
-  formationRegistration(id: ID!): FormationRegistrationType
-  services(serviceCategory: String): [ServiceType]
-  service(id: ID, slug: String): ServiceType
   citationAleatoire(excludeId: Int): CitationType
   motifs: [MotifType]
   raisonsAppel: [RaisonAppelType]
   refonteAudit(reference: String!): RefonteAuditType
-  auditDossier(numeroDossier: String!): AuditDossierType
-  clientDossier(dossierId: String!): ClientDossierType
   creneauxDisponibles(motifId: Int!, dateDebut: Date!, dateFin: Date!, urgence: Boolean = false): [CreneauDisponibleType]
   calendrierMois(annee: Int!, mois: Int!): [JourCalendrierType]
 }
@@ -41,7 +28,6 @@ type ContactType {
   methodeContact: CrmContactMethodeContactChoices!
   status: CrmContactStatusChoices!
   message: String!
-  clientDossier: ClientDossierType
   demandLabel: String
   messages: [ContactMessageType]
 }
@@ -131,60 +117,35 @@ enum CrmContactStatusChoices {
   CLOSED
 }
 
-type ClientDossierType {
-  id: ID!
-  dossierId: String!
-  sequenceMonth: String!
-  sequenceNumber: Int!
-  phase: AuditsClientDossierPhaseChoices!
-  email: String!
-  name: String!
-  phone: String!
-  source: String!
-  metadata: JSONString!
+type ContactMessageType {
   createdAt: DateTime!
-  updatedAt: DateTime!
-  logs: [DossierLogType!]!
-  auditDossiers: [AuditDossierType!]!
-  refonteAudits: [RefonteAuditType!]!
-  rdvContacts: [RdvContactType!]!
-  rdvs: [RdvType!]!
-  crmContacts: [ContactType!]!
-  diagnosticTickets: [DiagnosticTicketType!]!
-  crmLeads: [LeadType!]!
-  formationRegistrations: [FormationRegistrationType!]!
-  urgencyRequests: [UrgencyRequestType!]!
-  visitorSessions: [VisitorSessionType!]!
+  author: CrmContactMessageAuthorChoices!
+  authorName: String!
+  message: String!
 }
 
 """An enumeration."""
-enum AuditsClientDossierPhaseChoices {
-  """Contact"""
-  A_0
+enum CrmContactMessageAuthorChoices {
+  """Client"""
+  CUSTOMER
 
-  """Diagnostic"""
-  A_1
+  """Support"""
+  SUPPORT
 
-  """Proposition"""
-  A_2
+  """Système"""
+  SYSTEM
+}
 
-  """Contrat"""
-  A_3
-
-  """En cours"""
-  A_4
-
-  """Tests / recette"""
-  A_5
-
-  """Livraison"""
-  A_6
-
-  """Suivi"""
-  A_7
-
-  """Archivé"""
-  A_8
+type DiagnosticTicketType {
+  ticketId: String!
+  organization: String!
+  email: String!
+  phone: String!
+  message: String!
+  answers: JSONString!
+  diagnosticResult: JSONString!
+  emailConfirmation: JSONString!
+  id: String
 }
 
 """
@@ -195,187 +156,11 @@ schema (one of the key benefits of GraphQL).
 """
 scalar JSONString
 
-type DossierLogType {
+type CitationType {
   id: ID!
-  dossier: ClientDossierType!
-  oldPhase: AuditsDossierLogOldPhaseChoices!
-  newPhase: AuditsDossierLogNewPhaseChoices!
-  timestamp: DateTime!
-  reason: String!
-}
-
-"""An enumeration."""
-enum AuditsDossierLogOldPhaseChoices {
-  """Contact"""
-  A_0
-
-  """Diagnostic"""
-  A_1
-
-  """Proposition"""
-  A_2
-
-  """Contrat"""
-  A_3
-
-  """En cours"""
-  A_4
-
-  """Tests / recette"""
-  A_5
-
-  """Livraison"""
-  A_6
-
-  """Suivi"""
-  A_7
-
-  """Archivé"""
-  A_8
-}
-
-"""An enumeration."""
-enum AuditsDossierLogNewPhaseChoices {
-  """Contact"""
-  A_0
-
-  """Diagnostic"""
-  A_1
-
-  """Proposition"""
-  A_2
-
-  """Contrat"""
-  A_3
-
-  """En cours"""
-  A_4
-
-  """Tests / recette"""
-  A_5
-
-  """Livraison"""
-  A_6
-
-  """Suivi"""
-  A_7
-
-  """Archivé"""
-  A_8
-}
-
-type AuditDossierType {
-  id: ID!
-  numeroDossier: String!
-  prenom: String!
-  nom: String!
-  email: String!
-  telephone: String!
-  typePersonne: AuditsAuditDossierTypePersonneChoices!
-  nomStructure: String
-  consentementRgpd: Boolean!
-  dateCreation: DateTime!
-  statut: AuditsAuditDossierStatutChoices!
-  notificationStatus: JSONString!
-  clientDossier: ClientDossierType
-  reponse: AuditReponseType
-  rdvContacts: [RdvContactType!]!
-}
-
-"""An enumeration."""
-enum AuditsAuditDossierTypePersonneChoices {
-  """Individu"""
-  INDIVIDU
-
-  """Association"""
-  ASSOCIATION
-
-  """Entreprise"""
-  ENTREPRISE
-}
-
-"""An enumeration."""
-enum AuditsAuditDossierStatutChoices {
-  """Identifié"""
-  IDENTIFIE
-
-  """Questionnaire complété"""
-  QUESTIONNAIRE_COMPLETE
-}
-
-type AuditReponseType {
-  id: ID!
-  dossier: AuditDossierType!
-  reponses: JSONString!
-  scoresSeries: JSONString!
-  scoreGlobal: Decimal!
-  pilierFaible: String!
-  dateSoumission: DateTime!
-  ipAddress: String
-  userAgent: String!
-  nomSignataire: String!
-  telephoneSignataire: String!
-  signatureHash: String!
-}
-
-"""The `Decimal` scalar type represents a python Decimal."""
-scalar Decimal
-
-type RdvContactType {
-  id: ID!
-  prenom: String!
-  nom: String!
-  email: String!
-  telephone: String!
-  auditDossier: AuditDossierType
-  clientDossier: ClientDossierType
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  creneaux: [CreneauCalendrierType!]!
-  rdvs: [RdvType!]!
-}
-
-type CreneauCalendrierType {
-  id: ID!
-  date: Date!
-  heureDebut: Time!
-  heureFin: Time!
-  statut: AuditsCreneauCalendrierStatutChoices!
-  motifReserve: MotifType
-  urgence: Boolean!
-  client: RdvContactType
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  rdvs: [RdvType!]!
-}
-
-"""
-The `Date` scalar type represents a Date
-value as specified by
-[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
-"""
-scalar Date
-
-"""
-The `Time` scalar type represents a Time value as
-specified by
-[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
-"""
-scalar Time
-
-"""An enumeration."""
-enum AuditsCreneauCalendrierStatutChoices {
-  """Libre"""
-  LIBRE
-
-  """Réservé audit"""
-  RESERVE_AUDIT
-
-  """Réservé intervention"""
-  RESERVE_INTERVENTION
-
-  """Bloqué"""
-  BLOQUE
+  texte: String!
+  auteur: String!
+  source: String!
 }
 
 type MotifType {
@@ -383,10 +168,6 @@ type MotifType {
   nom: String!
   dureeMinutes: Int!
   creneauType: AuditsMotifCreneauTypeChoices!
-  actif: Boolean!
-  ordre: Int!
-  creneauxReserves: [CreneauCalendrierType!]!
-  rdvs: [RdvType!]!
 }
 
 """An enumeration."""
@@ -401,70 +182,14 @@ enum AuditsMotifCreneauTypeChoices {
   JOURNEE_COMPLETE
 }
 
-type RdvType {
-  id: ID!
-  contact: RdvContactType!
-  motif: MotifType!
-  creneaux: [CreneauCalendrierType!]!
-  raisons: [RaisonAppelType!]!
-  urgence: Boolean!
-  message: String!
-  statut: AuditsRdvStatutChoices!
-  notificationStatus: JSONString!
-  clientDossier: ClientDossierType
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  rappels: [RdvRappelType!]!
-}
-
 type RaisonAppelType {
   id: ID!
   nom: String!
-  actif: Boolean!
-  ordre: Int!
-  rdvs: [RdvType!]!
-}
-
-"""An enumeration."""
-enum AuditsRdvStatutChoices {
-  """Confirmé"""
-  CONFIRME
-
-  """Annulé"""
-  ANNULE
-}
-
-type RdvRappelType {
-  id: ID!
-  rdv: RdvType!
-  typeRappel: AuditsRdvRappelTypeRappelChoices!
-  scheduledAt: DateTime!
-  sentAt: DateTime
-  status: String!
-  lastError: String!
-}
-
-"""An enumeration."""
-enum AuditsRdvRappelTypeRappelChoices {
-  """La veille"""
-  VEILLE
-
-  """Une heure avant"""
-  UNE_HEURE
 }
 
 type RefonteAuditType {
-  id: ID!
   reference: String!
-  prenom: String!
-  nom: String!
-  email: String!
-  telephone: String!
-  typePersonne: AuditsRefonteAuditTypePersonneChoices!
-  nomStructure: String
   siteUrl: String!
-  consentementRgpd: Boolean!
-  reponses: JSONString!
   analysisStatus: AuditsRefonteAuditAnalysisStatusChoices!
   technicalReport: JSONString!
   pagespeedReport: JSONString!
@@ -472,19 +197,6 @@ type RefonteAuditType {
   analysisError: String!
   dateCreation: DateTime!
   dateMaj: DateTime!
-  clientDossier: ClientDossierType
-}
-
-"""An enumeration."""
-enum AuditsRefonteAuditTypePersonneChoices {
-  """Individu"""
-  INDIVIDU
-
-  """Association"""
-  ASSOCIATION
-
-  """Entreprise"""
-  ENTREPRISE
 }
 
 """An enumeration."""
@@ -505,357 +217,18 @@ enum AuditsRefonteAuditAnalysisStatusChoices {
   ECHEC
 }
 
-type DiagnosticTicketType {
-  id: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  ticketId: String!
-  organization: String!
-  email: String!
-  phone: String!
-  message: String!
-  status: String!
-  answers: JSONString!
-  diagnosticResult: JSONString!
-  emailConfirmation: JSONString!
-  clientDossier: ClientDossierType
-}
-
-type LeadType {
-  id: ID!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  name: String!
-  email: String!
-  company: String!
-  phone: String!
-  budget: String!
-  projectDescription: String!
-  timeline: String!
-  leadType: CrmLeadLeadTypeChoices!
-  status: CrmLeadStatusChoices!
-  clientDossier: ClientDossierType
-}
-
-"""An enumeration."""
-enum CrmLeadLeadTypeChoices {
-  """Développement"""
-  DEVELOPPEMENT
-
-  """Matériel"""
-  MATERIEL
-
-  """Formation"""
-  FORMATION
-
-  """Autre"""
-  AUTRE
-}
-
-"""An enumeration."""
-enum CrmLeadStatusChoices {
-  """Nouveau"""
-  NEW
-
-  """Contacté"""
-  CONTACTED
-
-  """Qualifié"""
-  QUALIFIED
-
-  """Clôturé"""
-  CLOSED
-}
-
-type FormationRegistrationType {
-  id: ID!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  formation: FormationType!
-  name: String!
-  email: String!
-  company: String!
-  phone: String!
-  numberOfParticipants: Int!
-  specialNeeds: String!
-  status: CrmFormationRegistrationStatusChoices!
-  clientDossier: ClientDossierType
-}
-
-type FormationType {
-  id: ID!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  title: String!
-  description: String!
-  formatType: CrmFormationFormatTypeChoices!
-  durationHours: Int!
-  price: Decimal!
-  maxParticipants: Int!
-  scheduledDates: JSONString!
-  active: Boolean!
-  registrations: [FormationRegistrationType!]!
-}
-
-"""An enumeration."""
-enum CrmFormationFormatTypeChoices {
-  """Présentiel"""
-  PRESENTIEL
-
-  """Distanciel"""
-  DISTANCIEL
-
-  """Hybride"""
-  HYBRIDE
-}
-
-"""An enumeration."""
-enum CrmFormationRegistrationStatusChoices {
-  """En attente"""
-  PENDING
-
-  """Confirmée"""
-  CONFIRMED
-
-  """Annulée"""
-  CANCELLED
-}
-
-type UrgencyRequestType {
-  id: ID!
-  reference: String!
-  problemType: UrgenciesUrgencyRequestProblemTypeChoices!
-  impactLevel: UrgenciesUrgencyRequestImpactLevelChoices!
-  affectedUrl: String!
-  shortDescription: String!
-  sinceWhen: String!
-  name: String!
-  organization: String!
-  email: String!
-  phone: String!
-  contactPreference: UrgenciesUrgencyRequestContactPreferenceChoices!
-  callbackSlot: String!
-  expectedNextStep: UrgenciesUrgencyRequestExpectedNextStepChoices!
-  consentToContact: Boolean!
-  noSecretsConfirmed: Boolean!
-  status: String!
-  notificationStatus: JSONString!
-  clientDossier: ClientDossierType
-  createdAt: DateTime!
-}
-
-"""An enumeration."""
-enum UrgenciesUrgencyRequestProblemTypeChoices {
-  """Site inaccessible"""
-  SITE_DOWN
-
-  """Suspicion de piratage"""
-  SUSPECTED_HACK
-
-  """Formulaire cassé"""
-  BROKEN_FORM
-
-  """Problème email / DNS / domaine"""
-  EMAIL_DNS_DOMAIN
-
-  """Contenu modifié"""
-  CONTENT_MODIFIED
-
-  """Erreur critique"""
-  CRITICAL_ERROR
-
-  """Ralentissement massif"""
-  MASSIVE_SLOWDOWN
-
-  """Autre"""
-  OTHER
-}
-
-"""An enumeration."""
-enum UrgenciesUrgencyRequestImpactLevelChoices {
-  """Simple gêne"""
-  MINOR
-
-  """Activité perturbée"""
-  DISRUPTED
-
-  """Activité bloquée"""
-  BLOCKED
-
-  """Risque sécurité / données"""
-  SECURITY_DATA_RISK
-}
-
-"""An enumeration."""
-enum UrgenciesUrgencyRequestContactPreferenceChoices {
-  """Email"""
-  EMAIL
-
-  """Téléphone"""
-  PHONE
-
-  """Email ou téléphone"""
-  EITHER
-}
-
-"""An enumeration."""
-enum UrgenciesUrgencyRequestExpectedNextStepChoices {
-  """Je veux d’abord comprendre ce qui se passe"""
-  UNDERSTAND_FIRST
-
-  """Je souhaite être rappelé rapidement"""
-  QUICK_CALLBACK
-
-  """Je veux sécuriser la situation avant d’agir"""
-  SECURE_BEFORE_ACTION
-
-  """Je veux préparer une intervention si nécessaire"""
-  PREPARE_INTERVENTION
-
-  """Je ne sais pas encore, j’ai besoin d’être guidé"""
-  NEED_GUIDANCE
-}
-
-type VisitorSessionType {
-  id: UUID!
-  sessionId: UUID!
-  ipAddress: String
-  userAgent: String!
-  deviceType: TrackingVisitorSessionDeviceTypeChoices!
-  browser: String
-  os: String
-  referrer: String
-  utmSource: String
-  utmMedium: String
-  utmCampaign: String
-  language: String
-  clientDossier: ClientDossierType
-  createdAt: DateTime!
-  lastSeenAt: DateTime!
-}
-
-"""
-Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
-in fields, resolvers and input.
-"""
-scalar UUID
-
-"""An enumeration."""
-enum TrackingVisitorSessionDeviceTypeChoices {
-  """Desktop"""
-  DESKTOP
-
-  """Mobile"""
-  MOBILE
-
-  """Tablet"""
-  TABLET
-
-  """Unknown"""
-  UNKNOWN
-}
-
-type ContactMessageType {
-  id: ID!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  contact: ContactType!
-  author: CrmContactMessageAuthorChoices!
-  authorName: String!
-  message: String!
-}
-
-"""An enumeration."""
-enum CrmContactMessageAuthorChoices {
-  """Client"""
-  CUSTOMER
-
-  """Support"""
-  SUPPORT
-
-  """Système"""
-  SYSTEM
-}
-
-type ServiceType {
-  id: ID!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  name: String!
-  slug: String!
-  description: String!
-  icon: String!
-  serviceCategory: CrmServiceServiceCategoryChoices!
-  order: Int!
-}
-
-"""An enumeration."""
-enum CrmServiceServiceCategoryChoices {
-  """Développement"""
-  DEVELOPPEMENT
-
-  """Matériel"""
-  MATERIEL
-
-  """Formation"""
-  FORMATION
-}
-
-type CitationType {
-  id: ID!
-  texte: String!
-  numero: Int!
-  auteur: String!
-  source: String!
-  langue: AuditsCitationLangueChoices!
-  theme: AuditsCitationThemeChoices!
-  actif: Boolean!
-  verifie: Boolean!
-  nbAffichages: Int!
-  annee: Int
-  metadata: JSONString!
-  dateCreation: DateTime!
-  dateMaj: DateTime!
-}
-
-"""An enumeration."""
-enum AuditsCitationLangueChoices {
-  """Français"""
-  FR
-
-  """Anglais"""
-  EN
-
-  """Latin"""
-  LA
-}
-
-"""An enumeration."""
-enum AuditsCitationThemeChoices {
-  """Espoir"""
-  ESPOIR
-
-  """Renouveau"""
-  RENOUVEAU
-
-  """Résilience"""
-  RESILIENCE
-
-  """Joie de vivre"""
-  JOIE_DE_VIVRE
-
-  """Amour"""
-  AMOUR
-
-  """Paix"""
-  PAIX
-}
-
 type CreneauDisponibleType {
   date: String
   heureDebut: String
   heureFin: String
 }
+
+"""
+The `Date` scalar type represents a Date
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar Date
 
 type JourCalendrierType {
   date: String
@@ -871,13 +244,6 @@ type Mutation {
   createContact(access: String, backups: String, budget: String, cms: String, company: String!, contactPreference: String, demandType: String!, email: String!, foundUs: String, hosting: String, message: String!, methodeContact: String!, nom: String!, objet: String!, prenom: String!, privacyConsent: Boolean, serviceType: String!, startedAt: Float, structureType: String, telephone: String!, urgency: String, websiteCompany: String, websiteUrl: String): CreateContact
   addContactMessage(authorName: String!, message: String!, token: String!): AddContactMessage
   createDiagnosticTicket(answers: JSONString!, email: String!, message: String!, organization: String!, phone: String): CreateDiagnosticTicket
-  createLead(budget: String, company: String, email: String!, leadType: String!, name: String!, phone: String, projectDescription: String!, timeline: String): CreateLead
-  updateLeadStatus(id: ID!, status: String!): UpdateLeadStatus
-  createFormation(active: Boolean, description: String!, durationHours: Int!, formatType: String!, maxParticipants: Int, price: Decimal!, scheduledDates: JSONString, title: String!): CreateFormation
-  createFormationRegistration(company: String, email: String!, formationId: ID!, name: String!, numberOfParticipants: Int, phone: String, specialNeeds: String): CreateFormationRegistration
-  updateFormationRegistrationStatus(id: ID!, status: String!): UpdateFormationRegistrationStatus
-  upsertService(description: String!, icon: String, name: String!, order: Int, serviceCategory: String!, slug: String!): UpsertService
-  deleteCrmObject(id: ID!, model: String!): DeleteCrmObject
   createAuditDossier(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, telephone: String!, typePersonne: String!): CreateAuditDossier
   submitAuditReponses(numeroDossier: String!, reponses: JSONString!): SubmitAuditReponses
   createRefonteAudit(consentementRgpd: Boolean!, email: String!, nom: String!, nomStructure: String, prenom: String!, reponses: JSONString!, siteUrl: String!, telephone: String!, typePersonne: String!): CreateRefonteAudit
@@ -892,72 +258,33 @@ type CreateUrgencyRequest {
   ticket: UrgencyRequestType
 }
 
+type UrgencyRequestType {
+  reference: String!
+  status: String!
+}
+
 type SessionInit {
   sessionId: UUID
   created: DateTime
-  session: VisitorSessionType
 }
+
+"""
+Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
+in fields, resolvers and input.
+"""
+scalar UUID
 
 type RecordPageView {
   pageviewId: UUID
-  pageView: PageViewType
-}
-
-type PageViewType {
-  id: UUID!
-  session: VisitorSessionType!
-  url: String!
-  title: String
-  createdAt: DateTime!
 }
 
 type RecordQuestionInteraction {
   interactionId: UUID
   revisitCount: Int
-  interaction: QuestionInteractionType
-}
-
-type QuestionInteractionType {
-  id: UUID!
-  session: VisitorSessionType!
-  questionId: String!
-  serie: String
-  timeSpentSeconds: Float!
-  revisitCount: Int!
-  orderIndex: Int!
-  createdAt: DateTime!
 }
 
 type RecordTrackingEvent {
   eventId: UUID
-  event: TrackingEventType
-}
-
-type TrackingEventType {
-  id: UUID!
-  session: VisitorSessionType
-  eventType: TrackingTrackingEventEventTypeChoices!
-  pageUrl: String!
-  metadata: JSONString!
-  createdAt: DateTime!
-}
-
-"""An enumeration."""
-enum TrackingTrackingEventEventTypeChoices {
-  """Pageview"""
-  PAGEVIEW
-
-  """CTA Click"""
-  CTA_CLICK
-
-  """Form Submit"""
-  FORM_SUBMIT
-
-  """Form Abandon"""
-  FORM_ABANDON
-
-  """Custom"""
-  CUSTOM
 }
 
 type CreateContact {
@@ -975,36 +302,22 @@ type CreateDiagnosticTicket {
   redirectTo: String
 }
 
-type CreateLead {
-  lead: LeadType
-}
-
-type UpdateLeadStatus {
-  lead: LeadType
-}
-
-type CreateFormation {
-  formation: FormationType
-}
-
-type CreateFormationRegistration {
-  registration: FormationRegistrationType
-}
-
-type UpdateFormationRegistrationStatus {
-  registration: FormationRegistrationType
-}
-
-type UpsertService {
-  service: ServiceType
-}
-
-type DeleteCrmObject {
-  ok: Boolean
-}
-
 type CreateAuditDossier {
   dossier: AuditDossierType
+}
+
+type AuditDossierType {
+  numeroDossier: String!
+  statut: AuditsAuditDossierStatutChoices!
+}
+
+"""An enumeration."""
+enum AuditsAuditDossierStatutChoices {
+  """Identifié"""
+  IDENTIFIE
+
+  """Questionnaire complété"""
+  QUESTIONNAIRE_COMPLETE
 }
 
 type SubmitAuditReponses {
@@ -1023,3 +336,21 @@ type CreateRefonteAudit {
 type CreateRdvReservation {
   rdv: RdvType
 }
+
+type RdvType {
+  motif: MotifType!
+  creneaux: [CreneauCalendrierType!]!
+}
+
+type CreneauCalendrierType {
+  date: Date!
+  heureDebut: Time!
+  heureFin: Time!
+}
+
+"""
+The `Time` scalar type represents a Time value as
+specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar Time

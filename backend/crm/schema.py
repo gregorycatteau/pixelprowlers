@@ -17,6 +17,7 @@ from graphql import GraphQLError
 
 from audits.dossier_services import attach_client_dossier
 from audits.models import ClientDossier
+from pixelprowlers.graphql_security import enforce_capability_rate_limit
 from pixelprowlers.notifications import safe_send_mail
 
 from .contact_services import (
@@ -26,7 +27,7 @@ from .contact_services import (
     normalize_french_mobile,
     send_contact_acknowledgement,
 )
-from .models import Contact, ContactMessage, DiagnosticTicket, Formation, FormationRegistration, Lead, Service
+from .models import Contact, ContactMessage, DiagnosticTicket
 
 
 SINGLE_LINE_FORBIDDEN = {"\x00", "\r", "\n", "<", ">", "`"}
@@ -111,7 +112,7 @@ def _rate_limit(info, action: str, limit: int, window: int) -> bool:
 class ContactMessageType(DjangoObjectType):
     class Meta:
         model = ContactMessage
-        fields = "__all__"
+        fields = ("author", "author_name", "message", "created_at")
 
 
 class ContactType(DjangoObjectType):
@@ -154,34 +155,19 @@ class DiagnosticTicketType(DjangoObjectType):
 
     class Meta:
         model = DiagnosticTicket
-        fields = "__all__"
+        fields = (
+            "ticket_id",
+            "organization",
+            "email",
+            "phone",
+            "message",
+            "answers",
+            "diagnostic_result",
+            "email_confirmation",
+        )
 
     def resolve_id(self, info):
         return self.ticket_id
-
-
-class LeadType(DjangoObjectType):
-    class Meta:
-        model = Lead
-        fields = "__all__"
-
-
-class FormationType(DjangoObjectType):
-    class Meta:
-        model = Formation
-        fields = "__all__"
-
-
-class FormationRegistrationType(DjangoObjectType):
-    class Meta:
-        model = FormationRegistration
-        fields = "__all__"
-
-
-class ServiceType(DjangoObjectType):
-    class Meta:
-        model = Service
-        fields = "__all__"
 
 
 def _notify_contact(contact: Contact, detail_fields: dict) -> dict[str, str]:
@@ -409,10 +395,14 @@ class AddContactMessage(graphene.Mutation):
     contact = graphene.Field(ContactType)
 
     def mutate(self, info, token, message, author_name):
+        enforce_capability_rate_limit(info, "contact-message")
         cleaned_message = (message or "").strip()
         if len(cleaned_message) < 2 or len(cleaned_message) > 2000:
             raise GraphQLError("message est invalide.")
-        contact = Contact.objects.get(secret_token=_clean(token, 80, "token", required=True))
+        try:
+            contact = Contact.objects.get(secret_token=_clean(token, 80, "token", required=True))
+        except Contact.DoesNotExist as exc:
+            raise GraphQLError("Ressource indisponible.") from exc
         ContactMessage.objects.create(
             contact=contact,
             author=ContactMessage.Author.CUSTOMER,
@@ -458,260 +448,26 @@ class CreateDiagnosticTicket(graphene.Mutation):
         return CreateDiagnosticTicket(ticket=ticket, redirect_to=f"/diagnostic-result/{ticket.ticket_id}")
 
 
-class CreateLead(graphene.Mutation):
-    class Arguments:
-        name = graphene.String(required=True)
-        email = graphene.String(required=True)
-        company = graphene.String(required=False)
-        phone = graphene.String(required=False)
-        budget = graphene.String(required=False)
-        project_description = graphene.String(required=True)
-        timeline = graphene.String(required=False)
-        lead_type = graphene.String(required=True)
-
-    lead = graphene.Field(LeadType)
-
-    def mutate(self, info, **kwargs):
-        description = (kwargs.get("project_description") or "").strip()
-        if len(description) < 10 or len(description) > 4000:
-            raise GraphQLError("projectDescription est invalide.")
-        lead = Lead.objects.create(
-            name=_clean(kwargs["name"], 160, "name", required=True),
-            email=_clean_email(kwargs["email"]),
-            company=_clean(kwargs.get("company"), 180, "company"),
-            phone=_clean_phone(kwargs.get("phone")),
-            budget=_clean(kwargs.get("budget"), 80, "budget"),
-            project_description=description,
-            timeline=_clean(kwargs.get("timeline"), 120, "timeline"),
-            lead_type=_check_choice(kwargs["lead_type"], {choice.value for choice in Lead.LeadType}, "leadType"),
-        )
-        attach_client_dossier(lead, phase=ClientDossier.Phase.CONTACT, source="lead", metadata={"lead_id": lead.id})
-        return CreateLead(lead=lead)
-
-
-class UpdateLeadStatus(graphene.Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        status = graphene.String(required=True)
-
-    lead = graphene.Field(LeadType)
-
-    def mutate(self, info, id, status):
-        lead = Lead.objects.get(pk=id)
-        lead.status = _check_choice(status, {choice.value for choice in Lead.Status}, "status")
-        lead.save(update_fields=["status", "updated_at"])
-        return UpdateLeadStatus(lead=lead)
-
-
-class CreateFormation(graphene.Mutation):
-    class Arguments:
-        title = graphene.String(required=True)
-        description = graphene.String(required=True)
-        format_type = graphene.String(required=True)
-        duration_hours = graphene.Int(required=True)
-        price = graphene.Decimal(required=True)
-        max_participants = graphene.Int(required=False)
-        scheduled_dates = graphene.JSONString(required=False)
-        active = graphene.Boolean(required=False)
-
-    formation = graphene.Field(FormationType)
-
-    def mutate(self, info, **kwargs):
-        formation = Formation.objects.create(
-            title=_clean(kwargs["title"], 180, "title", required=True),
-            description=(kwargs["description"] or "").strip(),
-            format_type=_check_choice(kwargs["format_type"], {choice.value for choice in Formation.FormatType}, "formatType"),
-            duration_hours=max(1, int(kwargs["duration_hours"])),
-            price=kwargs["price"],
-            max_participants=max(1, int(kwargs.get("max_participants") or 10)),
-            scheduled_dates=kwargs.get("scheduled_dates") or [],
-            active=kwargs.get("active", True),
-        )
-        return CreateFormation(formation=formation)
-
-
-class CreateFormationRegistration(graphene.Mutation):
-    class Arguments:
-        formation_id = graphene.ID(required=True)
-        name = graphene.String(required=True)
-        email = graphene.String(required=True)
-        company = graphene.String(required=False)
-        phone = graphene.String(required=False)
-        number_of_participants = graphene.Int(required=False)
-        special_needs = graphene.String(required=False)
-
-    registration = graphene.Field(FormationRegistrationType)
-
-    def mutate(self, info, **kwargs):
-        formation = Formation.objects.get(pk=kwargs["formation_id"], active=True)
-        registration = FormationRegistration.objects.create(
-            formation=formation,
-            name=_clean(kwargs["name"], 160, "name", required=True),
-            email=_clean_email(kwargs["email"]),
-            company=_clean(kwargs.get("company"), 180, "company"),
-            phone=_clean_phone(kwargs.get("phone")),
-            number_of_participants=max(1, int(kwargs.get("number_of_participants") or 1)),
-            special_needs=(kwargs.get("special_needs") or "").strip()[:1200],
-        )
-        attach_client_dossier(registration, phase=ClientDossier.Phase.CONTACT, source="formation", metadata={"registration_id": registration.id})
-        return CreateFormationRegistration(registration=registration)
-
-
-class UpdateFormationRegistrationStatus(graphene.Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        status = graphene.String(required=True)
-
-    registration = graphene.Field(FormationRegistrationType)
-
-    def mutate(self, info, id, status):
-        registration = FormationRegistration.objects.get(pk=id)
-        registration.status = _check_choice(status, {choice.value for choice in FormationRegistration.Status}, "status")
-        registration.save(update_fields=["status", "updated_at"])
-        return UpdateFormationRegistrationStatus(registration=registration)
-
-
-class UpsertService(graphene.Mutation):
-    class Arguments:
-        slug = graphene.String(required=True)
-        name = graphene.String(required=True)
-        description = graphene.String(required=True)
-        service_category = graphene.String(required=True)
-        icon = graphene.String(required=False)
-        order = graphene.Int(required=False)
-
-    service = graphene.Field(ServiceType)
-
-    def mutate(self, info, **kwargs):
-        service, _created = Service.objects.update_or_create(
-            slug=_clean(kwargs["slug"], 80, "slug", required=True),
-            defaults={
-                "name": _clean(kwargs["name"], 160, "name", required=True),
-                "description": (kwargs["description"] or "").strip(),
-                "service_category": _check_choice(kwargs["service_category"], {choice.value for choice in Service.Category}, "serviceCategory"),
-                "icon": _clean(kwargs.get("icon"), 80, "icon"),
-                "order": int(kwargs.get("order") or 0),
-            },
-        )
-        return UpsertService(service=service)
-
-
-class DeleteCrmObject(graphene.Mutation):
-    class Arguments:
-        model = graphene.String(required=True)
-        id = graphene.ID(required=True)
-
-    ok = graphene.Boolean()
-
-    def mutate(self, info, model, id):
-        models = {
-            "contact": Contact,
-            "lead": Lead,
-            "formation": Formation,
-            "registration": FormationRegistration,
-            "service": Service,
-        }
-        model_class = models.get(model)
-        if model_class is None:
-            raise GraphQLError("model est invalide.")
-        model_class.objects.filter(pk=id).delete()
-        return DeleteCrmObject(ok=True)
-
-
 class Query(graphene.ObjectType):
-    contacts = graphene.List(ContactType, service_type=graphene.String(), read=graphene.Boolean())
-    contact = graphene.Field(ContactType, id=graphene.ID(required=True))
     contact_by_token = graphene.Field(ContactType, token=graphene.String(required=True))
-    unread_contacts = graphene.List(ContactType)
     diagnostic_ticket = graphene.Field(DiagnosticTicketType, ticket_id=graphene.String(required=True))
 
-    leads = graphene.List(LeadType, lead_type=graphene.String(), status=graphene.String(), timeline=graphene.String())
-    lead = graphene.Field(LeadType, id=graphene.ID(required=True))
-
-    formations = graphene.List(FormationType, format_type=graphene.String(), active=graphene.Boolean())
-    formation = graphene.Field(FormationType, id=graphene.ID(required=True))
-
-    formation_registrations = graphene.List(FormationRegistrationType, formation_id=graphene.ID(), status=graphene.String())
-    formation_registration = graphene.Field(FormationRegistrationType, id=graphene.ID(required=True))
-
-    services = graphene.List(ServiceType, service_category=graphene.String())
-    service = graphene.Field(ServiceType, id=graphene.ID(), slug=graphene.String())
-
-    def resolve_contacts(root, info, service_type=None, read=None):
-        qs = Contact.objects.all()
-        if service_type:
-            qs = qs.filter(service_type=service_type)
-        if read is not None:
-            qs = qs.filter(read=read)
-        return qs
-
-    def resolve_contact(root, info, id):
-        return Contact.objects.get(pk=id)
-
     def resolve_contact_by_token(root, info, token):
-        return Contact.objects.get(secret_token=token)
-
-    def resolve_unread_contacts(root, info):
-        return Contact.objects.filter(read=False)
+        enforce_capability_rate_limit(info, "contact")
+        try:
+            return Contact.objects.get(secret_token=token)
+        except Contact.DoesNotExist as exc:
+            raise GraphQLError("Ressource indisponible.") from exc
 
     def resolve_diagnostic_ticket(root, info, ticket_id):
-        return DiagnosticTicket.objects.get(ticket_id=ticket_id)
-
-    def resolve_leads(root, info, lead_type=None, status=None, timeline=None):
-        qs = Lead.objects.all()
-        if lead_type:
-            qs = qs.filter(lead_type=lead_type)
-        if status:
-            qs = qs.filter(status=status)
-        if timeline:
-            qs = qs.filter(timeline=timeline)
-        return qs
-
-    def resolve_lead(root, info, id):
-        return Lead.objects.get(pk=id)
-
-    def resolve_formations(root, info, format_type=None, active=True):
-        qs = Formation.objects.all()
-        if active is not None:
-            qs = qs.filter(active=active)
-        if format_type:
-            qs = qs.filter(format_type=format_type)
-        return qs
-
-    def resolve_formation(root, info, id):
-        return Formation.objects.get(pk=id)
-
-    def resolve_formation_registrations(root, info, formation_id=None, status=None):
-        qs = FormationRegistration.objects.select_related("formation")
-        if formation_id:
-            qs = qs.filter(formation_id=formation_id)
-        if status:
-            qs = qs.filter(status=status)
-        return qs
-
-    def resolve_formation_registration(root, info, id):
-        return FormationRegistration.objects.get(pk=id)
-
-    def resolve_services(root, info, service_category=None):
-        qs = Service.objects.all()
-        if service_category:
-            qs = qs.filter(service_category=service_category)
-        return qs
-
-    def resolve_service(root, info, id=None, slug=None):
-        if slug:
-            return Service.objects.get(slug=slug)
-        return Service.objects.get(pk=id)
+        enforce_capability_rate_limit(info, "diagnostic")
+        try:
+            return DiagnosticTicket.objects.get(ticket_id=ticket_id)
+        except DiagnosticTicket.DoesNotExist as exc:
+            raise GraphQLError("Ressource indisponible.") from exc
 
 
 class Mutation(graphene.ObjectType):
     create_contact = CreateContact.Field()
     add_contact_message = AddContactMessage.Field()
     create_diagnostic_ticket = CreateDiagnosticTicket.Field()
-    create_lead = CreateLead.Field()
-    update_lead_status = UpdateLeadStatus.Field()
-    create_formation = CreateFormation.Field()
-    create_formation_registration = CreateFormationRegistration.Field()
-    update_formation_registration_status = UpdateFormationRegistrationStatus.Field()
-    upsert_service = UpsertService.Field()
-    delete_crm_object = DeleteCrmObject.Field()
