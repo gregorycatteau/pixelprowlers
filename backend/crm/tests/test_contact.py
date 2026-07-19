@@ -80,7 +80,7 @@ class ContactGraphQLTests(TransactionTestCase):
             mutation Contact(
               $nom: String!, $prenom: String!, $company: String!, $email: String!, $telephone: String!,
               $objet: String!, $methodeContact: String!, $serviceType: String!,
-              $demandType: String, $message: String!, $startedAt: Float!
+              $demandType: String!, $message: String!, $startedAt: Float!
             ) {
               createContact(
                 nom: $nom, prenom: $prenom, company: $company, email: $email, telephone: $telephone,
