@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   contactDemandOptions,
   isContactDemandType,
+  resolveDemandTypeFromQuery,
   serviceTypeFromDemand,
+  useContactForm,
 } from './useContact';
 
 describe('materiel demand type contract', () => {
@@ -50,5 +52,62 @@ describe('materiel demand type contract', () => {
       'materiel',
       'partnership',
     ]);
+  });
+});
+
+describe('/contact?demande= preselection (resolveDemandTypeFromQuery)', () => {
+  it('preselects materiel from the query string used by the /reparation-informatique CTA', () => {
+    expect(resolveDemandTypeFromQuery('materiel')).toBe('materiel');
+  });
+
+  it('preselects the other existing values the same way', () => {
+    expect(resolveDemandTypeFromQuery('urgency')).toBe('urgency');
+    expect(resolveDemandTypeFromQuery('audit')).toBe('audit');
+  });
+
+  it('ignores an unknown value instead of forwarding it', () => {
+    expect(resolveDemandTypeFromQuery('materiel-urgent')).toBeUndefined();
+    expect(resolveDemandTypeFromQuery('<script>alert(1)</script>')).toBeUndefined();
+    expect(resolveDemandTypeFromQuery('')).toBeUndefined();
+  });
+
+  it('ignores absent, null or non-string values without throwing', () => {
+    expect(resolveDemandTypeFromQuery(undefined)).toBeUndefined();
+    expect(resolveDemandTypeFromQuery(null)).toBeUndefined();
+    expect(resolveDemandTypeFromQuery(42)).toBeUndefined();
+  });
+
+  it('only reads the first entry of a repeated query parameter, and still whitelists it', () => {
+    expect(resolveDemandTypeFromQuery(['materiel', 'audit'])).toBe('materiel');
+    expect(resolveDemandTypeFromQuery(['unknown', 'materiel'])).toBeUndefined();
+    expect(resolveDemandTypeFromQuery([])).toBeUndefined();
+  });
+});
+
+describe('useContactForm preselection (ContactForm.vue initial-demand-type prop)', () => {
+  it('initializes the reactive form with the whitelisted preselected value', () => {
+    const { form } = useContactForm('materiel');
+
+    expect(form.demandType).toBe('materiel');
+  });
+
+  it('lets the user change the preselected radio afterwards', () => {
+    const { form } = useContactForm('materiel');
+
+    form.demandType = 'audit';
+
+    expect(form.demandType).toBe('audit');
+  });
+
+  it('falls back to no preselection when no initial value is given, as before', () => {
+    const { form } = useContactForm();
+
+    expect(form.demandType).toBe('');
+  });
+
+  it('ignores an initial value outside the whitelist as a defense-in-depth check', () => {
+    const { form } = useContactForm('not-a-real-demand-type' as never);
+
+    expect(form.demandType).toBe('');
   });
 });

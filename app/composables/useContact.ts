@@ -127,6 +127,21 @@ export const isContactDemandType = (
   )
 );
 
+/*
+ * Résout un type de demande présélectionné depuis un paramètre de requête
+ * (ex. Nuxt/Vue Router peut fournir une chaîne, `null`, `undefined` ou un
+ * tableau en cas de paramètre répété). Toute valeur hors liste blanche —
+ * y compris un tableau non résolu — renvoie `undefined` : elle n’est
+ * jamais transmise telle quelle au formulaire ni à GraphQL.
+ */
+export const resolveDemandTypeFromQuery = (
+  rawValue: unknown,
+): ContactDemandType | undefined => {
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+
+  return isContactDemandType(value) ? value : undefined;
+};
+
 const CONTACT_FIELDS = /* GraphQL */ `
   {
     ticketId

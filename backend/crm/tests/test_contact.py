@@ -133,6 +133,10 @@ class ContactGraphQLTests(TransactionTestCase):
         self.assertEqual(len(contact.signature_hmac), 64)
         self.assertTrue(verify_contact_hmac(contact))
 
+    def test_materiel_belongs_to_the_declared_choices(self):
+        self.assertIn("materiel", {choice.value for choice in Contact.DemandType})
+        self.assertIn("materiel", {choice.value for choice in Contact.ServiceType})
+
     def test_materiel_demand_type_is_accepted_and_persists_service_type(self):
         response = self.submit(
             serviceType="materiel",
@@ -143,6 +147,9 @@ class ContactGraphQLTests(TransactionTestCase):
         self.assertIsNone(body.get("errors"), body)
         result = body["data"]["createContact"]
         self.assertTrue(result["success"])
+
+        # Une seule ligne créée, avec les deux valeurs attendues persistées.
+        self.assertEqual(Contact.objects.count(), 1)
         contact = Contact.objects.get()
         self.assertEqual(contact.demand_type, "materiel")
         self.assertEqual(contact.service_type, "materiel")
@@ -150,6 +157,40 @@ class ContactGraphQLTests(TransactionTestCase):
             contact.get_demand_type_display(),
             "Matériel : réparation, reconditionnement, migration Linux",
         )
+
+        # Numéro de dossier conforme et retourné publiquement.
+        self.assertRegex(result["numeroDossier"], r"^\d{8}001$")
+        self.assertEqual(contact.numero_dossier, result["numeroDossier"])
+
+        # Le HMAC de la ligne créée reste valide.
+        self.assertEqual(len(contact.signature_hmac), 64)
+        self.assertTrue(verify_contact_hmac(contact))
+
+        # L'e-mail est simulé par le backend mémoire, jamais un SMTP réel.
+        self.assertEqual(settings.EMAIL_BACKEND, "django.core.mail.backends.locmem.EmailBackend")
+        sent_to_client = [item for item in mail.outbox if item.to == [contact.email]]
+        self.assertEqual(len(sent_to_client), 1)
+        self.assertEqual(contact.statut_notification, Contact.NotificationStatus.SENT)
+
+    def test_other_demand_types_still_work_after_adding_materiel(self):
+        for demand_type, service_type in (
+            ("diagnostic", "audit_site"),
+            ("urgency", "urgence"),
+            ("audit", "audit_site"),
+            ("refonte", "site_maintenable"),
+            ("transmission", "maintenance_documentation"),
+            ("partnership", "autre"),
+        ):
+            with self.subTest(demand_type=demand_type):
+                cache.clear()
+                response = self.submit(demandType=demand_type, serviceType=service_type)
+                body = response.json()
+                self.assertIsNone(body.get("errors"), body)
+                self.assertTrue(body["data"]["createContact"]["success"])
+
+    def test_unknown_demand_type_is_still_rejected(self):
+        self.assert_rejected(demandType="materiel-urgent")
+        self.assert_rejected(demandType="unknown")
 
     def test_validation_rejections(self):
         cases = [
