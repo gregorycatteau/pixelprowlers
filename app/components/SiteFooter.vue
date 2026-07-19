@@ -88,6 +88,10 @@ const navigationLinks = [
     href: "/diagnostic-situation",
   },
   {
+    label: "Réparation & Linux",
+    href: "/reparation-informatique",
+  },
+  {
     label: "À propos",
     href: "/a-propos",
   },

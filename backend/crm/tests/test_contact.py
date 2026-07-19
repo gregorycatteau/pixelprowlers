@@ -133,6 +133,24 @@ class ContactGraphQLTests(TransactionTestCase):
         self.assertEqual(len(contact.signature_hmac), 64)
         self.assertTrue(verify_contact_hmac(contact))
 
+    def test_materiel_demand_type_is_accepted_and_persists_service_type(self):
+        response = self.submit(
+            serviceType="materiel",
+            demandType="materiel",
+            objet="Ordinateur portable qui ne démarre plus",
+        )
+        body = response.json()
+        self.assertIsNone(body.get("errors"), body)
+        result = body["data"]["createContact"]
+        self.assertTrue(result["success"])
+        contact = Contact.objects.get()
+        self.assertEqual(contact.demand_type, "materiel")
+        self.assertEqual(contact.service_type, "materiel")
+        self.assertEqual(
+            contact.get_demand_type_display(),
+            "Matériel : réparation, reconditionnement, migration Linux",
+        )
+
     def test_validation_rejections(self):
         cases = [
             {"email": "invalid"},
@@ -281,6 +299,13 @@ class ContactServiceTests(TransactionTestCase):
             with self.subTest(raw=raw):
                 with self.assertRaisesRegex(ValueError, "French mobile"):
                     normalize_french_mobile(raw)
+
+    def test_service_accepts_materiel_demand_type(self):
+        contact = create_contact_dossier(
+            contact_data(service_type="materiel", demand_type="materiel")
+        )
+        self.assertEqual(contact.demand_type, "materiel")
+        self.assertEqual(contact.service_type, "materiel")
 
     def test_service_stores_canonical_phone_before_hmac(self):
         contact = create_contact_dossier(contact_data(telephone="+33612345678"))

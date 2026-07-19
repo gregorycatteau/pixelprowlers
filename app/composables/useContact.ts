@@ -24,6 +24,7 @@ export type ContactDemandType =
   | 'audit'
   | 'refonte'
   | 'transmission'
+  | 'materiel'
   | 'partnership';
 
 export type ContactStatus =
@@ -103,10 +104,28 @@ export const contactDemandOptions: Array<{
     value: 'transmission',
   },
   {
+    label: 'Réparation, reconditionnement ou migration Linux',
+    value: 'materiel',
+  },
+  {
     label: 'Partenariat ou autre demande',
     value: 'partnership',
   },
 ];
+
+/*
+ * Liste blanche stricte des types de demande acceptés. Toute valeur qui
+ * n’en fait pas partie (par exemple un paramètre d’URL) doit être ignorée
+ * plutôt que transmise au formulaire ou à GraphQL.
+ */
+export const isContactDemandType = (
+  value: unknown,
+): value is ContactDemandType => (
+  typeof value === 'string'
+  && contactDemandOptions.some(
+    (option) => option.value === value,
+  )
+);
 
 const CONTACT_FIELDS = /* GraphQL */ `
   {
@@ -191,7 +210,13 @@ const ADD_CONTACT_MESSAGE_MUTATION = /* GraphQL */ `
   }
 `;
 
-const serviceTypeFromDemand = (
+/*
+ * Dérive le service_type backend à partir du type de demande choisi côté
+ * client. Exportée pour être testée indépendamment du cycle de vie du
+ * formulaire (vee-validate) : c’est ici, et uniquement ici, que la valeur
+ * ServiceType.MATERIEL est produite pour la mutation GraphQL.
+ */
+export const serviceTypeFromDemand = (
   demandType: ContactDemandType | '',
 ) => {
   if (demandType === 'urgency') {
@@ -208,6 +233,10 @@ const serviceTypeFromDemand = (
 
   if (demandType === 'transmission') {
     return 'maintenance_documentation';
+  }
+
+  if (demandType === 'materiel') {
+    return 'materiel';
   }
 
   /*
@@ -249,7 +278,9 @@ export const statusLabel = (
   closed: 'Fermé',
 }[status] || status);
 
-export const useContactForm = () => {
+export const useContactForm = (
+  initialDemandType?: ContactDemandType,
+) => {
   const {
     defineField,
     errors,
@@ -259,7 +290,11 @@ export const useContactForm = () => {
     validationSchema: toTypedSchema(contactFormSchema),
 
     initialValues: {
-      demandType: '' as ContactDemandType,
+      demandType: (
+        isContactDemandType(initialDemandType)
+          ? initialDemandType
+          : ''
+      ) as ContactDemandType,
       prenom: '',
       nom: '',
       organization: '',

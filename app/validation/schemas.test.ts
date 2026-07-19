@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   auditIdentitySchema,
+  contactDemandTypeSchema,
   contactFormSchema,
   contactPhoneSchema,
   contactRequiredFieldStates,
@@ -140,5 +141,22 @@ describe('contact validation schema and progress', () => {
     expect(missing.find((field) => field.key === 'phone')?.valid).toBe(false);
     expect(valid.find((field) => field.key === 'phone')?.valid).toBe(true);
     expect(invalidAgain.find((field) => field.key === 'phone')?.valid).toBe(false);
+  });
+
+  it('accepts the materiel demand type end to end', () => {
+    expect(contactDemandTypeSchema.safeParse('materiel').success).toBe(true);
+
+    const materielContact = { ...completeContact, demandType: 'materiel' as const };
+    expect(contactFormSchema.safeParse(materielContact).success).toBe(true);
+    expect(isContactFormComplete(materielContact)).toBe(true);
+
+    const states = contactRequiredFieldStates(materielContact);
+    expect(states.find((field) => field.key === 'demandType')?.valid).toBe(true);
+  });
+
+  it('rejects a demand type outside the whitelist, such as an arbitrary URL parameter', () => {
+    expect(contactDemandTypeSchema.safeParse('materiel-urgent').success).toBe(false);
+    expect(contactDemandTypeSchema.safeParse('<script>').success).toBe(false);
+    expect(contactFormSchema.safeParse({ ...completeContact, demandType: 'unknown' }).success).toBe(false);
   });
 });

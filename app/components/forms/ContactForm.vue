@@ -354,7 +354,16 @@ import AppButton from '~/components/ui/AppButton.vue';
 import {
   contactDemandOptions,
   useContactForm,
+  type ContactDemandType,
 } from '~/composables/useContact';
+
+const props = defineProps<{
+  /*
+   * Type de demande présélectionné (ex. depuis /contact?demande=materiel).
+   * La valeur est déjà filtrée par liste blanche par la page appelante.
+   */
+  initialDemandType?: ContactDemandType;
+}>();
 
 const router = useRouter();
 
@@ -372,7 +381,7 @@ const {
   formatPhoneOnBlur,
   validatePrivacyAcknowledgement,
   submit,
-} = useContactForm();
+} = useContactForm(props.initialDemandType);
 
 const handleSubmit = async () => {
   const ticket = await submit();

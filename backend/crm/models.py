@@ -37,6 +37,7 @@ class Contact(TimeStampedModel):
         AUDIT = "audit", "Audit"
         REFONTE = "refonte", "Refonte"
         TRANSMISSION = "transmission", "Transmission"
+        MATERIEL = "materiel", "Matériel : réparation, reconditionnement, migration Linux"
         PARTNERSHIP = "partnership", "Partenariat / autre"
 
     class ContactMethod(models.TextChoices):

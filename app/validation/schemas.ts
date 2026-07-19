@@ -207,6 +207,7 @@ export const contactDemandTypeSchema = z.enum([
   'audit',
   'refonte',
   'transmission',
+  'materiel',
   'partnership',
 ]);
 

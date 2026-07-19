@@ -88,6 +88,7 @@ const navLinks = [
   { label: 'Accueil', href: '/' },
   { label: 'Audit sécurité', href: '/audit-site-web' },
   { label: 'Développement web', href: '/refonte-site' },
+  { label: 'Réparation & Linux', href: '/reparation-informatique' },
   { label: 'Accès sécurisés', href: '/transmission-acces' },
   { label: 'Urgence', href: '/urgence' },
   { label: 'À propos', href: '/a-propos' },
