@@ -1,4 +1,5 @@
 import re
+import math
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -7,6 +8,7 @@ from django.core.exceptions import ValidationError
 MAX_JSON_ENTRIES = 50
 MAX_JSON_NAME_LENGTH = 80
 MAX_JSON_VALUE_LENGTH = 500
+MAX_JSON_NUMERIC_ABS = 1_000_000_000_000
 _HTML_TAG = re.compile(r"<\s*/?\s*[a-zA-Z][^>]*>")
 
 
@@ -34,8 +36,18 @@ def validate_structured_entries(value):
         item_value = entry.get("value", "")
         if isinstance(item_value, bool):
             continue
-        if isinstance(item_value, (int, float, Decimal)) and not isinstance(item_value, complex):
-            continue
+        if isinstance(item_value, int):
+            if abs(item_value) <= MAX_JSON_NUMERIC_ABS:
+                continue
+            raise ValidationError(f"La valeur numérique de l'entrée {index + 1} est trop grande.")
+        if isinstance(item_value, float):
+            if math.isfinite(item_value) and abs(item_value) <= MAX_JSON_NUMERIC_ABS:
+                continue
+            raise ValidationError(f"La valeur numérique de l'entrée {index + 1} est invalide.")
+        if isinstance(item_value, Decimal):
+            if item_value.is_finite() and abs(item_value) <= MAX_JSON_NUMERIC_ABS:
+                continue
+            raise ValidationError(f"La valeur numérique de l'entrée {index + 1} est invalide.")
         if not isinstance(item_value, str) or len(item_value) > MAX_JSON_VALUE_LENGTH:
             raise ValidationError(f"La valeur de l'entrée {index + 1} est invalide.")
         validate_plain_text(item_value)

@@ -26,6 +26,8 @@ class RefurbishedMachineModelTests(TestCase):
             [{"name": "CPU", "value": {"nested": True}}],
             [{"name": "CPU", "value": "x" * 501}],
             [{"name": "<b>CPU</b>", "value": "x"}],
+            [{"name": "Fréquence", "value": float("inf")}],
+            [{"name": "Capacité", "value": 10**13}],
         )
         for index, value in enumerate(invalid_values):
             with self.subTest(value=value), self.assertRaises(ValidationError):
