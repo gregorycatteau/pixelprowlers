@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "graphene_django",
     "audits",
+    "catalogue",
     "crm",
     "urgencies",
     "tracking",
@@ -333,7 +334,7 @@ JAZZMIN_SETTINGS = {
     ],
 
     # Ordre des apps dans la sidebar
-    "order_with_respect_to": ["auth", "audits", "urgencies", "tracking"],
+    "order_with_respect_to": ["auth", "catalogue", "audits", "urgencies", "tracking"],
 
     # Icônes FontAwesome par modèle
     # Format: "app_label.ModelName": "fa-solid fa-icone"
@@ -357,6 +358,8 @@ JAZZMIN_SETTINGS = {
         "audits.Citation": "fas fa-quote-right",
 
         "tracking": "fas fa-chart-line",
+        "catalogue": "fas fa-laptop",
+        "catalogue.RefurbishedMachine": "fas fa-laptop-code",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
