@@ -1,6 +1,8 @@
 type Query {
   contactByToken(token: String!): ContactType
   diagnosticTicket(ticketId: String!): DiagnosticTicketType
+  availableMachines(first: Int, after: String): MachineConnection!
+  refurbishedMachine(slug: String!): RefurbishedMachineType
   citationAleatoire(excludeId: Int): CitationType
   motifs: [MotifType]
   raisonsAppel: [RaisonAppelType]
@@ -83,6 +85,9 @@ enum CrmContactDemandTypeChoices {
   """Transmission"""
   TRANSMISSION
 
+  """Matériel : réparation, reconditionnement, migration Linux"""
+  MATERIEL
+
   """Partenariat / autre"""
   PARTNERSHIP
 }
@@ -155,6 +160,55 @@ Use of this type is *not recommended* as you lose the benefits of having a defin
 schema (one of the key benefits of GraphQL).
 """
 scalar JSONString
+
+type MachineConnection {
+  edges: [MachineEdge!]!
+  pageInfo: MachinePageInfo!
+}
+
+type MachineEdge {
+  cursor: String!
+  node: RefurbishedMachineType!
+}
+
+type RefurbishedMachineType {
+  slug: String!
+  title: String!
+  brand: String!
+  modelName: String!
+  summary: String!
+  description: String!
+  cosmeticCondition: String!
+  installedOperatingSystem: String!
+  specifications: GenericScalar!
+  performedInterventions: GenericScalar!
+  performedTests: GenericScalar!
+  commercialStatus: String!
+  priceAmount: Decimal
+  currency: String!
+  warrantyInformation: String!
+  availabilityNote: String!
+  featured: Boolean!
+  seoTitle: String!
+  seoDescription: String!
+  publishedAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+The `GenericScalar` scalar type represents a generic
+GraphQL scalar value that could be:
+String, Boolean, Int, Float, List or Object.
+"""
+scalar GenericScalar
+
+"""The `Decimal` scalar type represents a python Decimal."""
+scalar Decimal
+
+type MachinePageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
 
 type CitationType {
   id: ID!
