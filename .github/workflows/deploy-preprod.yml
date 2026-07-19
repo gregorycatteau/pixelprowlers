@@ -165,15 +165,32 @@ jobs:
           set -euo pipefail
           ssh -i "${SSH_KEY_PATH}" -p "${VPS_PORT}" \
             -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "${VPS_USER}@${VPS_HOST}" 'bash -se' -- "${{ github.sha }}" "${REMOTE_DIR}" <<'REMOTE'
+            "${VPS_USER}@${VPS_HOST}" 'bash -se' -- "${{ github.sha }}" "${REMOTE_DIR}" "${BACKUP_ROOT}" <<'REMOTE'
           set -euo pipefail
           deploy_sha="$1"
           remote_dir="$2"
+          backup_root="$3"
           cd "$remote_dir"
           test "$(git rev-parse HEAD)" = "$deploy_sha" || {
             echo "ERROR: deployed SHA changed during deployment" >&2
             exit 1
           }
+          deployment_backup="$(cat "$backup_root/current-deployment-backup.txt")"
+          case "$deployment_backup" in
+            "$backup_root"/*) ;;
+            *) echo "ERROR: invalid deployment backup path" >&2; exit 1 ;;
+          esac
+          test -s "$deployment_backup/postgresql.sql" || {
+            echo "ERROR: PostgreSQL backup missing or empty" >&2
+            exit 1
+          }
+          for service in postgres django nuxt; do
+            health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "pixelprowlers-$service")"
+            test "$health" = "healthy" || {
+              echo "ERROR: $service is not healthy" >&2
+              exit 1
+            }
+          done
           curl -fsSI https://pixelprowlers.io >/dev/null
           curl -fsS https://pixelprowlers.io/health/ >/dev/null
           echo "HTTPS verification successful"
