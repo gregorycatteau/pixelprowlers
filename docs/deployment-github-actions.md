@@ -48,13 +48,16 @@ automatiquement une nouvelle identité du VPS.
 6. Créer un `pg_dump` externe, restrictif et non vide.
 7. Exécuter `manage.py check`, puis les migrations une seule fois via un
    conteneur ponctuel.
-8. Démarrer Django et Nuxt et attendre leurs contrôles HTTP internes.
+8. Démarrer Django et Nuxt et attendre leurs contrôles HTTP internes ; Nuxt
+   expose une route Nitro autonome `/api/healthz`.
 9. Vérifier le SHA distant puis HTTPS et `/health/` via Caddy.
 10. En cas d'échec après synchronisation, restaurer le SHA applicatif précédent
     et redémarrer l'ancienne stack. La sauvegarde PostgreSQL est conservée pour
     une restauration contrôlée ; elle n'est jamais restaurée automatiquement.
 
-Les attentes PostgreSQL, Django et Nuxt sont bornées et bloquantes. Un timeout
+Les attentes PostgreSQL, Django et Nuxt sont bornées et bloquantes. Le
+healthcheck Nuxt valide le statut HTTP et le contrat JSON de `/api/healthz`,
+sans appeler Django, PostgreSQL ou Internet. Un timeout
 affiche au maximum 40 lignes du service concerné avant de retourner un code non
 nul.
 

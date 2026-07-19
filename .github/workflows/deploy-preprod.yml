@@ -123,7 +123,10 @@ jobs:
             done
             if [ "$ready" -ne 1 ]; then
               echo "ERROR: $service did not become ready" >&2
-              docker compose logs --tail=40 "$service" >&2 || :
+              set +e
+              docker inspect --format 'status={{.State.Status}} health={{json .State.Health}} configured={{json .Config.Healthcheck}}' "pixelprowlers-$service" >&2
+              docker compose logs --tail=40 "$service" 2>&1 | sed -E '/(password|secret|token|key)/Is/=.*/=[REDACTED]/' >&2
+              set -e
               return 1
             fi
             echo "$service ready"
@@ -154,7 +157,7 @@ jobs:
           wait_for_service django 30 docker compose exec -T django \
             curl -fsS http://127.0.0.1:8000/health/
           wait_for_service nuxt 30 docker compose exec -T nuxt \
-            node -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            node -e "const timer=setTimeout(()=>process.exit(1),2000);fetch('http://127.0.0.1:3000/api/healthz').then(async r=>{const body=await r.json();clearTimeout(timer);process.exit(r.status===200&&body.status==='ok'&&body.service==='nuxt'?0:1)}).catch(()=>process.exit(1))"
           docker compose ps
           REMOTE
 
@@ -191,6 +194,9 @@ jobs:
               exit 1
             }
           done
+          docker compose exec -T nuxt node -e \
+            "const timer=setTimeout(()=>process.exit(1),2000);fetch('http://127.0.0.1:3000/api/healthz').then(async r=>{const body=await r.json();clearTimeout(timer);process.exit(r.status===200&&body.status==='ok'&&body.service==='nuxt'?0:1)}).catch(()=>process.exit(1))" \
+            </dev/null
           curl -fsSI https://pixelprowlers.io >/dev/null
           curl -fsS https://pixelprowlers.io/health/ >/dev/null
           echo "HTTPS verification successful"
