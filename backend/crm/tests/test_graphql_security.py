@@ -164,7 +164,7 @@ class PublicGraphQLSecurityBoundaryTests(TestCase):
                 objet: "Qualification matérielle"
                 methodeContact: "email"
                 serviceType: "materiel"
-                demandType: "partnership"
+                demandType: "materiel"
                 message: "Nous souhaitons qualifier un besoin matériel avant toute intervention."
                 privacyConsent: true
                 startedAt: $startedAt
@@ -184,6 +184,7 @@ class PublicGraphQLSecurityBoundaryTests(TestCase):
         self.assertTrue(result["success"])
         contact = Contact.objects.get()
         self.assertEqual(contact.service_type, "materiel")
+        self.assertEqual(contact.demand_type, "materiel")
         self.assertTrue(verify_contact_hmac(contact))
 
     def test_malformed_and_enumeration_attempts_reveal_no_private_data(self):
