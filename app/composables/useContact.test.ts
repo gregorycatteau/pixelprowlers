@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CONTACT_CONFIRMATION_STORAGE_KEY,
   contactDemandOptions,
   isContactDemandType,
+  parseStoredContactConfirmation,
   resolveDemandTypeFromQuery,
   serviceTypeFromDemand,
   useContactForm,
@@ -109,5 +111,42 @@ describe('useContactForm preselection (ContactForm.vue initial-demand-type prop)
     const { form } = useContactForm('not-a-real-demand-type' as never);
 
     expect(form.demandType).toBe('');
+  });
+});
+
+describe('contact confirmation storage contract (/contact/confirmation)', () => {
+  it('accepts a validly shaped stored confirmation', () => {
+    const raw = JSON.stringify({
+      numeroDossier: '20072026001',
+      message: 'Votre demande a bien été enregistrée.',
+    });
+
+    expect(parseStoredContactConfirmation(raw)).toEqual({
+      numeroDossier: '20072026001',
+      message: 'Votre demande a bien été enregistrée.',
+    });
+  });
+
+  it('rejects when sessionStorage has nothing (direct access without context)', () => {
+    expect(parseStoredContactConfirmation(null)).toBeNull();
+  });
+
+  it('rejects a dossier number that is not exactly 11 digits', () => {
+    const raw = JSON.stringify({ numeroDossier: '123', message: 'x' });
+    expect(parseStoredContactConfirmation(raw)).toBeNull();
+  });
+
+  it('rejects malformed JSON without throwing', () => {
+    expect(() => parseStoredContactConfirmation('not-json{')).not.toThrow();
+    expect(parseStoredContactConfirmation('not-json{')).toBeNull();
+  });
+
+  it('rejects a payload missing the message', () => {
+    const raw = JSON.stringify({ numeroDossier: '20072026001' });
+    expect(parseStoredContactConfirmation(raw)).toBeNull();
+  });
+
+  it('never derives the confirmation from the URL: the storage key is the only source', () => {
+    expect(CONTACT_CONFIRMATION_STORAGE_KEY).toBe('pixelprowlers-contact-confirmation');
   });
 });

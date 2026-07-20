@@ -35,23 +35,25 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
-
-type ContactConfirmation = { numeroDossier: string; message: string };
+import {
+  CONTACT_CONFIRMATION_STORAGE_KEY,
+  parseStoredContactConfirmation,
+  type ContactConfirmation,
+} from '~/composables/useContact';
 
 const confirmation = ref<ContactConfirmation | null>(null);
 const error = ref('');
 
 onMounted(() => {
-  try {
-    const stored = sessionStorage.getItem('pixelprowlers-contact-confirmation');
-    const parsed = stored ? JSON.parse(stored) as ContactConfirmation : null;
-    if (!parsed?.numeroDossier || !/^\d{11}$/.test(parsed.numeroDossier) || !parsed.message) {
-      throw new Error('invalid confirmation');
-    }
-    confirmation.value = parsed;
-  } catch {
+  const stored = sessionStorage.getItem(CONTACT_CONFIRMATION_STORAGE_KEY);
+  const parsed = parseStoredContactConfirmation(stored);
+
+  if (!parsed) {
     error.value = "Le numéro de dossier n'est plus disponible dans cette session.";
+    return;
   }
+
+  confirmation.value = parsed;
 });
 </script>
 

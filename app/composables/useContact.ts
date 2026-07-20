@@ -56,6 +56,43 @@ export type ContactTicket = {
   updatedAt: string;
 };
 
+export const CONTACT_CONFIRMATION_STORAGE_KEY =
+  'pixelprowlers-contact-confirmation';
+
+export type ContactConfirmation = {
+  numeroDossier: string;
+  message: string;
+};
+
+/*
+ * Relit et valide la confirmation stockée après une création réussie.
+ * Aucun numéro de dossier ni jeton n’est jamais transmis par l’URL : la
+ * page de confirmation dépend uniquement de cette donnée de session,
+ * testable indépendamment du montage du composant.
+ */
+export const parseStoredContactConfirmation = (
+  raw: string | null,
+): ContactConfirmation | null => {
+  try {
+    const parsed = raw ? JSON.parse(raw) as Partial<ContactConfirmation> : null;
+
+    if (
+      !parsed?.numeroDossier
+      || !/^\d{11}$/.test(parsed.numeroDossier)
+      || !parsed.message
+    ) {
+      return null;
+    }
+
+    return {
+      numeroDossier: parsed.numeroDossier,
+      message: parsed.message,
+    };
+  } catch {
+    return null;
+  }
+};
+
 type ContactGraphql = {
   ticketId: string;
   numeroDossier: string;
@@ -532,7 +569,7 @@ export const useContactForm = (
        */
       try {
         window.sessionStorage.setItem(
-          'pixelprowlers-contact-confirmation',
+          CONTACT_CONFIRMATION_STORAGE_KEY,
           JSON.stringify(created),
         );
       } catch {
