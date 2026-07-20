@@ -159,11 +159,15 @@ const currentYear = new Date().getFullYear();
 }
 
 .FooterLinkList {
-  @apply mt-4 space-y-3;
+  @apply mt-2 space-y-1;
 }
 
+/*
+ * Cible tactile confortable (min ~44px) : le lien porte sa propre
+ * hauteur/marge intérieure plutôt que de dépendre du seul texte.
+ */
 .FooterLink {
-  @apply inline-flex rounded-md text-sm font-semibold text-white/75 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9ed7b9];
+  @apply -mx-2 inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-white/75 transition-colors duration-(--motion-feedback) ease-(--motion-ease-standard) hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9ed7b9];
 }
 
 .FooterCommitments {

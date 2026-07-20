@@ -15,8 +15,10 @@
           <p>{{ error }}</p>
           <AppButton href="/contact">Réessayer</AppButton>
         </div>
-        <div v-else-if="confirmation" class="contact-panel">
-          <h2 id="confirmation-ticket-title">Numéro de dossier : {{ confirmation.numeroDossier }}</h2>
+        <div v-else-if="confirmation" v-reveal class="contact-panel confirmation-panel">
+          <h2 id="confirmation-ticket-title" class="dossier-pill">
+            Numéro de dossier : {{ confirmation.numeroDossier }}
+          </h2>
           <p>{{ confirmation.message }}</p>
           <p>Vous savez maintenant par où commencer : votre site, vos accès et vos priorités vont être clarifiés.</p>
           <p>Votre demande est enregistrée. Conservez votre référence de dossier. Aucun accès ne sera demandé sans validation.</p>
@@ -52,3 +54,24 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped>
+@reference "../../assets/css/main.css";
+
+/* Accent de succès sobre : une bordure haute, pas une bannière. */
+.confirmation-panel {
+  border-top: 3px solid var(--color-pxp-green);
+}
+
+.dossier-pill {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(43, 112, 83, 0.18);
+  border-radius: 8px;
+  background: white;
+  padding: 9px 14px;
+  color: #2b4b39 !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+}
+</style>

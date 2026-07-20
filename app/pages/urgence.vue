@@ -55,7 +55,7 @@
           Avant d’envoyer votre demande
         </h2>
 
-        <div class="urgency-grid">
+        <div v-reveal class="urgency-grid">
           <article class="urgency-card">
             <h3>Situations à signaler rapidement</h3>
 
@@ -82,6 +82,7 @@
         </div>
 
         <div
+          v-reveal
           class="qualification-process"
           aria-labelledby="qualification-process-title"
         >
@@ -247,7 +248,7 @@ useHead({
 }
 
 .urgency-card {
-  @apply rounded-xl border border-pxp-green/20 bg-white p-5 md:p-6;
+  @apply rounded-xl border border-pxp-green/20 bg-white p-5 shadow-sm md:p-6;
 }
 
 .urgency-card h3 {

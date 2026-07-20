@@ -293,6 +293,41 @@
     padding: 12px;
     color: var(--color-pxp-ink);
     font: inherit;
+    transition:
+      border-color var(--motion-feedback) var(--motion-ease-standard),
+      box-shadow var(--motion-feedback) var(--motion-ease-standard);
+  }
+
+  .text-field input:hover,
+  .text-field textarea:hover {
+    border-color: rgba(43, 112, 83, 0.4);
+  }
+
+  /*
+   * Champ renseigné (au repos) : bordure légèrement affirmée, sans
+   * dépendre de la couleur seule (le contenu tapé reste le signal
+   * principal) pour indiquer qu'une valeur a été saisie.
+   */
+  .text-field input:not(:placeholder-shown):not(:focus):not([aria-invalid="true"]),
+  .text-field textarea:not(:placeholder-shown):not(:focus):not([aria-invalid="true"]) {
+    border-color: rgba(43, 112, 83, 0.38);
+  }
+
+  .text-field input:focus-visible,
+  .text-field textarea:focus-visible {
+    border-color: var(--color-pxp-green);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(43, 112, 83, 0.18);
+  }
+
+  .text-field input[aria-invalid="true"],
+  .text-field textarea[aria-invalid="true"] {
+    border-color: #c0402c;
+  }
+
+  .text-field input[aria-invalid="true"]:focus-visible,
+  .text-field textarea[aria-invalid="true"]:focus-visible {
+    box-shadow: 0 0 0 3px rgba(192, 64, 44, 0.18);
   }
 
   .text-field input {
@@ -387,6 +422,21 @@
     color: #7c2418;
     font-weight: 800;
     line-height: 1.45;
+    transition:
+      opacity var(--motion-feedback) var(--motion-ease-standard),
+      transform var(--motion-feedback) var(--motion-ease-standard);
+  }
+
+  /*
+   * Apparition en douceur plutôt qu'un pop instantané : le message ne
+   * bouge pas les champs voisins de façon brutale. N'exige aucune
+   * modification des composants qui l'utilisent (v-if inchangé).
+   */
+  @starting-style {
+    .form-error {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
   }
 
   .form-note {

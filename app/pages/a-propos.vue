@@ -19,11 +19,11 @@
         </p>
 
         <div class="HeroActions">
-          <NuxtLink to="/contact" class="ButtonPrimary">
+          <NuxtLink to="/contact" class="ButtonBase ButtonPrimary">
             Parler de votre situation
           </NuxtLink>
 
-          <NuxtLink to="/diagnostic-situation" class="ButtonSecondary">
+          <NuxtLink to="/diagnostic-situation" class="ButtonBase ButtonSecondary">
             Faire le pré-diagnostic
           </NuxtLink>
         </div>
@@ -38,7 +38,7 @@
 
     <section class="Section" aria-labelledby="founder-title">
       <div class="Container ContainerWide">
-        <div class="FounderGrid">
+        <div v-reveal class="FounderGrid">
           <figure class="FounderPhotoFrame">
             <img
               src="/images/about/parcours.jpg"
@@ -119,7 +119,7 @@
           liberté de choix.
         </p>
 
-        <div class="PrinciplesGrid">
+        <div v-reveal class="PrinciplesGrid">
           <article
             v-for="principle in principles"
             :key="principle.title"
@@ -135,7 +135,7 @@
 
     <section class="Section TrustSection" aria-labelledby="trust-title">
       <div class="Container ContainerWide">
-        <div class="TrustGrid">
+        <div v-reveal class="TrustGrid">
           <div>
             <p class="SectionEyebrow SectionEyebrowLight">
               Cadre de confiance
@@ -203,7 +203,7 @@
 
     <section class="Section SectionAlt" aria-labelledby="promises-title">
       <div class="Container ContainerWide">
-        <div class="PromisesGrid">
+        <div v-reveal class="PromisesGrid">
           <div>
             <p class="SectionEyebrow">Des promesses crédibles</p>
 
@@ -235,7 +235,7 @@
           Vérifions simplement si l’approche vous convient.
         </h2>
 
-        <div class="FitGrid">
+        <div v-reveal class="FitGrid">
           <article class="FitCard FitCardPositive">
             <h3>PixelProwlers est probablement adapté si</h3>
             <ul>
@@ -272,11 +272,11 @@
         </p>
 
         <div class="HeroActions">
-          <NuxtLink to="/contact" class="ButtonPrimary ButtonPrimaryLight">
+          <NuxtLink to="/contact" class="ButtonBase ButtonPrimary ButtonPrimaryLight">
             Contacter PixelProwlers
           </NuxtLink>
 
-          <NuxtLink to="/diagnostic-situation" class="ButtonSecondaryLight">
+          <NuxtLink to="/diagnostic-situation" class="ButtonBase ButtonSecondary ButtonSecondaryLight">
             Faire le pré-diagnostic
           </NuxtLink>
         </div>
@@ -443,20 +443,6 @@ useHead({
 
 .HeroActions {
   @apply mt-8 flex flex-col gap-3;
-}
-
-.ButtonPrimary,
-.ButtonSecondary,
-.ButtonSecondaryLight {
-  @apply inline-flex min-h-12 items-center justify-center rounded-xl px-6 py-3 text-center font-bold transition focus-visible:outline-2 focus-visible:outline-offset-4;
-}
-
-.ButtonPrimary {
-  @apply bg-pxp-green text-white hover:bg-pxp-green/80 focus-visible:outline-pxp-green;
-}
-
-.ButtonSecondary {
-  @apply border border-pxp-green/40 bg-white text-[#20563f] hover:border-pxp-green hover:bg-[#f7fbf8] focus-visible:outline-pxp-green;
 }
 
 .TrustSummary {
@@ -655,11 +641,11 @@ useHead({
 }
 
 .ButtonPrimaryLight {
-  @apply bg-white text-[#1f4f3b] hover:bg-[#eff8f3] focus-visible:outline-white;
+  @apply bg-white text-[#1f4f3b] shadow-none hover:bg-[#eff8f3] focus-visible:ring-white;
 }
 
 .ButtonSecondaryLight {
-  @apply border border-white/50 text-white hover:border-white hover:bg-white/10 focus-visible:outline-white;
+  @apply border border-white/50 bg-transparent text-white hover:border-white hover:bg-white/10 focus-visible:ring-white;
 }
 
 @media (min-width: 640px) {

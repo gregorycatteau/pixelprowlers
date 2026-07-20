@@ -367,7 +367,7 @@ useHead({
 }
 
 .repair-card {
-  @apply rounded-xl border border-pxp-green/20 bg-white p-5 md:p-6;
+  @apply rounded-xl border border-pxp-green/20 bg-white p-5 shadow-sm md:p-6;
 }
 
 .repair-card h3 {

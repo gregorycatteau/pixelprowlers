@@ -671,7 +671,7 @@ const unsuitableFits = [
 
 .PrincipleCard,
 .EvidenceCard {
-  @apply rounded-xl border border-pxp-green/20 bg-white p-6;
+  @apply rounded-xl border border-pxp-green/20 bg-white p-6 shadow-sm;
 }
 
 .PrincipleNumber {
@@ -730,7 +730,7 @@ const unsuitableFits = [
 }
 
 .CollaborationCard {
-  @apply rounded-xl border border-pxp-green/20 bg-white p-6 md:p-8;
+  @apply rounded-xl border border-pxp-green/20 bg-white p-6 shadow-sm md:p-8;
 }
 
 .CollaborationCardPositive {

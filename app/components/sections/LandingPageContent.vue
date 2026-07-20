@@ -16,6 +16,7 @@
     <section
       v-for="section in landing.sections"
       :key="section.title"
+      v-reveal
       class="landing-section"
       :class="{ 'section-alt': section.alt }"
       :aria-labelledby="section.id"
