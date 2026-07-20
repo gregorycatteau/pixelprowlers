@@ -1,0 +1,67 @@
+{% extends "admin/base_site.html" %}
+{% load i18n jazzmin cockpit_tags %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block bodyclass %}{{ block.super }} dashboard cockpit-dashboard{% endblock %}
+{% block content_title %}Vue opérationnelle{% endblock %}
+
+{% block content %}
+  {% get_side_menu using="app_list" as dashboard_list %}
+  {% cockpit_dashboard user dashboard_list as cockpit %}
+  <section class="cockpit-intro" aria-labelledby="cockpit-heading">
+    <div>
+      <p class="cockpit-eyebrow">Activité PixelProwlers</p>
+      <h2 id="cockpit-heading">Ce qui demande votre attention</h2>
+    </div>
+    <p>Indicateurs calculés en temps réel. Chaque carte ouvre la liste de travail correspondante.</p>
+  </section>
+
+  <div class="cockpit-metrics">
+    {% for metric in cockpit.metrics %}
+      <a class="cockpit-metric cockpit-metric--{{ metric.tone }}" href="{{ metric.url }}">
+        <span class="cockpit-metric__value">{{ metric.value }}</span>
+        <span class="cockpit-metric__label">{{ metric.label }}</span>
+      </a>
+    {% empty %}
+      <div class="alert alert-info">Aucun indicateur disponible avec vos permissions actuelles.</div>
+    {% endfor %}
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8 col-12">
+      {% for app in dashboard_list %}
+        <section class="card cockpit-domain mb-3">
+          <div class="card-header"><h3 class="card-title">{{ app.name }}</h3></div>
+          <div class="card-body p-0">
+            <table class="table table-hover mb-0"><tbody>
+              {% for model in app.models %}
+                <tr>
+                  <th scope="row">{% if model.url %}<a href="{{ model.url }}">{{ model.name }}</a>{% else %}{{ model.name }}{% endif %}</th>
+                  <td class="text-right">
+                    {% if model.add_url %}<a href="{{ model.add_url }}" class="btn btn-sm {{ jazzmin_ui.button_classes.success }}">Ajouter</a>{% endif %}
+                    {% if model.url %}<a href="{{ model.url }}" class="btn btn-sm {{ jazzmin_ui.button_classes.info }}">Ouvrir</a>{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody></table>
+          </div>
+        </section>
+      {% endfor %}
+    </div>
+    {% if cockpit.recent_actions %}<aside class="col-lg-4 col-12" aria-labelledby="recent-heading">
+      <section class="card">
+        <div class="card-header"><h3 id="recent-heading" class="card-title">Dernières modifications</h3></div>
+        <div class="card-body">
+          {% for entry in cockpit.recent_actions %}
+            <div class="cockpit-action">
+              <strong>{{ entry.object_repr }}</strong>
+              <span>{{ entry.action_time|date:"d/m/Y H:i" }} · {{ entry.user.get_username }}</span>
+            </div>
+          {% empty %}
+            <p class="text-muted mb-0">Aucune modification visible.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </aside>{% endif %}
+  </div>
+{% endblock %}

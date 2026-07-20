@@ -83,6 +83,7 @@ ALLOWED_HOSTS = [
 ]
 
 INSTALLED_APPS = [
+    "cockpit",
     "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -101,6 +102,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -200,6 +202,17 @@ else:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = int(env("DJANGO_ADMIN_SESSION_AGE", "28800") or "28800")
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
 USE_I18N = True
@@ -210,8 +223,11 @@ USE_TZ = True
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(env("DJANGO_MAX_REQUEST_BODY_BYTES", "1048576") or "1048576")
 
 STATIC_URL = "static/"
-STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -310,21 +326,18 @@ if not DEBUG:
 
 JAZZMIN_SETTINGS = {
     "site_title": "PixelProwlers Admin",
-    "site_header": "PixelProwlers",
-    "site_brand": "PixelProwlers",
-    "site_logo": None,
-    "login_logo": None,
+    "site_header": "PixelProwlers · Administration",
+    "site_brand": "PixelProwlers Cockpit",
+    "site_logo": "cockpit/img/mark.svg",
+    "login_logo": "cockpit/img/mark.svg",
     "site_logo_classes": "img-circle",
-    "site_icon": None,
+    "site_icon": "cockpit/img/mark.svg",
     "welcome_sign": "Bienvenue dans le cockpit PixelProwlers",
     "copyright": "PixelProwlers",
 
     # Modèles inclus dans la recherche rapide (barre en haut)
     # Ajuste les préfixes d'app selon l'emplacement réel de tes modèles
-    "search_model": [
-        "urgencies.Rdv",
-        "audits.AuditDossier",
-    ],
+    "search_model": [],
 
     "user_avatar": None,
 
@@ -334,7 +347,15 @@ JAZZMIN_SETTINGS = {
     ],
 
     # Ordre des apps dans la sidebar
-    "order_with_respect_to": ["auth", "catalogue", "audits", "urgencies", "tracking"],
+    "order_with_respect_to": ["crm", "urgencies", "audits", "catalogue", "auth", "tracking"],
+    "hide_models": [
+        "crm.ContactDailyCounter",
+        "audits.AuditDossierCounter",
+        "audits.ClientDossierCounter",
+        "audits.RdvRaison",
+        "tracking.PageView",
+        "tracking.QuestionInteraction",
+    ],
 
     # Icônes FontAwesome par modèle
     # Format: "app_label.ModelName": "fa-solid fa-icone"
@@ -342,6 +363,10 @@ JAZZMIN_SETTINGS = {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
+
+        "crm.Contact": "fas fa-inbox",
+        "crm.DiagnosticTicket": "fas fa-stethoscope",
+        "urgencies.UrgencyRequest": "fas fa-triangle-exclamation",
 
         # ajuster selon l'app réelle si différente
         "urgencies.Rdv": "fas fa-calendar-check",
@@ -358,6 +383,7 @@ JAZZMIN_SETTINGS = {
         "audits.Citation": "fas fa-quote-right",
 
         "tracking": "fas fa-chart-line",
+        "admin.LogEntry": "fas fa-clipboard-list",
         "catalogue": "fas fa-laptop",
         "catalogue.RefurbishedMachine": "fas fa-laptop-code",
     },
@@ -366,8 +392,9 @@ JAZZMIN_SETTINGS = {
 
     # UX des formulaires
     "related_modal_active": True,
-    "use_google_fonts_cdn": True,
-    "show_ui_builder": True,
+    "use_google_fonts_cdn": False,
+    "show_ui_builder": False,
+    "custom_css": "cockpit/css/admin.css",
 
     "changeform_format": "horizontal_tabs",
     "language_chooser": False,
@@ -394,7 +421,6 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "darkly",
-    "dark_mode_theme": "darkly",
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",

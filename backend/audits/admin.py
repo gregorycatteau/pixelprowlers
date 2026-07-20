@@ -8,7 +8,10 @@ from .models import (
     AuditDossierCounter,
     AuditReponse,
     Citation,
+    ClientDossier,
+    ClientDossierCounter,
     CreneauCalendrier,
+    DossierLog,
     Motif,
     RaisonAppel,
     RefonteAudit,
@@ -17,9 +20,47 @@ from .models import (
     RdvRappel,
 )
 
-admin.site.site_header = "PixelProwlers - Administration"
-admin.site.site_title = "PixelProwlers Admin"
-admin.site.index_title = "Poste de pilotage"
+class ReadOnlyAdmin(admin.ModelAdmin):
+    actions = None
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ClientDossier)
+class ClientDossierAdmin(admin.ModelAdmin):
+    list_display = ("dossier_id", "name", "email", "phase", "source", "updated_at")
+    list_filter = ("phase", "source", "created_at", "updated_at")
+    search_fields = ("dossier_id", "name", "email", "phone")
+    readonly_fields = ("dossier_id", "sequence_month", "sequence_number", "email", "name", "phone", "source", "metadata", "created_at", "updated_at")
+    date_hierarchy = "created_at"
+    ordering = ("-updated_at",)
+    list_per_page = 40
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser and super().has_delete_permission(request, obj)
+
+
+@admin.register(ClientDossierCounter)
+class ClientDossierCounterAdmin(ReadOnlyAdmin):
+    list_display = ("sequence_month", "last_number", "updated_at")
+    readonly_fields = ("sequence_month", "last_number", "updated_at")
+
+
+@admin.register(DossierLog)
+class DossierLogAdmin(ReadOnlyAdmin):
+    list_display = ("dossier", "old_phase", "new_phase", "changed_by", "timestamp", "reason")
+    list_filter = ("old_phase", "new_phase", "timestamp")
+    search_fields = ("dossier__dossier_id", "reason")
+    readonly_fields = ("dossier", "old_phase", "new_phase", "changed_by", "timestamp", "reason")
+    list_select_related = ("dossier", "changed_by")
+    date_hierarchy = "timestamp"
 
 
 # --- Inlines ---
@@ -53,7 +94,10 @@ class AuditDossierAdmin(admin.ModelAdmin):
     )
     search_fields = ("numero_dossier", "prenom", "nom", "email", "nom_structure")
     list_filter = ("type_personne", "statut", "date_creation")
-    readonly_fields = ("numero_dossier", "date_creation", "notification_status")
+    readonly_fields = (
+        "numero_dossier", "prenom", "nom", "email", "telephone", "type_personne", "nom_structure",
+        "consentement_rgpd", "date_creation", "notification_status", "client_dossier",
+    )
     date_hierarchy = "date_creation"
     ordering = ("-date_creation",)
     list_per_page = 30
@@ -86,22 +130,22 @@ class AuditDossierAdmin(admin.ModelAdmin):
 
 
 @admin.register(AuditReponse)
-class AuditReponseAdmin(admin.ModelAdmin):
+class AuditReponseAdmin(ReadOnlyAdmin):
     list_display = ("dossier", "score_global", "pilier_faible", "date_soumission")
     search_fields = ("dossier__numero_dossier", "dossier__email")
     list_filter = ("pilier_faible", "date_soumission")
-    readonly_fields = ("date_soumission",)
+    readonly_fields = (
+        "dossier", "reponses", "scores_series", "score_global", "pilier_faible", "date_soumission",
+        "ip_address", "user_agent", "nom_signataire", "telephone_signataire", "signature_hash",
+    )
     date_hierarchy = "date_soumission"
 
 
 @admin.register(AuditDossierCounter)
-class AuditDossierCounterAdmin(admin.ModelAdmin):
+class AuditDossierCounterAdmin(ReadOnlyAdmin):
     list_display = ("year", "last_number")
     readonly_fields = ("year", "last_number")
 
-    def has_add_permission(self, request):
-        # Généralement auto-généré, on évite les créations manuelles hasardeuses
-        return False
 
 
 # --- RefonteAudit ---
@@ -118,6 +162,14 @@ class RefonteAuditAdmin(admin.ModelAdmin):
     ordering = ("-date_creation",)
     readonly_fields = (
         "reference",
+        "prenom",
+        "nom",
+        "email",
+        "telephone",
+        "type_personne",
+        "nom_structure",
+        "site_url",
+        "consentement_rgpd",
         "reponses",
         "technical_report",
         "pagespeed_report",

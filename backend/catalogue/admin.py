@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
+from django.utils.html import format_html
 
 from .models import RefurbishedMachine
 
@@ -9,8 +10,8 @@ class RefurbishedMachineAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "brand_model",
-        "status",
-        "commercial_status",
+        "editorial_badge",
+        "commercial_badge",
         "display_price",
         "featured",
         "display_order",
@@ -49,10 +50,22 @@ class RefurbishedMachineAdmin(admin.ModelAdmin):
         ("Traçabilité", {"fields": ("created_at", "updated_at", "created_by", "updated_by")}),
     )
     actions = ("publish_selected", "archive_selected", "mark_available", "mark_reserved", "mark_sold")
+    list_select_related = ("created_by", "updated_by")
+    list_per_page = 40
 
     @admin.display(description="Marque / modèle", ordering="brand")
     def brand_model(self, obj):
         return f"{obj.brand} {obj.model_name}".strip()
+
+    @admin.display(description="Publication", ordering="status")
+    def editorial_badge(self, obj):
+        colors = {obj.Status.DRAFT: "#f4be5b", obj.Status.PUBLISHED: "#67d99a", obj.Status.ARCHIVED: "#7d8ca3"}
+        return format_html('<span style="color:{};font-weight:700">{}</span>', colors[obj.status], obj.get_status_display())
+
+    @admin.display(description="Disponibilité", ordering="commercial_status")
+    def commercial_badge(self, obj):
+        colors = {obj.CommercialStatus.AVAILABLE: "#67d99a", obj.CommercialStatus.RESERVED: "#f4be5b", obj.CommercialStatus.SOLD: "#39d0d8", obj.CommercialStatus.ARCHIVED: "#7d8ca3"}
+        return format_html('<span style="color:{};font-weight:700">{}</span>', colors[obj.commercial_status], obj.get_commercial_status_display())
 
     @admin.display(description="Prix", ordering="price_amount")
     def display_price(self, obj):
