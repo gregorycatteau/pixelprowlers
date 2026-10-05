@@ -12,7 +12,7 @@ export default defineNuxtConfig({
     pageTransition: { name: 'page', mode: 'out-in' },
   },
   routeRules: {
-    '/reparation-informatique/decrire-ma-panne': { redirect: '/contact' },
+    '/reparation-informatique/decrire-ma-panne': { redirect: '/contact?besoin=reparation' },
     '/ticket/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
   },
   runtimeConfig: {

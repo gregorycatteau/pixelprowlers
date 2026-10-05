@@ -16,7 +16,7 @@
         </p>
 
         <div class="pillar-actions">
-          <AppButton href="/contact">
+          <AppButton href="/contact?besoin=formation">
             Nous contacter pour une formation
           </AppButton>
         </div>
@@ -77,7 +77,7 @@
         </p>
 
         <div class="pillar-actions">
-          <AppButton href="/contact">
+          <AppButton href="/contact?besoin=formation">
             Nous contacter pour une formation
           </AppButton>
         </div>

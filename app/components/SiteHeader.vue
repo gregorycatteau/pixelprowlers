@@ -70,6 +70,7 @@
           class="MobileMenu"
           :class="{ MobileMenuOpen: isMenuOpen }"
           :aria-hidden="!isMenuOpen"
+          :inert="!isMenuOpen"
         >
           <NuxtLink
             class="MobileLink MobileUrgencyLink"
@@ -147,6 +148,7 @@ let previousBodyOverflow = '';
 const activePillarHref = computed(() => activePillarHrefFor(route.path));
 const contextualCta = computed(() => contextualCtaFor(route.path));
 
+/** Ferme le panneau et restaure le focus au déclencheur lorsque demandé. */
 const closeMenu = (options: { restoreFocus?: boolean } = {}) => {
   isMenuOpen.value = false;
 
@@ -155,6 +157,7 @@ const closeMenu = (options: { restoreFocus?: boolean } = {}) => {
   }
 };
 
+/** Bascule le panneau ; inert retire les liens fermés du parcours clavier. */
 const toggleMenu = () => {
   isMenuOpen.value ? closeMenu() : (isMenuOpen.value = true);
 };
@@ -214,7 +217,7 @@ onBeforeUnmount(() => {
 }
 
 .HeaderInner {
-  @apply mx-auto flex min-h-18 items-center justify-between gap-4 py-2.5;
+  @apply mx-auto w-[min(1320px,calc(100%-32px))] flex min-h-18 items-center justify-between gap-4 py-2.5;
 }
 
 .BrandLink {

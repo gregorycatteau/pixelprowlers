@@ -56,8 +56,8 @@ export const navPillars: readonly NavPillar[] = [
 export const navTransverse = {
   about: { label: 'À propos', href: '/a-propos' },
   contact: { label: 'Contact', href: '/contact' },
-  urgency: { label: 'Urgence', href: '/urgence' },
-  urgencyLong: { label: 'Urgence numérique', href: '/urgence' },
+  urgency: { label: 'Urgence web', href: '/urgence' },
+  urgencyLong: { label: 'Urgence web', href: '/urgence' },
 } as const;
 
 export const footerLegalLinks = [
@@ -79,7 +79,7 @@ const CTA_DIGITAL_SERVICES: ContextualCta = {
 
 const CTA_DESCRIBE_FAILURE: ContextualCta = {
   label: 'Décrire ma panne',
-  href: '/contact',
+  href: '/contact?besoin=reparation',
 };
 
 const CTA_SEE_MACHINES: ContextualCta = {
@@ -140,10 +140,6 @@ export const contextualCtaFor = (rawPath: string): ContextualCta | null => {
   }
 
   if (isWithin(path, '/reparation-informatique')) {
-    if (path === CTA_DESCRIBE_FAILURE.href) {
-      return { label: 'Nous contacter', href: '/contact' };
-    }
-
     return CTA_DESCRIBE_FAILURE;
   }
 
@@ -153,7 +149,7 @@ export const contextualCtaFor = (rawPath: string): ContextualCta | null => {
      * renvoyer vers cette même page n'apporterait rien.
      */
     if (path === CTA_SEE_MACHINES.href) {
-      return CTA_CONTACT;
+      return { label: 'Demander les disponibilités', href: '/contact?besoin=reemploi' };
     }
 
     return CTA_SEE_MACHINES;
@@ -161,13 +157,12 @@ export const contextualCtaFor = (rawPath: string): ContextualCta | null => {
 
   if (isWithin(path, '/formations')) {
     /*
-     * `formation` est un type de demande à part entière, reconnu par la
-     * liste blanche du formulaire comme par le CRM : le paramètre pré-coche
-     * réellement la bonne case au lieu d'être ignoré en silence.
+     * `formation` présélectionne le besoin public ; le formulaire le traduit
+     * vers le service historique formation et la demande transmission.
      */
     return {
       label: 'Nous contacter pour une formation',
-      href: '/contact',
+      href: '/contact?besoin=formation',
     };
   }
 

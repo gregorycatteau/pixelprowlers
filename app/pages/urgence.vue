@@ -12,4 +12,6 @@
 </template>
 
 <script setup lang="ts">
+useSeoMeta({ title: 'Urgence web : site inaccessible ou incident | PixelProwlers', description: 'Signalez un site inaccessible, un accès perdu ou une modification suspecte pour qualifier une urgence web.', robots: 'index, follow', ogUrl: 'https://pixelprowlers.io/urgence' });
+useHead({ link: [{ rel: 'canonical', href: 'https://pixelprowlers.io/urgence' }] });
 </script>

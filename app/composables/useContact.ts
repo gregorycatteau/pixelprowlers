@@ -1,6 +1,7 @@
 import { computed, reactive, ref } from 'vue';
 import { isEmailLike } from '~/utils/formatDate';
 import { graphqlRequest, parseGraphqlJson } from '~/utils/graphql';
+import { buildContactMessage, contactApiMapping, CONTACT_MESSAGE_LIMIT, resolveContactNeed, type ContactNeed } from '~/utils/contactNeeds';
 
 export type ContactDemandType = 'diagnostic' | 'urgency' | 'audit' | 'refonte' | 'transmission' | 'partnership';
 export type ContactStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed';
@@ -29,14 +30,6 @@ export type ContactTicket = {
   updatedAt: string;
 };
 
-export const contactDemandOptions: Array<{ label: string; value: ContactDemandType }> = [
-  { label: 'Je veux un diagnostic', value: 'diagnostic' },
-  { label: "J'ai une urgence maintenant", value: 'urgency' },
-  { label: "Je veux parler d'un audit", value: 'audit' },
-  { label: "Je veux parler d'une refonte", value: 'refonte' },
-  { label: 'Je veux parler de transmission', value: 'transmission' },
-  { label: 'Partenariat / autre', value: 'partnership' },
-];
 
 type ContactGraphql = {
   ticketId: string;
@@ -122,14 +115,6 @@ const ADD_CONTACT_MESSAGE_MUTATION = /* GraphQL */ `
   }
 `;
 
-const serviceTypeFromDemand = (demandType: ContactDemandType | '') => {
-  if (demandType === 'urgency') return 'urgence';
-  if (demandType === 'audit') return 'audit_site';
-  if (demandType === 'refonte') return 'site_maintenable';
-  if (demandType === 'transmission') return 'maintenance_documentation';
-  if (demandType === 'diagnostic') return 'audit_site';
-  return 'autre';
-};
 
 const mapContact = (contact: ContactGraphql): ContactTicket => ({
   ticketId: contact.ticketId,
@@ -169,9 +154,11 @@ export const statusLabel = (status: ContactStatus) => ({
   closed: 'Fermé',
 }[status] || status);
 
-export const useContactForm = () => {
+/** Prépare et envoie une demande compatible avec l’API publiée, en conservant la saisie après erreur. */
+export const useContactForm = (initialNeed: ContactNeed | '' = '') => {
   const form = reactive({
-    demandType: '' as ContactDemandType | '',
+    need: resolveContactNeed(initialNeed),
+    deviceType: '', model: '', usage: '', budget: '',
     organization: '',
     email: '',
     phone: '',
@@ -182,10 +169,11 @@ export const useContactForm = () => {
   const isSubmitting = ref(false);
 
   const canSubmit = computed(() => (
-    Boolean(form.demandType)
-    && form.organization.trim().length > 0
-    && isEmailLike(form.email)
-    && form.message.trim().length > 0
+    Boolean(resolveContactNeed(form.need))
+    && form.organization.trim().length > 0 && form.organization.trim().length <= 160
+    && isEmailLike(form.email) && form.email.trim().length <= 254
+    && form.message.trim().length >= 20 && form.message.length <= 500
+    && buildContactMessage(form).length <= CONTACT_MESSAGE_LIMIT
   ));
 
   const submit = async () => {
@@ -193,6 +181,9 @@ export const useContactForm = () => {
       return null;
     }
 
+    const need = resolveContactNeed(form.need);
+    if (!need) return null;
+    const message = buildContactMessage(form);
     isSubmitting.value = true;
     submitError.value = '';
 
@@ -202,9 +193,8 @@ export const useContactForm = () => {
         email: form.email,
         company: form.organization,
         phone: form.phone,
-        serviceType: serviceTypeFromDemand(form.demandType),
-        demandType: form.demandType,
-        message: form.message,
+        ...contactApiMapping[need],
+        message,
         privacyConsent: true,
         startedAt: Date.now() - 5000,
       });
@@ -218,7 +208,7 @@ export const useContactForm = () => {
       ticket.value = created;
       return created;
     } catch {
-      submitError.value = "Impossible d'ouvrir le ticket pour le moment. Vous pouvez réessayer dans quelques instants.";
+      submitError.value = "La demande n’a pas pu être envoyée. Vos informations sont conservées : vous pouvez réessayer.";
       return null;
     } finally {
       isSubmitting.value = false;

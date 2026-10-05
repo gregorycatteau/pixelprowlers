@@ -20,7 +20,7 @@
             Faire le bilan numérique
           </AppButton>
 
-          <AppButton variant="secondary" href="/contact">
+          <AppButton variant="secondary" href="/contact?besoin=conseil">
             Nous décrire la situation
           </AppButton>
         </div>
@@ -123,7 +123,7 @@
             Faire le bilan numérique
           </AppButton>
 
-          <AppButton variant="secondary" href="/contact">
+          <AppButton variant="secondary" href="/contact?besoin=conseil">
             Nous décrire la situation
           </AppButton>
         </div>
@@ -154,7 +154,7 @@ const routes = [
     title: 'Assistance : avancer face à une difficulté',
     description:
       'Décrire un problème d’usage ou de configuration pour examiner l’accompagnement adapté à votre situation.',
-    href: '/contact',
+    href: '/contact?besoin=conseil',
     linkLabel: 'Décrire mon besoin d’assistance',
   },
   {
@@ -172,7 +172,7 @@ const routes = [
     linkLabel: 'Clarifier mes accès',
   },
   {
-    title: 'Urgence numérique',
+    title: 'Urgence web',
     description:
       'Site inaccessible, accès perdu, modification suspecte : le parcours d’urgence est distinct et prioritaire.',
     href: '/urgence',
@@ -192,7 +192,7 @@ const developmentRoutes = [
     title: 'Applications et outils métier',
     description:
       'Définir un outil autour de vos usages : traitement de données, suivi d’activité ou automatisation de tâches. La faisabilité se vérifie avec vous.',
-    href: '/contact',
+    href: '/contact?besoin=developpement',
     linkLabel: 'Décrire mon projet d’application',
   },
 ];
