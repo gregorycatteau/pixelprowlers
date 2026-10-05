@@ -18,7 +18,7 @@ Contact : soumission depuis le navigateur vers un conteneur dédié, utilisant l
 
 Le push de cette branche ne déclenche pas le workflow (limité à master). Ne pas lancer ce workflow : il reconstruit toute la stack et migre Django.
 
-Le build local autonome `.output` est archivé, son SHA Git inscrit dans `_delivery.json`, et son empreinte SHA-256 contrôlée après transfert SSH. Une image contenant cet artefact est construite à partir de l'image runtime actuellement exécutée, sans installer de dépendances. Un conteneur isolé valide l'accueil avant bascule. Docker Compose reçoit une surcharge externe avec uniquement la nouvelle image Nuxt et ses URL publiques relatives. La commande `up -d --no-deps --no-build nuxt` conserve Django, PostgreSQL et les volumes.
+Les métadonnées `_delivery.json` sont générées avec le SHA Git avant compilation, puis incluses dans le manifeste statique Nitro. Le build autonome `.output` est archivé et son empreinte SHA-256 contrôlée après transfert SSH. Le fichier source temporaire de métadonnées est retiré après compilation ; il ne fait pas partie du code applicatif. Une image contenant cet artefact est construite à partir de l'image runtime actuellement exécutée, sans installer de dépendances. Un conteneur isolé valide l'accueil et le SHA des métadonnées avant bascule. Docker Compose reçoit une surcharge externe avec uniquement la nouvelle image Nuxt et ses URL publiques relatives. La commande `up -d --no-deps --no-build nuxt` conserve Django, PostgreSQL et les volumes.
 
 L'image précédente est taguée et une surcharge `rollback.yml` est conservée sous `/opt/pixelprowlers-deploy-backups/frontend-20261005-<SHA>/`. Retour arrière, depuis `/opt/pixelprowlers` :
 
