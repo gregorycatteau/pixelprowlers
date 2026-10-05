@@ -1,10 +1,10 @@
 # Livraison limitée de la vitrine — 5 octobre 2026
 
-La branche repart de `1683fa233434b612a2a8b8b6837074050ece73c5` : son accueil correspond au HTML servi et les empreintes de quatre fichiers Django correspondent aux fichiers exécutés. Le checkout VPS et le dernier workflow réussi indiquent `4e243c6`, mais les conteneurs exécutent des images construites le 14 juillet. La référence exacte de retour arrière est donc l'image Nuxt `sha256:4e80a0448388447d72f9194e73696e2617aac7763f52ea27c7763e158a825ee3`, pas le checkout.
+La branche repart de `1683fa233434b612a2a8b8b6837074050ece73c5` : son accueil correspond au HTML servi et les empreintes de quatre fichiers Django correspondent aux fichiers exécutés. Le checkout VPS et le dernier workflow réussi indiquent `4e243c6`, mais les conteneurs exécutent des images construites le 14 juillet. La référence exacte de retour arrière initial est donc l'image Nuxt `sha256:4e80a0448388447d72f9194e73696e2617aac7763f52ea27c7763e158a825ee3`, pas le checkout.
 
 ## Périmètre
 
-Accueil, réparation/micro-soudure, présentation du réemploi, services numériques et formations, navigation, styles, sept images WebP, police locale et licence. Le contact existant et son contrat GraphQL sont conservés. Les liens réparation ouvrent `/contact`. Le catalogue est remplacé par une présentation et une demande de disponibilité, sans exemplaire, prix ou stock. Les anciens liens vers le diagnostic sont redirigés vers le contact.
+Accueil, réparation/micro-soudure, présentation du réemploi, services numériques et formations, navigation, mentions légales et confidentialité existantes (avec téléphone facultatif, conformément au contact exécuté), styles, sept images WebP, police locale et licence. Le contact existant et son contrat GraphQL sont conservés. Les liens réparation ouvrent `/contact`. Le catalogue est remplacé par une présentation et une demande de disponibilité, sans exemplaire, prix ou stock. Les anciens liens vers le diagnostic sont redirigés vers le contact.
 
 Aucun changement Django, PostgreSQL, Compose ou du workflow global ; aucune migration. Les 17 commits de la branche matériel ne sont pas livrés. Le checkout VPS et sa modification locale de Compose restent intacts.
 
@@ -27,3 +27,5 @@ docker compose -f compose.yml -f /opt/pixelprowlers-deploy-backups/frontend-2026
 ```
 
 Les métadonnées externes gardent les empreintes des trois images précédentes. Aucun volume n'est supprimé et aucune restauration de base n'est nécessaire pour cette livraison frontend.
+
+Le contrôle en ligne de la première livraison a identifié deux liens légaux absents de la base du 14 juillet. Les pages statiques existantes à `4e243c6` ont été examinées et incluses, sans contrat API ni code backend. Chaque bascule conserve sa propre image Nuxt précédente et sa surcharge de retour arrière.
