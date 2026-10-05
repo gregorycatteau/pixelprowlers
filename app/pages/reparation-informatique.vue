@@ -10,6 +10,7 @@
       </div>
       <EditorialImage name="microscope" alt="Illustration de micro-soudure sur une carte électronique sous microscope" caption="travail de précision" priority />
     </section>
+    <div id="prise-en-charge" class="container HandoffSection"><RepairHandoff /></div>
     <section class="container RepairSection" aria-labelledby="devices-title">
       <h2 id="devices-title">Quels appareils ?</h2>
       <p>Ordinateurs portables ou fixes, téléphones et tablettes : décrivez le type d’appareil, son modèle si vous le connaissez et le symptôme observé. Vous n’avez pas besoin de vocabulaire technique pour faire une demande.</p>
@@ -42,6 +43,7 @@
 <script setup lang="ts">
 import AppButton from '~/components/ui/AppButton.vue';
 import EditorialImage from '~/components/sections/EditorialImage.vue';
+import RepairHandoff from '~/components/sections/RepairHandoff.vue';
 useSeoMeta({ title: 'Réparation informatique et micro-soudure | PixelProwlers', description: 'Diagnostic d’ordinateurs, téléphones et tablettes, réparation au composant et micro-soudure lorsque la panne le justifie.', robots: 'index, follow', ogUrl: 'https://pixelprowlers.io/reparation-informatique' });
 useHead({ link: [{ rel: 'canonical', href: 'https://pixelprowlers.io/reparation-informatique' }] });
 </script>
@@ -56,6 +58,7 @@ h2 { @apply mb-5 text-3xl font-bold; }
 h3 { @apply mb-3 text-xl font-bold; }
 p { @apply leading-relaxed; }
 .Note { @apply text-sm; }
+.HandoffSection { @apply pb-4 scroll-mt-32; }
 .RepairSection { @apply py-10 md:py-14; }
 .MicroSection { @apply bg-pxp-ink py-12 text-pxp-paper; }
 .MicroLayout { @apply grid items-center gap-10 md:grid-cols-2; }

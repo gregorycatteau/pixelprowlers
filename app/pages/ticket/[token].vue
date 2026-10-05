@@ -16,9 +16,10 @@
         <div v-else-if="error" class="contact-panel">
           <h2 id="ticket-detail-title">Ticket introuvable.</h2>
           <p>{{ error }}</p>
-          <AppButton href="/contact">Ouvrir un ticket</AppButton>
+          <AppButton href="/contact">Envoyer une demande</AppButton>
         </div>
         <article v-else-if="ticket" class="ticket-panel">
+          <p class="TicketReceipt" role="status">Votre demande est enregistrée. Conservez ce lien pour retrouver le suivi ; il est personnel, ne le partagez pas.</p>
           <header class="ticket-header">
             <div>
               <h2 id="ticket-detail-title">{{ ticket.ticketId }}</h2>
@@ -69,6 +70,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
+@reference "../../assets/css/main.css";
+.TicketReceipt { @apply mb-6 rounded-lg border border-pxp-green/25 bg-pxp-paper p-5 text-pxp-ink leading-relaxed; }
 .ticket-header {
   display: flex;
   align-items: flex-start;
