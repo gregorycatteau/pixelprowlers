@@ -8,11 +8,18 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-07-04',
   srcDir: 'app',
   css: [mainCssPath],
+  app: {
+    pageTransition: { name: 'page', mode: 'out-in' },
+  },
+  routeRules: {
+    '/reparation-informatique/decrire-ma-panne': { redirect: '/contact' },
+    '/ticket/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+  },
   runtimeConfig: {
     graphqlApiUrl: process.env.GRAPHQL_API_URL || defaultGraphqlApiUrl,
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000',
-      graphqlApiUrl: process.env.NUXT_PUBLIC_GRAPHQL_API_URL || `${process.env.NUXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000'}/graphql/`,
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || (isProduction ? '' : 'http://127.0.0.1:8000'),
+      graphqlApiUrl: process.env.NUXT_PUBLIC_GRAPHQL_API_URL || defaultGraphqlApiUrl,
     },
   },
   postcss: {

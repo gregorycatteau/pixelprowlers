@@ -8,21 +8,39 @@
 
         <div class="DesktopLinks" aria-label="Liens internes">
           <NuxtLink
-            v-for="link in navLinks"
-            :key="link.href"
+            v-for="pillar in navPillars"
+            :key="pillar.href"
+            class="NavLink"
+            :class="{ 'is-active': activePillarHref === pillar.href }"
+            :aria-current="activePillarHref === pillar.href ? 'page' : undefined"
+            :to="pillar.href"
+          >
+            {{ pillar.label }}
+          </NuxtLink>
+
+          <NuxtLink
             class="NavLink"
             active-class="is-active"
             exact-active-class="is-active"
-            :to="link.href"
+            :to="navTransverse.about.href"
           >
-            {{ link.label }}
+            {{ navTransverse.about.label }}
           </NuxtLink>
         </div>
 
         <div class="HeaderRight">
           <div class="HeaderActions">
-            <NuxtLink class="ActionButton ActionButtonGreen" to="/diagnostic-situation">
-              Demander un diagnostic
+            <NuxtLink class="UrgencyLink" :to="navTransverse.urgency.href">
+              <span class="UrgencyMark" aria-hidden="true">⚡</span>
+              {{ navTransverse.urgency.label }}
+            </NuxtLink>
+
+            <NuxtLink
+              v-if="contextualCta"
+              class="ActionButton ActionButtonGreen"
+              :to="contextualCta.href"
+            >
+              {{ contextualCta.label }}
             </NuxtLink>
           </div>
 
@@ -54,19 +72,50 @@
           :aria-hidden="!isMenuOpen"
         >
           <NuxtLink
-            v-for="link in navLinks"
-            :key="link.href"
+            class="MobileLink MobileUrgencyLink"
+            :to="navTransverse.urgencyLong.href"
+            @click="closeMenu()"
+          >
+            <span class="MobileLinkLabel">
+              <span class="UrgencyMark" aria-hidden="true">⚡</span>
+              {{ navTransverse.urgencyLong.label }}
+            </span>
+          </NuxtLink>
+
+          <NuxtLink
+            v-for="pillar in navPillars"
+            :key="pillar.href"
+            class="MobileLink"
+            :class="{ 'is-active': activePillarHref === pillar.href }"
+            :aria-current="activePillarHref === pillar.href ? 'page' : undefined"
+            :to="pillar.href"
+            @click="closeMenu()"
+          >
+            <span class="MobileLinkLabel">{{ pillar.label }}</span>
+            <span class="MobileLinkDescription">{{ pillar.description }}</span>
+          </NuxtLink>
+
+          <NuxtLink
             class="MobileLink"
             active-class="is-active"
             exact-active-class="is-active"
-            :to="link.href"
+            :to="navTransverse.about.href"
             @click="closeMenu()"
           >
-            {{ link.label }}
+            <span class="MobileLinkLabel">{{ navTransverse.about.label }}</span>
           </NuxtLink>
+
           <div class="MobileActions">
-            <NuxtLink class="ActionButton ActionButtonGreen" to="/diagnostic-situation" @click="closeMenu()">
-              Demander un diagnostic
+            <NuxtLink
+              v-if="contextualCta"
+              class="ActionButton ActionButtonGreen"
+              :to="contextualCta.href"
+              @click="closeMenu()"
+            >
+              {{ contextualCta.label }}
+            </NuxtLink>
+            <NuxtLink class="ActionButton ActionButtonOutline" :to="navTransverse.contact.href" @click="closeMenu()">
+              {{ navTransverse.contact.label }}
             </NuxtLink>
           </div>
         </div>
@@ -76,7 +125,14 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+import {
+  activePillarHrefFor,
+  contextualCtaFor,
+  navPillars,
+  navTransverse,
+} from '~/utils/navigation';
 
 const route = useRoute();
 const isMenuOpen = ref(false);
@@ -84,15 +140,12 @@ const menuButtonRef = ref<HTMLButtonElement | null>(null);
 const mobileMenuRef = ref<HTMLElement | null>(null);
 let previousBodyOverflow = '';
 
-const navLinks = [
-  { label: 'Accueil', href: '/' },
-  { label: 'Audit sécurité', href: '/audit-site-web' },
-  { label: 'Développement web', href: '/refonte-site' },
-  { label: 'Accès sécurisés', href: '/transmission-acces' },
-  { label: 'Urgence', href: '/urgence' },
-  { label: 'À propos', href: '/a-propos' },
-  { label: 'Contact', href: '/contact' },
-] as const;
+/*
+ * Le pilier actif et l'appel à l'action se déduisent du chemin courant,
+ * jamais d'un paramètre fourni par le visiteur.
+ */
+const activePillarHref = computed(() => activePillarHrefFor(route.path));
+const contextualCta = computed(() => contextualCtaFor(route.path));
 
 const closeMenu = (options: { restoreFocus?: boolean } = {}) => {
   isMenuOpen.value = false;
@@ -155,7 +208,7 @@ onBeforeUnmount(() => {
   @apply w-full border-b;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 68%),
-    #102033;
+    #17251d;
   border-color: rgba(255, 255, 255, 0.16);
   box-shadow: 0 10px 24px rgba(16, 32, 51, 0.18);
 }
@@ -173,7 +226,7 @@ onBeforeUnmount(() => {
 }
 
 .BrandLogo {
-  @apply h-auto w-[clamp(132px,15vw,164px)];
+  @apply h-auto w-[76px] md:w-[90px];
 }
 
 .DesktopLinks {
@@ -181,22 +234,28 @@ onBeforeUnmount(() => {
 }
 
 .NavLink {
-  @apply inline-flex min-h-11 items-center rounded-md px-3 py-2 text-[0.92rem] font-bold text-white no-underline transition;
+  @apply relative inline-flex min-h-11 items-center rounded-md px-3 py-2 text-[0.92rem] font-bold text-white no-underline transition-[background-color,color] duration-(--motion-feedback) ease-(--motion-ease-standard);
   background: transparent;
   text-underline-offset: 6px;
 }
 
 .NavLink:hover,
-.NavLink:focus-visible,
-.NavLink.is-active {
+.NavLink:focus-visible {
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
 }
 
 .NavLink.is-active {
   @apply underline decoration-2;
+  background: rgba(94, 234, 212, 0.14);
   font-weight: 850;
   text-decoration-color: #5eead4;
+}
+
+.NavLink.is-active::before {
+  @apply absolute inset-x-3 -bottom-[3px] block h-[3px] rounded-full;
+  content: "";
+  background: #5eead4;
 }
 
 .NavLink:focus-visible {
@@ -226,6 +285,53 @@ onBeforeUnmount(() => {
   background: #0f766e;
 }
 
+/*
+ * Variante en contour pour le second bouton du panneau mobile : il doit
+ * rester lisible sans concurrencer visuellement l'appel à l'action principal.
+ */
+.ActionButtonOutline {
+  @apply border;
+  border-color: rgba(255, 255, 255, 0.32);
+  background: transparent;
+}
+
+/*
+ * L'urgence n'est pas une expertise : elle ne figure pas parmi les piliers,
+ * mais doit rester repérable en un coup d'oeil par quelqu'un dont le site
+ * est déjà tombé. D'où un traitement distinct, discret mais coloré.
+ */
+.UrgencyLink {
+  @apply mr-1 hidden min-h-11 items-center gap-1.5 rounded-md px-3 py-2 text-[0.9rem] font-bold text-white no-underline transition-[background-color,color] duration-(--motion-feedback) ease-(--motion-ease-standard) xl:inline-flex;
+  background: transparent;
+}
+
+.UrgencyLink:hover,
+.UrgencyLink:focus-visible {
+  background: rgba(233, 95, 36, 0.18);
+}
+
+.UrgencyLink:focus-visible {
+  @apply outline-2 outline-offset-2 outline-white;
+}
+
+.UrgencyMark {
+  @apply text-[0.95em];
+}
+
+.MobileUrgencyLink {
+  border-color: rgba(233, 95, 36, 0.55);
+  background: rgba(233, 95, 36, 0.16);
+}
+
+.MobileLinkLabel {
+  @apply block;
+}
+
+.MobileLinkDescription {
+  @apply mt-0.5 block text-[0.85rem] font-semibold;
+  color: rgba(255, 255, 255, 0.68);
+}
+
 .MenuToggle {
   @apply inline-flex h-11 w-11 items-center justify-center rounded-md border text-white transition xl:hidden;
   border-color: rgba(255, 255, 255, 0.28);
@@ -251,7 +357,7 @@ onBeforeUnmount(() => {
 }
 
 .MobileMenu {
-  @apply pointer-events-none grid max-h-0 translate-y-[-6px] overflow-hidden pb-0 opacity-0 transition-all duration-200 ease-out;
+  @apply pointer-events-none grid max-h-0 translate-y-[-6px] overflow-hidden pb-0 opacity-0 transition-all duration-(--motion-standard) ease-(--motion-ease-standard);
 }
 
 .MobileMenuOpen {
@@ -259,21 +365,41 @@ onBeforeUnmount(() => {
 }
 
 .MobileLink {
-  @apply rounded-md border px-4 py-3.5 text-[1rem] font-bold text-white no-underline transition;
+  @apply rounded-md border px-4 py-3.5 text-[1rem] font-bold text-white no-underline opacity-0 transition-[background-color,color,opacity,transform] duration-(--motion-standard) ease-(--motion-ease-enter);
   border-color: rgba(255, 255, 255, 0.22);
   background: #172a42;
   text-underline-offset: 6px;
+  transform: translateY(6px);
 }
 
+/*
+ * Légère cascade à l’ouverture : chaque lien apparaît avec un décalage
+ * croissant, pour donner une sensation d’espace plutôt qu’un bloc figé.
+ * N’a d’effet que si le panneau est ouvert (les liens fermés restent à
+ * opacity 0, déjà neutralisés par pointer-events-none sur le parent).
+ */
+.MobileMenuOpen .MobileLink {
+  opacity: 1;
+  transform: none;
+}
+
+.MobileMenuOpen .MobileLink:nth-child(1) { transition-delay: 20ms; }
+.MobileMenuOpen .MobileLink:nth-child(2) { transition-delay: 45ms; }
+.MobileMenuOpen .MobileLink:nth-child(3) { transition-delay: 70ms; }
+.MobileMenuOpen .MobileLink:nth-child(4) { transition-delay: 95ms; }
+.MobileMenuOpen .MobileLink:nth-child(5) { transition-delay: 120ms; }
+.MobileMenuOpen .MobileLink:nth-child(6) { transition-delay: 145ms; }
+
 .MobileLink:hover,
-.MobileLink:focus-visible,
-.MobileLink.is-active {
+.MobileLink:focus-visible {
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
 }
 
 .MobileLink.is-active {
   @apply underline decoration-2;
+  background: rgba(94, 234, 212, 0.14);
+  border-color: rgba(94, 234, 212, 0.4);
   font-weight: 850;
   text-decoration-color: #5eead4;
 }
@@ -292,27 +418,17 @@ onBeforeUnmount(() => {
 
 @media (max-width: 767px) {
   .HeaderNav {
-    background: #102033;
+    background: #17251d;
   }
   .HeaderInner {
     @apply min-w-0 gap-2;
   }
   .BrandLogo {
-    @apply w-[clamp(132px,42vw,160px)];
+    @apply w-[76px];
   }
 }
 
 @media (min-width: 821px) and (max-width: 1279px) {
   .ActionButton { @apply min-w-42.5; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .NavLink,
-  .ActionButton,
-  .MenuToggle,
-  .MobileMenu,
-  .MobileLink {
-    transition: none;
-  }
 }
 </style>

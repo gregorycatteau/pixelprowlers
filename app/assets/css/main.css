@@ -1,6 +1,20 @@
 @import "tailwindcss";
 @import "./groups/buttons.css";
 
+/* Police locale sélectionnée sur la branche de direction artistique, sous OFL. */
+@font-face {
+  font-family: "Barlow Condensed";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("../fonts/barlow-condensed-700.woff2") format("woff2");
+}
+
+.pxp-font-display {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+  letter-spacing: -0.015em;
+}
+
 @theme {
   --color-pxp-ink: #17251d;
   --color-pxp-paper: #f7f4ea;
@@ -18,6 +32,83 @@
   --color-secondary-500: #6b7280;
   --color-red-500: #ef4444;
   --color-red-600: #dc2626;
+}
+
+/*
+ * Langage de mouvement unique du site : un nombre restreint de durées et
+ * d’easings, réutilisés partout via var(...) plutôt que des valeurs
+ * arbitraires dispersées dans chaque composant.
+ *
+ * - instant     : retour de clic / pression
+ * - feedback    : hover, focus, changement d’état ponctuel
+ * - standard    : ouverture de menu, apparition au clic
+ * - structural  : révélation de section, arrivée de page
+ */
+:root {
+  --motion-instant: 100ms;
+  --motion-feedback: 160ms;
+  --motion-standard: 240ms;
+  --motion-structural: 380ms;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * Garde unique et globale : toute animation ou transition du site est
+ * neutralisée si l’utilisateur préfère un mouvement réduit. Remplace les
+ * gardes ponctuelles qui n’étaient posées que sur certains composants.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Révélation progressive au scroll (directive v-reveal). L’état initial
+ * n’est posé qu’au montage côté client : le rendu SSR est toujours
+ * pleinement visible.
+ */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity var(--motion-structural) var(--motion-ease-enter),
+    transform var(--motion-structural) var(--motion-ease-enter);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Transition de route discrète (app.pageTransition dans nuxt.config.ts) :
+ * un simple fondu court, jamais un déplacement, pour marquer le
+ * changement de page sans ralentir la navigation.
+ */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity var(--motion-feedback) var(--motion-ease-standard);
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
 }
 
 @layer base {
@@ -169,11 +260,11 @@
   }
 
   li {
-    margin-top: 10px;
-    border: 1px solid rgba(43, 112, 83, 0.12);
+    margin-top: 8px;
+    border: 1px solid rgba(43, 112, 83, 0.08);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.62);
-    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.4);
+    padding: 10px 14px;
     color: #2b4b39;
     font-weight: 700;
     line-height: 1.45;
@@ -216,6 +307,41 @@
     padding: 12px;
     color: var(--color-pxp-ink);
     font: inherit;
+    transition:
+      border-color var(--motion-feedback) var(--motion-ease-standard),
+      box-shadow var(--motion-feedback) var(--motion-ease-standard);
+  }
+
+  .text-field input:hover,
+  .text-field textarea:hover {
+    border-color: rgba(43, 112, 83, 0.4);
+  }
+
+  /*
+   * Champ renseigné (au repos) : bordure légèrement affirmée, sans
+   * dépendre de la couleur seule (le contenu tapé reste le signal
+   * principal) pour indiquer qu'une valeur a été saisie.
+   */
+  .text-field input:not(:placeholder-shown):not(:focus):not([aria-invalid="true"]),
+  .text-field textarea:not(:placeholder-shown):not(:focus):not([aria-invalid="true"]) {
+    border-color: rgba(43, 112, 83, 0.38);
+  }
+
+  .text-field input:focus-visible,
+  .text-field textarea:focus-visible {
+    border-color: var(--color-pxp-green);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(43, 112, 83, 0.18);
+  }
+
+  .text-field input[aria-invalid="true"],
+  .text-field textarea[aria-invalid="true"] {
+    border-color: #c0402c;
+  }
+
+  .text-field input[aria-invalid="true"]:focus-visible,
+  .text-field textarea[aria-invalid="true"]:focus-visible {
+    box-shadow: 0 0 0 3px rgba(192, 64, 44, 0.18);
   }
 
   .text-field input {
@@ -256,6 +382,33 @@
     font-weight: 760;
     line-height: 1.45;
     cursor: pointer;
+    transition:
+      border-color var(--motion-feedback) var(--motion-ease-standard),
+      background-color var(--motion-feedback) var(--motion-ease-standard),
+      box-shadow var(--motion-feedback) var(--motion-ease-standard);
+  }
+
+  .radio-choice:hover,
+  .check-choice:hover {
+    border-color: rgba(43, 112, 83, 0.32);
+  }
+
+  /*
+   * Feedback de sélection : le conteneur entier réagit, pas seulement le
+   * point natif, pour rendre visible un choix qui détermine le reste du
+   * parcours (type de demande, méthode de contact...).
+   */
+  .radio-choice:has(:checked),
+  .check-choice:has(:checked) {
+    border-color: var(--color-pxp-green);
+    background: rgba(43, 112, 83, 0.06);
+    box-shadow: 0 0 0 1px rgba(43, 112, 83, 0.28) inset;
+  }
+
+  .radio-choice:has(:focus-visible),
+  .check-choice:has(:focus-visible) {
+    outline: 2px solid var(--color-pxp-green);
+    outline-offset: 2px;
   }
 
   .radio-choice input,
@@ -283,6 +436,21 @@
     color: #7c2418;
     font-weight: 800;
     line-height: 1.45;
+    transition:
+      opacity var(--motion-feedback) var(--motion-ease-standard),
+      transform var(--motion-feedback) var(--motion-ease-standard);
+  }
+
+  /*
+   * Apparition en douceur plutôt qu'un pop instantané : le message ne
+   * bouge pas les champs voisins de façon brutale. N'exige aucune
+   * modification des composants qui l'utilisent (v-if inchangé).
+   */
+  @starting-style {
+    .form-error {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
   }
 
   .form-note {

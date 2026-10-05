@@ -1,373 +1,113 @@
 <template>
-  <main>
-    <section v-if="showHero" id="probleme" class="hero-section" aria-labelledby="hero-title">
-      <img class="hero-background" src="/images/hero_wallpaper.jpeg" alt="" aria-hidden="true" loading="eager" decoding="async">
-      <div class="hero-overlay" aria-hidden="true"></div>
-      <div class="container">
-        <div class="hero-layout">
-          <div class="hero-copy">
-            <h1 id="hero-title">
-              Votre site ralentit l'équipe. Vos accès sont partout. Et si demain, la personne qui sait
-              comment ça marche n'est pas là ?
-            </h1>
-            <p>
-              PixelProwlers remet ça en ordre. Sites qui tiennent la route. Accès qui se voient.
-              Sauvegardes qui sauvent vraiment.
-            </p>
-            <p class="hero-support">
-              Audit, urgence, refonte et transmission d'accès sont pensés pour se lire vite, se décider vite,
-              et se lancer sans perdre la main.
-            </p>
-          </div>
-        </div>
+  <div class="HomeSections">
+    <section id="atelier" class="Workshop container" aria-labelledby="workshop-title">
+      <div class="SectionIntro">
+        <p class="eyebrow">Le matériel d’abord</p>
+        <h2 id="workshop-title" class="pxp-font-display">Une panne n’est pas<br>une fin de vie.</h2>
+        <p>Ordinateurs, téléphones et tablettes : examiner, réparer ce qui peut l’être et prolonger les usages.</p>
       </div>
-      <div class="hero-wave" aria-hidden="true"></div>
+      <div class="WorkshopGrid">
+        <article class="WorkshopCard">
+          <EditorialImage name="composant" alt="Illustration d’une soudure de précision sur un composant électronique" caption="réparation au composant" />
+          <div class="CardCopy">
+            <span class="CardIndex" aria-hidden="true">01 / RÉPARER</span>
+            <h3 class="pxp-font-display">Du diagnostic à la micro-soudure.</h3>
+            <p>Pannes de carte mère, composants et maintenance : une intervention ciblée quand le diagnostic la justifie.</p>
+            <NuxtLink class="EditorialLink" to="/reparation-informatique">Découvrir la réparation <span aria-hidden="true">↗</span></NuxtLink>
+          </div>
+        </article>
+        <article class="WorkshopCard WorkshopCardOffset">
+          <EditorialImage name="reemploi" alt="Illustration de la remise en état d’un ordinateur portable" caption="réemploi, hors fiche de vente" />
+          <div class="CardCopy">
+            <span class="CardIndex" aria-hidden="true">02 / RÉEMPLOYER</span>
+            <h3 class="pxp-font-display">Une seconde vie, sans angle mort.</h3>
+            <p>Du matériel d’occasion et reconditionné, avec ses caractéristiques, ses tests et ses défauts connus annoncés.</p>
+            <NuxtLink class="EditorialLink" to="/materiel-reconditionne">Découvrir le matériel reconditionné <span aria-hidden="true">↗</span></NuxtLink>
+          </div>
+        </article>
+      </div>
     </section>
 
-    <section id="solutions" class="section section-alt" aria-labelledby="offers-title">
+    <section id="numerique" class="Digital" aria-labelledby="digital-title">
       <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow">Offres principales</p>
-          <h2 id="offers-title">Trois chemins selon où vous en êtes.</h2>
+        <div class="SectionIntro">
+          <p class="eyebrow">Au-delà du matériel</p>
+          <h2 id="digital-title" class="pxp-font-display">Garder la main.<br>Sur tous vos outils.</h2>
         </div>
-
-        <div class="card-grid three">
-          <article v-for="offer in offers" :key="offer.title" class="card offer-card">
-            <p class="eyebrow">{{ offer.kicker }}</p>
+        <div class="DigitalGrid">
+          <article v-for="offer in offers" :key="offer.href">
+            <span class="CardIndex" aria-hidden="true">{{ offer.number }}</span>
             <h3>{{ offer.title }}</h3>
             <p>{{ offer.description }}</p>
-            <ul>
-              <li v-for="point in offer.points" :key="point">{{ point }}</li>
-            </ul>
-            <AppButton class="card-action" :href="offer.href">{{ offer.cta }}</AppButton>
-            <p class="cta-note">{{ offer.ctaNote }}</p>
+            <NuxtLink class="EditorialLink" :to="offer.href">{{ offer.cta }} <span aria-hidden="true">↗</span></NuxtLink>
           </article>
         </div>
       </div>
     </section>
 
-    <section id="preuves" class="section" aria-labelledby="proof-title">
-      <div class="container proof-grid">
-        <div class="section-heading">
-          <p class="eyebrow">Preuves concrètes</p>
-          <h2 id="proof-title">Des problèmes déjà vus, déjà repris.</h2>
-          <p>Vous ne cherchez pas une promesse. Vous voulez savoir si quelqu’un sait reprendre une situation technique sensible.</p>
-        </div>
-
-        <div class="proof-panels">
-          <article class="card">
-            <h3>Situations résolues</h3>
-            <ul>
-              <li v-for="proof in credibilityProofs" :key="proof">{{ proof }}</li>
-            </ul>
-          </article>
-
-          <article class="card">
-            <h3>Méthode de travail</h3>
-            <ul>
-              <li v-for="proof in methodProofs" :key="proof">{{ proof }}</li>
-            </ul>
-          </article>
-        </div>
+    <section id="methode" class="Method container" aria-labelledby="method-title">
+      <div class="SectionIntro">
+        <p class="eyebrow">Pas à pas</p>
+        <h2 id="method-title" class="pxp-font-display">Comprendre. Puis agir.</h2>
       </div>
+      <ol class="MethodGrid">
+        <li><span aria-hidden="true">01</span><h3>Diagnostic</h3><p>Nous examinons votre situation avant de proposer une solution.</p></li>
+        <li><span aria-hidden="true">02</span><h3>Proposition</h3><p>Vous validez le périmètre et le prix avant toute intervention.</p></li>
+        <li><span aria-hidden="true">03</span><h3>Intervention</h3><p>Nous intervenons dans le cadre convenu et expliquons ce qui a été fait.</p></li>
+      </ol>
+      <p class="MethodNote">Vos données restent sous votre contrôle ; les accès nécessaires sont définis avec votre accord.</p>
     </section>
 
-    <section id="angles-morts" class="section" aria-labelledby="mirror-title">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow">Angles morts</p>
-          <h2 id="mirror-title">Ça vous parle ?</h2>
-          <p>On commence par nommer ce qui fatigue l'équipe, puis on distingue ce qui est urgent.</p>
-        </div>
-
-        <div class="card-grid three">
-          <article v-for="problem in problems" :key="problem.title" class="card">
-            <h3>{{ problem.title }}</h3>
-            <p class="zone-impact">Zone impactée : <strong>{{ problem.zone }}</strong>, {{ problem.description }}</p>
-          </article>
-        </div>
+    <section id="contact" class="Contact" aria-labelledby="contact-title">
+      <div class="container ContactInner">
+        <div><p class="eyebrow">Parlons concret</p><h2 id="contact-title" class="pxp-font-display">Qu’est-ce qui vous bloque ?</h2><p>Une panne, un projet ou une question : décrivez simplement votre besoin, sans mot de passe ni code d’accès.</p></div>
+        <AppButton href="/contact">Prendre contact</AppButton>
       </div>
     </section>
-
-    <section id="methode" class="section" aria-labelledby="method-title">
-      <div class="container method-grid">
-        <div class="section-heading">
-          <p class="eyebrow">Méthode</p>
-          <h2 id="method-title">On avance étape par étape.</h2>
-          <p>Comprendre, rendre visible, décider, puis transmettre. Un site fragile finit souvent par casser au pire moment : plus tôt c’est pris, moins c’est coûteux.</p>
-        </div>
-
-        <div class="steps">
-          <article v-for="step in steps" :key="step.title" class="step-card">
-            <span>{{ step.number }}</span>
-            <div>
-              <h3>{{ step.title }}</h3>
-              <p>{{ step.description }}</p>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="cadre" class="section section-alt" aria-labelledby="audience-title">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow">Cadre de collaboration</p>
-          <h2 id="audience-title">C'est pour vous ? Ou pas.</h2>
-        </div>
-
-        <div class="card-grid two">
-          <article class="card">
-            <h3>Pour vous si...</h3>
-            <ul>
-              <li v-for="item in goodFits" :key="item">{{ item }}</li>
-            </ul>
-          </article>
-
-          <article class="card">
-            <h3>Pas idéal si...</h3>
-            <ul>
-              <li v-for="item in badFits" :key="item">{{ item }}</li>
-            </ul>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="contact" class="final-section" aria-labelledby="final-title">
-      <div class="container">
-        <div class="final-panel">
-          <p class="eyebrow light">Premier échange</p>
-          <h2 id="final-title">Vous êtes prêts ? On démarre.</h2>
-          <p>Un diagnostic simple : comprendre ce que vous faites, ce qui vous stresse, par quoi commencer.</p>
-          <AppButton href="/diagnostic-situation">Obtenir un diagnostic clair</AppButton>
-          <p class="final-cta-note">Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
-        </div>
-      </div>
-    </section>
-  </main>
+  </div>
 </template>
 
 <script setup lang="ts">
-import headerWaveSvg from '~/assets/images/header-wave.svg?url';
 import AppButton from '~/components/ui/AppButton.vue';
-import { badFits, credibilityProofs, goodFits, methodProofs, offers, problems, steps } from '~/utils/siteContent';
+import EditorialImage from '~/components/sections/EditorialImage.vue';
 
-const headerWaveBackground = `url(${headerWaveSvg})`;
-
-withDefaults(defineProps<{
-  showHero?: boolean;
-}>(), {
-  showHero: true,
-});
+const offers = [
+  { number: '03', title: 'Conseil & cybersécurité', description: 'Choisir vos outils, résoudre une difficulté et examiner les risques dans un périmètre autorisé.', href: '/services-numeriques#conseil-cybersecurite', cta: 'Faire le point' },
+  { number: '04', title: 'Développement', description: 'Des sites, applications et outils métier maintenables, construits à partir de vos usages réels.', href: '/services-numeriques#developpement', cta: 'Parler de mon projet' },
+  { number: '05', title: 'Formation & ateliers', description: 'Comprendre, pratiquer et devenir autonome, avec des repères que vous pouvez réutiliser.', href: '/formations', cta: 'Découvrir les formations' },
+] as const;
 </script>
 
 <style scoped>
-.hero-section {
-  position: relative;
-  overflow: hidden;
-  padding: 92px 0 0;
-  background: #102033;
-}
-
-.hero-background {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  filter: brightness(0.7) contrast(1.2);
-}
-
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background:
-    linear-gradient(180deg, rgba(16, 32, 51, 0.18) 0%, rgba(16, 32, 51, 0.44) 62%, rgba(16, 32, 51, 0.66) 100%),
-    linear-gradient(90deg, rgba(247, 244, 234, 0.16) 0%, rgba(247, 244, 234, 0) 44%);
-}
-
-.hero-layout {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  padding-bottom: 70px;
-  min-height: 620px;
-}
-
-.hero-copy {
-  display: grid;
-  gap: 20px;
-  max-width: 980px;
-  justify-items: center;
-  color: #fff;
-  text-align: center;
-}
-
-.hero-copy h1 {
-  max-width: 940px;
-  font-size: clamp(2.15rem, 5vw, 5rem);
-  line-height: 1.02;
-  font-weight: 900;
-  text-wrap: balance;
-}
-
-.hero-copy > p {
-  max-width: 760px;
-  font-size: 1.18rem;
-  line-height: 1.75;
-}
-
-.hero-support {
-  max-width: 700px;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.hero-wave {
-  position: relative;
-  z-index: 2;
-  height: 30px;
-  background-image: v-bind(headerWaveBackground);
-  background-repeat: repeat-x;
-  background-size: 1200px 30px;
-  animation: wave-drift 20s linear infinite;
-}
-
-@keyframes wave-drift {
-  from {
-    background-position-x: 0;
-  }
-
-  to {
-    background-position-x: 1200px;
-  }
-}
-
-@media (max-width: 959px) {
-  .hero-section {
-    padding-top: 64px;
-  }
-
-  .hero-layout {
-    min-height: auto;
-    padding-bottom: 52px;
-  }
-
-  .hero-copy {
-    gap: 16px;
-  }
-}
-
-.offer-card {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-}
-
-.card-action {
-  margin-top: auto;
-}
-
-.cta-note {
-  margin-top: 12px;
-  color: #596158;
-  font-size: 0.92rem;
-  font-weight: 750;
-  line-height: 1.5;
-}
-
-.proof-grid {
-  display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
-  gap: 40px;
-  align-items: start;
-}
-
-.proof-panels {
-  display: grid;
-  gap: 18px;
-}
-
-.zone-impact {
-  margin-top: 14px;
-  color: #596158;
-  line-height: 1.65;
-}
-
-.method-grid {
-  display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
-  gap: 40px;
-  align-items: start;
-}
-
-.steps {
-  display: grid;
-  gap: 16px;
-}
-
-.step-card {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 18px;
-  border: 1px solid rgba(43, 112, 83, 0.16);
-  border-radius: 8px;
-  background: #f7f4ea;
-  padding: 20px;
-}
-
-.step-card > span {
-  display: flex;
-  width: 56px;
-  height: 56px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: #2b7053;
-  color: white;
-  font-weight: 900;
-}
-
-.final-section {
-  padding: 76px 0;
-  background: #fbfaf5;
-}
-
-.final-panel {
-  border-radius: 8px;
-  background: #102033;
-  padding: 34px;
-  color: white;
-}
-
-.final-panel p:not(.eyebrow) {
-  max-width: 680px;
-  margin-top: 18px;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 1.08rem;
-  line-height: 1.7;
-}
-
-.final-panel .ButtonBase {
-  margin-top: 28px;
-}
-
-.final-cta-note {
-  max-width: 620px;
-  margin-top: 12px !important;
-  color: rgba(255, 255, 255, 0.86) !important;
-  font-size: 0.96rem !important;
-  font-weight: 800;
-}
-
-@media (max-width: 900px) {
-  .method-grid,
-  .proof-grid {
-    grid-template-columns: 1fr;
-  }
-}
+@reference "../../assets/css/main.css";
+.Workshop, .Method { @apply py-16 md:py-24; }
+.SectionIntro { @apply mb-10 grid max-w-2xl gap-4; }
+h2 { font-size: clamp(2.8rem, 5vw, 4.8rem); line-height: 1; }
+.SectionIntro > p:last-child { @apply max-w-lg leading-relaxed; }
+.WorkshopGrid { @apply grid items-start gap-8 md:grid-cols-2 md:gap-12; }
+.WorkshopCard { @apply bg-pxp-panel; }
+.WorkshopCardOffset { @apply md:mt-20; }
+.CardCopy { @apply grid gap-4 p-6 md:p-8; }
+.CardIndex { @apply text-xs font-bold tracking-[0.14em] text-pxp-green; }
+.CardCopy h3 { @apply text-4xl leading-none md:text-5xl; }
+.CardCopy p { @apply max-w-lg leading-relaxed; }
+.EditorialLink { @apply inline-flex min-h-11 w-fit items-center gap-4 font-bold text-pxp-green underline decoration-1 underline-offset-4 hover:text-pxp-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pxp-green; }
+.Digital { @apply border-y border-pxp-green/15 bg-[#ebe9df] py-16 md:py-20; }
+.DigitalGrid { @apply grid gap-8 md:grid-cols-3; }
+.DigitalGrid article { @apply grid content-start gap-4 border-t border-pxp-green/30 pt-6; }
+.DigitalGrid h3 { @apply text-xl font-bold; }
+.DigitalGrid p { @apply leading-relaxed; }
+.MethodGrid { @apply m-0 grid list-none gap-8 p-0 md:grid-cols-3; }
+.MethodGrid li { @apply relative grid content-start gap-3 border-t border-pxp-green/35 pt-6; }
+.MethodGrid li > span { @apply text-sm font-bold text-pxp-green; }
+.MethodGrid li::before { content: ""; @apply absolute -top-1 left-0 size-2 rounded-full bg-pxp-green; }
+.MethodGrid h3 { @apply text-xl font-bold; }
+.MethodGrid p, .MethodNote { @apply text-sm leading-relaxed; }
+.MethodNote { @apply mt-10 max-w-2xl text-pxp-ink/75; }
+.Contact { @apply bg-pxp-ink py-14 text-pxp-paper md:py-20; }
+.ContactInner { @apply grid items-center gap-8 md:grid-cols-[1fr_auto]; }
+.ContactInner > div { @apply grid gap-4; }
+.Contact .eyebrow { @apply text-[#a8d5bd]; }
+.Contact p:last-child { @apply max-w-xl leading-relaxed; }
+.Contact :deep(.ButtonPrimary) { @apply bg-pxp-paper text-pxp-ink shadow-none hover:bg-white focus-visible:ring-white; }
 </style>

@@ -17,4 +17,5 @@
 </template>
 
 <script setup lang="ts">
+useHead({ link: [{ rel: 'canonical', href: 'https://pixelprowlers.io/contact' }] });
 </script>
