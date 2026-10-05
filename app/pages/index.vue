@@ -33,14 +33,14 @@ const description = [
 ].join(' ');
 
 const heroContent = {
-  eyebrow: 'Précision électronique · Réemploi',
+  eyebrow: 'Micro-soudure · Réparation · Réemploi',
   title: 'Réparation informatique, jusqu’au composant.',
   subtitle: 'Nous diagnostiquons et réparons vos ordinateurs, téléphones et tablettes, jusqu’à la micro-soudure lorsque la panne s’y prête. Réparer plutôt que remplacer, et vous expliquer ce qui vaut le coup.',
   ctaText: 'Décrire ma panne',
-  ctaLink: '/contact',
+  ctaLink: '/contact?besoin=reparation',
   secondaryCtaText: 'Découvrir le matériel reconditionné',
   secondaryCtaLink: '/materiel-reconditionne',
-  ctaNote: 'Ni prix ni délai fixés avant l’examen de votre appareil.',
+  ctaNote: 'Le diagnostic permet de préciser l’intervention et son coût. Vous décidez avant toute réparation.',
 };
 
 useSeoMeta({

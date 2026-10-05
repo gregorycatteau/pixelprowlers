@@ -14,13 +14,7 @@
             <span class="FooterName">PixelProwlers</span>
           </NuxtLink>
 
-          <p class="FooterPromise">
-            Réparer vos ordinateurs et vos téléphones, remettre en état des
-            machines et les revendre sans rien masquer de leur histoire.
-            Puis vous accompagner par le conseil, l’assistance et la
-            cybersécurité, développer vos sites et outils métier, et
-            transmettre les savoir-faire par la formation et les ateliers.
-          </p>
+          <p class="FooterPromise">Réparer au composant et prolonger l’usage du matériel. Vous accompagner aussi par le conseil, le développement et la formation.</p>
 
           <a class="FooterEmail" href="mailto:contact@pixelprowlers.io">
             contact@pixelprowlers.io

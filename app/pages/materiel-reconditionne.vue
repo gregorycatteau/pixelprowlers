@@ -5,8 +5,8 @@
         <p class="eyebrow">Réemploi · Matériel reconditionné</p>
         <h1 class="pxp-font-display">Une seconde vie pour votre prochain ordinateur.</h1>
         <p>Nous remettons en état du matériel informatique pour prolonger son usage. Décrivez vos besoins et votre budget : nous vous indiquons les possibilités et les disponibilités.</p>
-        <p>Les caractéristiques, l’état, les défauts connus, les tests et le prix d’un exemplaire vous sont communiqués avant toute décision. Cette page ne présente aucun stock disponible à la vente.</p>
-        <AppButton href="/contact">Demander les disponibilités</AppButton>
+        <p>Indiquez l’usage prévu et une fourchette de budget dans le formulaire. Les caractéristiques, l’état, les défauts connus, les tests et le prix d’un exemplaire vous sont communiqués avant toute décision. Cette page est une présentation du réemploi, pas un catalogue de machines disponibles.</p>
+        <AppButton href="/contact?besoin=reemploi">Demander les disponibilités</AppButton>
       </div>
       <EditorialImage name="reemploi" alt="Illustration d’un ordinateur portable en cours de réparation" caption="réemploi, hors fiche de vente" priority />
     </section>
