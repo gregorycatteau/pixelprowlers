@@ -2,7 +2,7 @@
 ARG BASE_IMAGE=pixelprowlers-django:security-base-efd98e84bc44
 FROM ${BASE_IMAGE}
 ARG DELIVERY_SHA
-WORKDIR /srv/pixelprowlers-backend
+WORKDIR /app
 COPY . .
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN DJANGO_DEBUG=True DJANGO_SECRET_KEY=build-only-not-production POSTGRES_PASSWORD=build-only-not-production python manage.py collectstatic --noinput

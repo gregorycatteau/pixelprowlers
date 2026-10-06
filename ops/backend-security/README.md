@@ -24,9 +24,9 @@ docker build --pull=false --network=none \
   -t "pixelprowlers-django:security-${DELIVERY_SHA:0:12}" backend
 ```
 
-Le contexte est **backend uniquement**, avec sa `.dockerignore` historique. Pas de `.env`, logs, DB locale, média ou archive. Source active sous `/srv/pixelprowlers-backend`, seules applications historiques ; aucun catalogue/comptes/diagnostic récent. Base historique installée localement, versions consignées ; aucune installation/pull. `collectstatic` local sans DB et avec valeurs réservées au build ; elles ne deviennent pas des réglages d'exploitation. Le CMD lance Gunicorn **sans migrate**.
+Le contexte est **backend uniquement**, avec sa `.dockerignore` historique. Pas de `.env`, logs, DB locale, média ou archive. Source corrigé remplaçant les fichiers au chemin historique `/app` (aucune copie inactive du moteur vulnérable à un autre chemin), seules applications historiques ; aucun catalogue/comptes/diagnostic récent. Base historique installée localement, versions consignées ; aucune installation/pull. `collectstatic` local sans DB et avec valeurs réservées au build ; elles ne deviennent pas des réglages d'exploitation. Le CMD lance Gunicorn **sans migrate**.
 
-Réexécuter les tests sur cette image, sans bind de source applicative, avec `QUAL_SOURCE=/srv/pixelprowlers-backend` et le dossier `ops/backend-security` monté en lecture seule dans `/qualification`. Le module `qualification.py` refuse tout hôte autre que les deux conteneurs dédiés nommés ; credentials et clé synthétiques réservés aux fixtures, messagerie mémoire et SMS/webhook désactivés. Aucun `.env` du dépôt original monté.
+Réexécuter les tests sur cette image, sans bind de source applicative, avec `QUAL_SOURCE=/app` et le dossier `ops/backend-security` monté en lecture seule dans `/qualification`. Le module `qualification.py` refuse tout hôte autre que les deux conteneurs dédiés nommés ; credentials et clé synthétiques réservés aux fixtures, messagerie mémoire et SMS/webhook désactivés. Aucun `.env` du dépôt original monté.
 
 Exemple d'environnement de qualification, réseau Docker **interne**, deux instances `postgres:15-alpine` déjà disponibles :
 
@@ -41,7 +41,7 @@ docker run -d --name pixelprowlers-security-db-20261006 \
 # Même commande avec le nom pixelprowlers-security-restore-20261006 pour la seconde instance.
 ```
 
-Exécuter `qualification.py migrate` seulement sur cette base dédiée, puis `qualification.py test audits crm urgencies --verbosity 1`. Pour l'import de citations, prévoir `/srv/pixelprowlers-backend/logs` writable dans le conteneur ; ne pas rendre le source partagé writable. Les tests créent leur base temporaire avec le propriétaire de qualification, puis la détruisent ; le rôle applicatif sans CREATEDB est testé séparément sur la base synthétique persistante.
+Exécuter `qualification.py migrate` seulement sur cette base dédiée, puis `qualification.py test audits crm urgencies --verbosity 1`. Pour l'import de citations, prévoir `/app/logs` writable dans le conteneur ; ne pas rendre le source partagé writable. Les tests créent leur base temporaire avec le propriétaire de qualification, puis la détruisent ; le rôle applicatif sans CREATEDB est testé séparément sur la base synthétique persistante.
 
 Appliquer `runtime-role.sql` avec `db_name=qualification_only`, sous `qualification_owner`, puis donner LOGIN et le mot de passe synthétique **uniquement dans les instances dédiées**. Exécuter `qualification-runtime-check.py` avec `QUAL_DB_USER=pixelprowlers_app`, puis le contrôle des 16 contrats `qualification-contracts.py`. Le helper de restauration compare les données originales : le lancer **avant de modifier la base source après son dump**.
 
@@ -54,9 +54,9 @@ QUAL_DIRECTORY="$PWD/ops/backend-security"
 CORRECTED_IMAGE_ID=$(docker image inspect -f '{{.Id}}' "pixelprowlers-django:security-${DELIVERY_SHA:0:12}")
 docker run --name pixelprowlers-security-exact-image-tests-20261006 \
   --network pixelprowlers-backend-qual-20261006 \
-  --tmpfs /srv/pixelprowlers-backend/logs \
+  --tmpfs /app/logs \
   --mount "type=bind,src=$QUAL_DIRECTORY,dst=/qualification,readonly" \
-  -e QUAL_SOURCE=/srv/pixelprowlers-backend \
+  -e QUAL_SOURCE=/app \
   --entrypoint python --pull=never "$CORRECTED_IMAGE_ID" \
   /qualification/qualification.py test audits crm urgencies --verbosity 1
 ```
