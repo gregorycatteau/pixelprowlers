@@ -9,7 +9,7 @@
           <AppButton :href="ctaLink">{{ ctaText }}</AppButton>
           <AppButton variant="secondary" :href="secondaryCtaLink">{{ secondaryCtaText }}</AppButton>
         </div>
-        <p class="HeroNote">{{ ctaNote }}</p>
+        <p v-if="ctaNote" class="HeroNote">{{ ctaNote }}</p>
         <div class="HeroSignature" aria-hidden="true"><span></span> Réparer. Réemployer. Transmettre.</div>
       </div>
       <EditorialImage name="microscope" alt="Illustration d’une intervention sur une carte électronique sous microscope" caption="micro-soudure" priority sizes="(min-width: 1024px) 58vw, 100vw" />
@@ -29,7 +29,7 @@ defineProps<{
   ctaLink: string;
   secondaryCtaText: string;
   secondaryCtaLink: string;
-  ctaNote: string;
+  ctaNote?: string;
 }>();
 </script>
 

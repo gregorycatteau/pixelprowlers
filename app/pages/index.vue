@@ -40,7 +40,6 @@ const heroContent = {
   ctaLink: '/reparation-informatique#parcours-reparation',
   secondaryCtaText: 'Décrire ma panne directement',
   secondaryCtaLink: '/contact?besoin=reparation',
-  ctaNote: 'Une proposition claire. Votre accord avant intervention.',
 };
 
 useSeoMeta({
