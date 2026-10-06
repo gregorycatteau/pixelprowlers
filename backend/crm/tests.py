@@ -1,6 +1,11 @@
 """Security boundary tests use synthetic fixtures and existing Django authentication."""
 import json
 import time
+import hashlib
+import os
+import subprocess
+import sys
+from django.apps import apps
 from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -30,7 +35,11 @@ class SecurityBoundaryTests(TestCase):
         self.client = Client(HTTP_HOST='localhost',HTTP_ORIGIN='http://localhost')
         self.other = Client(HTTP_HOST='localhost',HTTP_ORIGIN='http://localhost')
     def gql(self,q,v=None,client=None,**headers):
+        self.before_denial = self.business_digest()
         return (client or self.client).post('/graphql/',json.dumps({'query':q,'variables':v or {}}),content_type='application/json',**headers)
+    def business_digest(self):
+        rows = {m._meta.label: list(m.objects.order_by('pk').values()) for m in apps.get_models() if m._meta.app_label in {'audits','crm','urgencies','tracking'}}
+        return hashlib.sha256(json.dumps(rows,default=str,sort_keys=True).encode()).hexdigest()
     def created_contact(self):
         r=self.gql(CREATE,{'s':(time.time()-5)*1000}).json()
         self.assertFalse(r.get('errors'),r)
@@ -39,6 +48,7 @@ class SecurityBoundaryTests(TestCase):
         body=response.json()
         self.assertTrue(body.get('errors'),body)
         self.assertNotIn('owner@example.invalid',json.dumps(body))
+        self.assertEqual(self.before_denial,self.business_digest(), 'A refusal modified business data')
         return body
     def test_private_fields_absent_for_anonymous_regular_staff_and_superuser(self):
         User=get_user_model()
@@ -78,12 +88,20 @@ class SecurityBoundaryTests(TestCase):
         self.assertEqual(json.loads(a['emailConfirmation'])['status'],'not_configured')
     def test_reply_requires_token_and_author_is_server_owned(self):
         a=self.created_contact()
+        b=self.created_contact()
+        other=Contact.objects.get(ticket_id=b['ticketId'])
+        other_before=list(Contact.objects.filter(pk=other.pk).values())
         q='mutation($t:String!){addContactMessage(token:$t,message:"Synthetic reply",authorName:"ADMIN"){contact{ticketId messages{author authorName}}}}'
         self.assert_denied(self.gql(q,{'t':a['ticketId']}))
+        injected=q.replace('token:$t,','token:$t,contactId:"'+str(other.pk)+'",')
+        self.assert_denied(self.gql(injected,{'t':a['secretToken']}))
         r=self.gql(q,{'t':a['secretToken']}).json();self.assertFalse(r.get('errors'))
         last=ContactMessage.objects.last()
         self.assertEqual(last.author,ContactMessage.Author.CUSTOMER)
         self.assertEqual(last.author_name,'Synthetic Owner')
+        self.assertEqual(last.contact.ticket_id,a['ticketId'])
+        self.assertEqual(other.messages.count(),1)
+        self.assertEqual(list(Contact.objects.filter(pk=other.pk).values()),other_before)
     def test_notification_failure_keeps_contact_and_initial_message(self):
         with patch('pixelprowlers.notifications.send_mail',side_effect=RuntimeError('synthetic failure')):
             a=self.created_contact()
@@ -188,3 +206,71 @@ class SecurityBoundaryTests(TestCase):
         self.assertEqual(response['data']['createUrgencyRequest']['clientEmailStatus'],'not_configured')
         from pixelprowlers.schema import schema
         self.assertEqual(set(schema.graphql_schema.get_type('UrgencyRequestType').fields),{'reference','status'})
+
+    def test_all_exposed_model_types_use_explicit_projections(self):
+        expected = {
+            'ContactType': {'ticketId','secretToken','name','email','phone','company','demandType','status','message','createdAt','updatedAt','demandLabel','emailConfirmation','messages'},
+            'ContactMessageType': {'id','author','authorName','message','createdAt'},
+            'DiagnosticTicketType': {'id','ticketId','organization','email','phone','message','answers','diagnosticResult','emailConfirmation'},
+            'AuditDossierType': {'numeroDossier','statut'},
+            'RefonteAuditType': {'reference','siteUrl','analysisStatus','technicalReport','pagespeedReport','heuristicReport','analysisError','dateCreation','dateMaj'},
+            'CitationType': {'id','texte','auteur','source'},
+            'MotifType': {'id','nom','dureeMinutes','creneauType'},
+            'RaisonAppelType': {'id','nom'},
+            'CreneauCalendrierType': {'date','heureDebut','heureFin','statut'},
+            'RdvType': {'id','motif','creneaux','statut'},
+            'UrgencyRequestType': {'reference','status'},
+        }
+        for name, fields in expected.items():
+            self.assertEqual(set(schema.graphql_schema.get_type(name).fields), fields, name)
+        for name in ('ClientDossierType','DossierLogType','LeadType','FormationRegistrationType','VisitorSessionType','TrackingEventType'):
+            self.assertIsNone(schema.graphql_schema.get_type(name),name)
+
+    def test_settings_reject_missing_or_invalid_secrets_without_public_fallback(self):
+        for debug in ('True','False'):
+            for key in ('','short','x'*64):
+                env=dict(os.environ,DJANGO_DEBUG=debug,DJANGO_SECRET_KEY=key)
+                result=subprocess.run([sys.executable,'-c','import pixelprowlers.settings'],env=env,capture_output=True)
+                self.assertNotEqual(result.returncode,0)
+                self.assertIn(b'ImproperlyConfigured',result.stderr)
+        for key in ('short','x'*64):
+            result=subprocess.run([sys.executable,'-c','import pixelprowlers.settings'],env=dict(os.environ,AUDIT_SIGNATURE_KEY=key),capture_output=True)
+            self.assertNotEqual(result.returncode,0)
+
+    def test_audit_authority_a_cannot_modify_b_with_alias_or_fragment(self):
+        a=self.gql(AUDIT).json()['data']['createAuditDossier']['dossier']['numeroDossier']
+        b=self.gql(AUDIT,client=self.other).json()['data']['createAuditDossier']['dossier']['numeroDossier']
+        self.assertNotEqual(a,b)
+        self.assert_denied(self.gql(SUBMIT.replace('submitAuditReponses','alias:submitAuditReponses'),{'n':b,'a':json.dumps({k:5 for k in QUESTION_IDS})}))
+        token=self.created_contact()['secretToken']
+        self.assert_denied(self.gql('query($t:String!){contactByToken(token:$t){...Private}} fragment Private on ContactType{read notificationStatus clientDossier{email}}',{'t':token}))
+
+    def test_missing_or_invalid_audit_key_refuses_before_business_write(self):
+        n=self.gql(AUDIT).json()['data']['createAuditDossier']['dossier']['numeroDossier']
+        for key in ('','short','x'*64):
+            with override_settings(AUDIT_SIGNATURE_KEY=key):
+                self.assert_denied(self.gql(SUBMIT,{'n':n,'a':json.dumps({k:5 for k in QUESTION_IDS})}))
+
+    @override_settings(DEBUG=False,SECURE_SSL_REDIRECT=False,SESSION_COOKIE_SECURE=True,CSRF_COOKIE_SECURE=True,CSRF_TRUSTED_ORIGINS=['https://localhost'])
+    def test_https_sessions_cookie_flags_and_admin_csrf_enforced(self):
+        client=Client(enforce_csrf_checks=True,HTTP_HOST='localhost',HTTP_ORIGIN='https://localhost')
+        r=self.gql(AUDIT,client=client,secure=True)
+        self.assertFalse(r.json().get('errors'))
+        cookie=r.cookies['sessionid']
+        self.assertTrue(cookie['secure']);self.assertTrue(cookie['httponly']);self.assertEqual(cookie['samesite'],'Lax')
+        self.assertEqual(client.post('/admin/login/',{'username':'synthetic','password':'synthetic'},secure=True).status_code,403)
+        staff=get_user_model().objects.create_user('csrf-operator',is_staff=True)
+        staff.user_permissions.add(Permission.objects.get(codename='change_contact'))
+        client.force_login(staff)
+        obj=Contact.objects.create(name='Synthetic',email='owner@example.invalid',message='Unmodified')
+        before=self.business_digest()
+        path=f'/admin/crm/contact/{obj.pk}/change/'
+        self.assertEqual(client.post(path,{},secure=True).status_code,403)
+        self.assertEqual(before,self.business_digest())
+        page=client.get(path,secure=True)
+        self.assertEqual(page.status_code,200)
+        token=client.cookies['csrftoken'].value
+        self.assertEqual(client.post(path,{},secure=True,HTTP_X_CSRFTOKEN=token,HTTP_REFERER='https://localhost'+path).status_code,200)
+        self.assertEqual(before,self.business_digest())
+        for path in ('/graphql/account/','/api/contacts/','/api/audits/'):
+            self.assertEqual(client.get(path,secure=True).status_code,404)

@@ -1,6 +1,37 @@
 # Livraison ciblée du backend historique
 
-**Préparation seulement. Aucun push, déploiement ou changement de réglage de production autorisé dans ce lot.** Les commandes serveur ci-dessous sont la procédure pour une décision ultérieure. Ne pas les exécuter automatiquement. Rapport : [qualification](../../docs/security/backend-historique-correctif-20261006.md).
+**Autorisation du 6 octobre 2026 : livraison ciblée backend et réglages d'exploitation par lots qualifiés.** L'instruction utilisateur remplace la restriction de préparation antérieure. Aucun workflow global, remplacement du backend historique ou modification de la vitrine. Rapport historique : [qualification](../../docs/security/backend-historique-correctif-20261006.md).
+
+### Procédure actuelle : conserver l'environnement réellement actif
+
+Le Compose du VPS diffère désormais de l'environnement du Django actif. **Ne pas
+utiliser les anciens exemples de surcharge `image` seule de la section 2.** Ils
+documentent la préparation historique et changeraient involontairement des
+réglages de base/email lors d'une recréation.
+
+La procédure actuelle utilise `prepare-runtime-overlay.py` : valeurs actives
+comparées et transmises en mémoire au processus Compose, fichier de surcharge
+contenant uniquement des références, backend email console conservé, proxy Caddy
+reconnu par son adresse exacte dans `pixelprowlers_default`. L'adresse doit être
+revalidée après une recréation de Caddy. Aucune confiance dans le sous-réseau entier.
+
+Après commit, publication de la branche, construction/requalification de l'image
+portant ce SHA et transfert vérifié, utiliser sur le VPS :
+
+```bash
+python3 apply-runtime-delivery.py /chemin/protege/qualified-manifest.json
+```
+
+Le manifeste doit identifier un SHA commité, une image testée, la preuve de
+publication distante et l'absence de migration. Un candidat non commité est
+refusé. Le script exige la sauvegarde réelle et sa restauration qualifiée,
+contrôle les identités, puis recrée **Django seulement**, sans build/pull/migration.
+Le contrôle HTTP public reste à exécuter avec `post-delivery-check.py`, après
+livraison uniquement. Le retour arrière passe exclusivement par
+`rollback-confined.py`, qui conserve les réglages actifs en mémoire et bloque
+GraphQL avant toute réactivation de l'image ancienne.
+
+État renouvelé et blocages : [rapport de reprise](../../docs/security/backend-exploitation-reprise-20261006.md).
 
 ## 1. Construire et qualifier localement l'image exacte
 
@@ -135,15 +166,16 @@ Contrôles après recréation :
 - Test du formulaire/ticket/réponse en préproduction ou avec boîte explicitement contrôlée et statut console non trompeur. Aucune soumission de production à un tiers par défaut. Sur production, une réception email réelle n'est affirmée qu'après observation de la boîte contrôlée.
 - Ne pas promouvoir audit/refonte comme qualifiés tant que signature et UI indiquées au rapport ne sont pas résolues.
 
-## 3. Retour arrière de code
+## 3. Retour arrière de code avec confinement obligatoire
 
 En cas de régression critique, préserver les demandes créées pendant la période : **ne pas restaurer la DB active**. L'ancien code est compatible avec le même schéma et aucune migration n'est appliquée.
 
-```bash
-docker compose -p pixelprowlers -f /opt/pixelprowlers/compose.yml \
-  -f /opt/pixelprowlers-deploy-backups/backend-security/rollback.yml \
-  up -d --no-deps --no-build --pull never django
-```
+Le retour à l'ancienne image est interdit tant que le confinement n'est pas
+persisté, rechargé et vérifié par HTTP 503. Utiliser exclusivement
+`rollback-confined.py /opt/pixelprowlers-deploy-backups/backend-operations-20261006`
+sur le VPS identifié. Le programme s'arrête avant le changement d'image si
+l'intégrité, la configuration active ou les trois contrôles HTTP échouent.
+Il ne retire jamais le confinement et ne restaure jamais la base.
 
 Recontrôler ancienne image, ID Nuxt/PostgreSQL, volumes et santé. Le rollback restaure également les failles anciennes ; envisager d'abord le confinement ci-dessous et un correctif complémentaire. Si retour à l'ancien backend nécessaire, faire approuver et appliquer le confinement `/graphql/` pendant sa durée. L'ancien code ne doit pas être déclaré sécurisé après rollback.
 

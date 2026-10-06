@@ -1,5 +1,10 @@
-# Insert these directives inside EACH existing pixelprowlers.io/www site block,
-# before its current reverse_proxy. Preserve existing TLS and other directives.
+# Replace the existing /graphql/* handle in the pixelprowlers.io block.
+# Add the exact /graphql handle as well. Preserve all other handles and TLS.
+# The www domain redirects to the confined canonical domain.
 # DO NOT replace the complete Caddyfile with this snippet.
-@backend_confinement path /graphql /graphql/*
-respond @backend_confinement "Formulaires temporairement indisponibles. Merci de revenir ultérieurement." 503
+handle /graphql/* {
+    respond "Formulaires temporairement indisponibles. Merci de revenir ultérieurement." 503
+}
+handle /graphql {
+    respond "Formulaires temporairement indisponibles. Merci de revenir ultérieurement." 503
+}

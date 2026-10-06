@@ -4,6 +4,7 @@ from datetime import datetime
 from secrets import token_hex
 from urllib.parse import urlparse
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.utils.dateparse import parse_date, parse_time
@@ -163,6 +164,9 @@ class AuditSubmitSerializer(BaseInputValidator):
         dossier = self.validated_data["numero_dossier"]
         if dossier != self.context.get("authorized_dossier"):
             raise ValidationError("Accès au dossier non autorisé.")
+        key = settings.AUDIT_SIGNATURE_KEY
+        if len(key) < 32 or len(set(key)) < 8:
+            raise ValidationError("La finalisation de l’audit est temporairement indisponible.")
         calculated = self.validated_data["calculated"]
         ip_address = self.context.get("ip_address")
         user_agent = self.context.get("user_agent", "")

@@ -7,7 +7,6 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BASE_DIR.parent
-DEV_INSECURE_SECRET_KEY = "pixelprowlers-dev-insecure-change-me"
 logger = logging.getLogger(__name__)
 
 
@@ -64,15 +63,8 @@ def env_list(name: str, default: str = "") -> list[str]:
 DEBUG = env_bool("DJANGO_DEBUG", env_bool("DEBUG", True))
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
-if not SECRET_KEY and DEBUG:
-    SECRET_KEY = DEV_INSECURE_SECRET_KEY
-    logger.warning(
-        "DJANGO_SECRET_KEY is not set. Using local development fallback SECRET_KEY; "
-        "this must never be used with DJANGO_DEBUG=False."
-    )
-
-if not DEBUG and not SECRET_KEY:
-    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set in production.")
+if len(SECRET_KEY) < 32 or len(set(SECRET_KEY)) < 8:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be explicitly configured with a strong secret.")
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -231,6 +223,8 @@ WEBHOOK_TOKEN = env_first("WEBHOOK_TOKEN", "URGENCY_WEBHOOK_TOKEN")
 
 # Clé secrète HMAC pour la signature légale des réponses d'audit (AuditReponse.compute_signature)
 AUDIT_SIGNATURE_KEY = env("AUDIT_SIGNATURE_KEY")
+if AUDIT_SIGNATURE_KEY and (len(AUDIT_SIGNATURE_KEY) < 32 or len(set(AUDIT_SIGNATURE_KEY)) < 8):
+    raise ImproperlyConfigured("AUDIT_SIGNATURE_KEY must be a strong independent secret.")
 
 
 # ---------------------------------------------------------------------------
