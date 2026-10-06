@@ -41,18 +41,14 @@
 
     <section class="pillar-section pillar-section-alt" aria-labelledby="formations-formats-title">
       <div class="article-container">
-        <h2 id="formations-formats-title">Formats possibles</h2>
+        <h2 id="formations-formats-title">Un format adapté à votre groupe</h2>
 
         <p class="pillar-section-intro">
-          Le format se décide avec vous, selon le nombre de personnes à
-          former et leur disponibilité.
+          Précisez le nombre de participants, votre contexte et l’objectif.
+          Nous définissons ensemble le format de l’atelier.
         </p>
 
-        <ul v-reveal class="pillar-principles">
-          <li v-for="format in formats" :key="format">
-            {{ format }}
-          </li>
-        </ul>
+
 
 
       </div>
@@ -110,11 +106,7 @@ const themes = [
   },
 ];
 
-const formats = [
-  'En présentiel, sur site, pour un groupe déjà constitué.',
-  'À distance, pour des participants dispersés géographiquement.',
-  'En format hybride, quand une partie de l’équipe seulement peut se déplacer.',
-];
+
 
 const siteUrl = String(
   runtimeConfig.public.siteUrl || 'https://pixelprowlers.io',
