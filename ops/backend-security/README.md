@@ -8,8 +8,17 @@ Depuis la racine du worktree dédié, après commits et revue :
 
 ```bash
 DELIVERY_SHA=$(git rev-parse HEAD)
+# This alias is created locally from the verified installed image; never replace it.
+# If it already exists, require the exact same ID instead of overwriting it.
+BASE_TAG=pixelprowlers-django:security-base-efd98e84bc44
+BASE_ID=sha256:efd98e84bc445b342a64b05cb63e40cae0fa62f7e920676261db4f4c1520fd23
+if docker image inspect "$BASE_TAG" >/dev/null 2>&1; then
+  test "$(docker image inspect -f '{{.Id}}' "$BASE_TAG")" = "$BASE_ID"
+else
+  docker image tag "$BASE_ID" "$BASE_TAG"
+fi
 docker build --pull=false --network=none \
-  --build-arg BASE_IMAGE=sha256:efd98e84bc445b342a64b05cb63e40cae0fa62f7e920676261db4f4c1520fd23 \
+  --build-arg BASE_IMAGE="$BASE_TAG" \
   --build-arg DELIVERY_SHA="$DELIVERY_SHA" \
   -f ops/backend-security/Dockerfile \
   -t "pixelprowlers-django:security-${DELIVERY_SHA:0:12}" backend

@@ -1,5 +1,5 @@
 # Existing locally installed Python 3.13 historical runtime; no dependency installation.
-ARG BASE_IMAGE=pixelprowlers-django:latest
+ARG BASE_IMAGE=pixelprowlers-django:security-base-efd98e84bc44
 FROM ${BASE_IMAGE}
 ARG DELIVERY_SHA
 WORKDIR /srv/pixelprowlers-backend
