@@ -37,7 +37,7 @@ const heroContent = {
   title: 'Avant de remplacer votre appareil, parlons réparation.',
   subtitle: 'Ordinateur qui ne démarre plus, téléphone qui ne charge plus, carte mère en panne : nous recherchons la cause et proposons une réparation adaptée, jusqu’au composant.',
   ctaText: 'Décrire ma panne',
-  ctaLink: '/contact?besoin=reparation',
+  ctaLink: '/reparation-informatique#parcours-reparation',
   secondaryCtaText: 'Découvrir nos réparations',
   secondaryCtaLink: '/reparation-informatique',
   ctaNote: 'Une proposition claire. Votre accord avant intervention.',

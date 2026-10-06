@@ -79,7 +79,7 @@ const CTA_DIGITAL_SERVICES: ContextualCta = {
 
 const CTA_DESCRIBE_FAILURE: ContextualCta = {
   label: 'Décrire ma panne',
-  href: '/contact?besoin=reparation',
+  href: '/reparation-informatique#parcours-reparation',
 };
 
 const CTA_SEE_MACHINES: ContextualCta = {
@@ -119,9 +119,8 @@ const isWithin = (path: string, base: string): boolean => (
 /**
  * Appel à l'action du header pour un chemin donné.
  *
- * Un CTA ne pointe jamais vers la page déjà affichée : sur le questionnaire
- * matériel et sur la racine du catalogue, il bascule vers une mise en
- * relation plutôt que de proposer un lien qui ne mène nulle part. Sur la
+ * Le CTA réparation rejoint le parcours, y compris par son ancre sur la page
+ * déjà affichée. Le catalogue utilise une demande de disponibilités. Sur la
  * page de contact elle-même, plus rien d'utile ne reste à proposer :
  * la fonction retourne `null` et le header n'affiche alors aucun bouton,
  * plutôt qu'un lien vers la page courante.

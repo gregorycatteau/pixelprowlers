@@ -1,20 +1,7 @@
 <template>
   <main class="RepairPage">
-    <section class="container RepairHero" aria-labelledby="repair-title">
-      <div>
-        <p class="eyebrow">Diagnostic · Micro-soudure</p>
-        <h1 id="repair-title" class="pxp-font-display">Réparer, jusqu’au composant.</h1>
-        <p>Une panne ne signifie pas forcément qu’il faut remplacer votre appareil. Nous examinons ce que vous observez, recherchons la cause et vous expliquons les possibilités avant de proposer une intervention.</p>
-        <AppButton href="/contact?besoin=reparation">Décrire ma panne</AppButton>
-        <p class="Note">Le diagnostic permet de préciser l’intervention et son coût. Vous décidez avant toute réparation.</p>
-      </div>
-      <EditorialImage name="microscope" alt="Illustration de micro-soudure sur une carte électronique sous microscope" caption="travail de précision" priority />
-    </section>
+    <div class="container"><RepairJourney /></div>
     <div id="prise-en-charge" class="container HandoffSection"><RepairHandoff /></div>
-    <section class="container RepairSection" aria-labelledby="devices-title">
-      <h2 id="devices-title">Quels appareils ?</h2>
-      <p>Ordinateurs portables ou fixes, téléphones et tablettes : décrivez le type d’appareil, son modèle si vous le connaissez et le symptôme observé. Vous n’avez pas besoin de vocabulaire technique pour faire une demande.</p>
-    </section>
     <section class="MicroSection" aria-labelledby="micro-title">
       <div class="container MicroLayout">
         <EditorialImage name="composant" alt="Illustration d’une intervention sur un composant de carte mère" caption="réparation au composant" />
@@ -22,8 +9,7 @@
       </div>
     </section>
     <section class="container RepairSection" aria-labelledby="symptoms-title">
-      <h2 id="symptoms-title">Qu’est-ce qui ne fonctionne plus ?</h2>
-      <div class="Symptoms"><article><h3>Démarrage</h3><p>Écran noir, appareil qui s’éteint ou ne démarre plus.</p></article><article><h3>Charge</h3><p>Charge intermittente, connecteur abîmé, autonomie réduite.</p></article><article><h3>Usage</h3><p>Écran cassé, ralentissements, panne après une chute ou un liquide.</p></article></div>
+      <h2 id="symptoms-title">Une précaution utile</h2>
       <p class="Safety"><strong>Batterie gonflée ou chauffe anormale :</strong> ne rechargez plus l’appareil et signalez-le dans votre demande.</p>
     </section>
     <section class="container RepairSection" aria-labelledby="method-title">
@@ -41,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import AppButton from '~/components/ui/AppButton.vue';
+import RepairJourney from '~/components/repair/RepairJourney.vue';
 import EditorialImage from '~/components/sections/EditorialImage.vue';
 import RepairHandoff from '~/components/sections/RepairHandoff.vue';
 useSeoMeta({ title: 'Réparation informatique et micro-soudure | PixelProwlers', description: 'Diagnostic d’ordinateurs, téléphones et tablettes, réparation au composant et micro-soudure lorsque la panne le justifie.', robots: 'index, follow', ogUrl: 'https://pixelprowlers.io/reparation-informatique' });

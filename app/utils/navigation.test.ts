@@ -7,6 +7,6 @@ describe('Orientation de l’urgence web', () => {
   });
   it('conserve le contact sans CTA et la réparation matérielle dans son parcours', () => {
     expect(contextualCtaFor('/contact?besoin=reparation')).toBeNull();
-    expect(contextualCtaFor('/reparation-informatique')?.href).toBe('/contact?besoin=reparation');
+    expect(contextualCtaFor('/reparation-informatique')?.href).toBe('/reparation-informatique#parcours-reparation');
   });
 });

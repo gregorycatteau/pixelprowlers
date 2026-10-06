@@ -158,7 +158,7 @@ export const statusLabel = (status: ContactStatus) => ({
 export const useContactForm = (initialNeed: ContactNeed | '' = '') => {
   const form = reactive({
     need: resolveContactNeed(initialNeed),
-    deviceType: '', model: '', usage: '', budget: '',
+    deviceType: '', model: '', usage: '', budget: '', repairContext: '',
     organization: '',
     email: '',
     phone: '',

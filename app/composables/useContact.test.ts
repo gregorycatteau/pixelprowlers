@@ -84,3 +84,21 @@ describe('Envoi et conservation du contact', () => {
     expect(request).not.toHaveBeenCalled();
   });
 });
+
+describe('Message enrichi du parcours', () => {
+  it('refuse le dépassement de 4000 caractères sans tronquer ni envoyer', async () => {
+    const state = filled(); state.form.repairContext = 'Contexte fictif '.repeat(300);
+    const original = state.form.repairContext;
+    expect(state.canSubmit.value).toBe(false); expect(await state.submit()).toBeNull();
+    expect(request).not.toHaveBeenCalled(); expect(state.form.repairContext).toBe(original);
+  });
+  it('garde le contexte après erreur et transmet sa mise à jour au réessai', async () => {
+    const state = filled(); state.form.repairContext = 'Symptôme : Ne charge plus\nGrille : TEST';
+    request.mockRejectedValueOnce(new Error('Échec contrôlé')); await state.submit();
+    expect(state.form.repairContext).toContain('Ne charge plus');
+    state.form.repairContext = 'Symptôme : Ne démarre plus\nGrille : TEST';
+    request.mockResolvedValueOnce({ createContact: { contact: fixture } }); await state.submit();
+    expect(request.mock.calls[1]?.[1]?.message).toContain('Ne démarre plus');
+    expect(request.mock.calls[1]?.[1]?.message).not.toContain('Ne charge plus');
+  });
+});

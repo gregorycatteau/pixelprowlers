@@ -1,15 +1,16 @@
 <template>
   <form class="contact-form" novalidate @submit.prevent="handleSubmit">
-    <header class="ContactIntro">
+    <header v-if="!repairContext" class="ContactIntro">
       <p class="eyebrow">Contact</p>
       <h1 id="contact-title" class="pxp-font-display">{{ heading }}</h1>
       <p>{{ form.need === 'reparation' ? 'Décrivez le symptôme : nous préciserons ensemble la suite.' : 'Quelques lignes suffisent pour préparer notre échange.' }}</p>
     </header>
-    <div class="NeedSummary">
+    <h2 v-if="repairContext" class="pxp-font-display RequestTitle">Votre demande de réparation</h2>
+    <div v-if="!repairContext" class="NeedSummary">
       <span>{{ selectedLabel || 'Choisissez votre demande' }}</span>
       <button ref="toggleButton" class="NeedToggle" type="button" :aria-expanded="selectorOpen" aria-controls="need-options" @click="selectorOpen = !selectorOpen">{{ selectorOpen ? 'Fermer les choix' : 'Changer de demande' }}</button>
     </div>
-    <fieldset v-if="selectorOpen" id="need-options" @keydown.esc.prevent="closeSelector">
+    <fieldset v-if="selectorOpen && !repairContext" id="need-options" @keydown.esc.prevent="closeSelector">
       <legend class="sr-only">Votre demande</legend>
       <div class="NeedGrid">
         <label v-for="option in contactDemandOptions" :key="option.value" class="radio-choice">
@@ -20,7 +21,7 @@
     </fieldset>
     <p v-if="attempted && !form.need" class="FieldError" role="alert">Choisissez le sujet de votre demande.</p>
     <div class="ContactFields">
-      <div v-if="form.need === 'reparation'" class="FieldPair">
+      <div v-if="form.need === 'reparation' && !repairContext" class="FieldPair">
         <label class="text-field"><span>Appareil <small>(facultatif)</small></span><select v-model="form.deviceType"><option value="">Choisir</option><option>Ordinateur</option><option>Téléphone</option><option>Tablette</option><option>Autre</option></select></label>
         <label class="text-field"><span>Modèle <small>(facultatif)</small></span><input v-model="form.model" maxlength="120" placeholder="Marque et modèle"></label>
       </div>
@@ -29,7 +30,7 @@
         <label class="text-field"><span>Budget <small>(facultatif)</small></span><input v-model="form.budget" maxlength="80" placeholder="Une fourchette suffit"></label>
       </div>
       <label class="text-field">
-        <span>{{ form.need === 'reparation' ? 'Quel symptôme observez-vous ?' : 'Décrivez votre besoin' }}</span>
+        <span>{{ form.need === 'reparation' ? (repairContext ? 'Précisions sur la panne' : 'Quel symptôme observez-vous ?') : 'Décrivez votre besoin' }}</span>
         <textarea v-model="form.message" required minlength="20" maxlength="500" rows="3" :aria-describedby="`description-help description-counter${showError('message') ? ' message-error' : ''}`" :aria-invalid="showError('message') || undefined" placeholder="Ce qui ne fonctionne plus, depuis quand…" @blur="touched.message = true"></textarea>
         <small id="description-help">{{ form.need === 'reparation' ? 'Décrivez la panne ; aucun mot de passe n’est nécessaire ici.' : 'Décrivez votre besoin ; aucun mot de passe n’est nécessaire ici.' }}</small>
         <small id="description-counter">{{ form.message.length }} / 500 caractères · minimum 20</small>
@@ -50,11 +51,14 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
 import { useContactForm } from '~/composables/useContact';
-import { contactDemandOptions, resolveContactNeed, type ContactNeed } from '~/utils/contactNeeds';
+import { contactDemandOptions, resolveContactNeed, buildContactMessage, CONTACT_MESSAGE_LIMIT, type ContactNeed } from '~/utils/contactNeeds';
 import { isEmailLike } from '~/utils/formatDate';
-const props = defineProps<{ initialNeed?: ContactNeed | '' }>();
+const props = defineProps<{ initialNeed?: ContactNeed | ''; repairContext?: string }>();
+const emit = defineEmits<{ pending: [value: boolean] }>();
 const router = useRouter();
 const { form, submitError, isSubmitting, canSubmit, submit } = useContactForm(props.initialNeed);
+watch(() => props.repairContext, value => { form.repairContext = value ?? ''; if (value) { form.need = 'reparation'; form.deviceType = ''; form.model = ''; } }, { immediate: true });
+watch(isSubmitting, value => emit('pending', value));
 const selectorOpen = ref(!props.initialNeed);
 const toggleButton = ref<HTMLButtonElement | null>(null);
 const attempted = ref(false);
@@ -80,6 +84,7 @@ const handleSubmit = async () => {
   if (!canSubmit.value) {
     await nextTick();
     (document.querySelector<HTMLElement>('.contact-form [aria-invalid="true"]') || toggleButton.value)?.focus();
+    if (buildContactMessage(form).length > CONTACT_MESSAGE_LIMIT) submitError.value = 'Le message enrichi dépasse la limite autorisée. Réduisez les précisions sans perdre les informations utiles.';
     return;
   }
   const ticket = await submit();
@@ -90,6 +95,7 @@ const handleSubmit = async () => {
 @reference "../../assets/css/main.css";
 .contact-form { @apply grid gap-5; }
 .ContactIntro { @apply grid gap-3; }
+.RequestTitle { @apply text-3xl; }
 h1 { @apply text-3xl leading-tight sm:text-4xl md:text-5xl; }
 .NeedSummary { @apply flex flex-wrap items-center justify-between gap-2 border-y border-pxp-green/20 py-3 text-sm; }
 .NeedSummary > span { @apply font-semibold; }

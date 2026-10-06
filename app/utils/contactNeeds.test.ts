@@ -32,3 +32,13 @@ describe('Présélection et contrat historique du contact', () => {
     expect(buildContactMessage({ need: 'autre', message, deviceType: '', model: '', usage: '', budget: '' })).toContain(message);
   });
 });
+
+// Le contexte du parcours reste dans le message, sans changer le mapping API.
+describe('Contexte réparation intégré', () => {
+  it('transmet le symptôme, le budget et la version sans troncature', () => {
+    const context = 'Symptôme : Ne charge plus\nRepère présenté : Estimation après diagnostic\nGrille : TEST-SEULEMENT';
+    const form = { need: 'reparation' as const, deviceType: '', model: '', usage: '', budget: '', message: 'Précisions sur ma panne suffisamment longues.', repairContext: context };
+    expect(buildContactMessage(form)).toContain(context);
+    expect(buildContactMessage({ ...form, need: 'autre' })).not.toContain(context);
+  });
+});

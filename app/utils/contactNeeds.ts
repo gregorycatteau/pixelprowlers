@@ -33,6 +33,7 @@ export type ContactDescription = {
   model: string;
   usage: string;
   budget: string;
+  repairContext?: string;
 };
 
 /** Enrichit le message sans le tronquer ; seuls les détails du besoin actif partent à l’API. */
@@ -45,6 +46,7 @@ export const buildContactMessage = (form: ContactDescription): string => {
   for (const [label, value] of details) {
     if (value?.trim()) lines.push(`${label} : ${value.trim()}`);
   }
+  if (form.need === 'reparation' && form.repairContext?.trim()) lines.push(form.repairContext.trim());
   lines.push('', form.message.trim());
   return lines.join('\n');
 };
