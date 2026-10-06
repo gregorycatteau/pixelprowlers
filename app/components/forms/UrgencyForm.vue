@@ -1,23 +1,10 @@
 <template>
-  <section class="urgency-section" aria-labelledby="urgency-form-title">
+  <section id="urgence-formulaire" class="urgency-section" aria-labelledby="urgency-form-title">
     <div class="article-container">
-      <div class="security-warning" role="alert">
-        <strong>Ne transmettez aucun secret.</strong>
-        <span>
-          Pas de mot de passe, token, clé privée, accès administrateur, cookie, sauvegarde ou information sensible.
-          Si un accès devient nécessaire, on utilisera un canal adapté après qualification.
-        </span>
-      </div>
-
       <div v-if="result" class="urgency-success" role="status" aria-live="polite">
-        <p class="eyebrow">Votre demande est prise en charge</p>
+        <p class="eyebrow">Votre demande est enregistrée</p>
         <h2>Référence : {{ result.reference }}</h2>
-        <p>Vous êtes en train de sécuriser votre situation. Un expert va analyser votre situation.</p>
-        <p>Réponse sous 24h selon le niveau d’impact et le créneau indiqué. Conservez cette référence de dossier pour le suivi.</p>
-        <p>
-          Ne transmettez aucun mot de passe, token, clé privée ou accès administrateur. Les modalités
-          d’intervention seront vues après un premier échange humain.
-        </p>
+        <p>Conservez cette référence pour le suivi. Nous conviendrons des modalités d’intervention après un premier échange.</p>
         <AppButton variant="secondary" type="button" @click="reset">Déclarer une autre urgence</AppButton>
       </div>
 
@@ -74,7 +61,9 @@
                 maxlength="700"
                 rows="5"
                 placeholder="Exemple : la page d’accueil affiche une erreur 500 depuis ce matin, les visiteurs ne peuvent plus accéder au formulaire."
+                aria-describedby="urgency-description-help"
               ></textarea>
+              <small id="urgency-description-help">Décrivez l’incident ; aucune clé ni aucun accès privé n’est nécessaire ici.</small>
             </label>
             <label class="text-field full-field">
               <span>Depuis quand ?</span>
@@ -153,19 +142,19 @@
           </label>
           <label class="check-choice">
             <input v-model="form.noSecretsConfirmed" required type="checkbox">
-            <span>Je confirme ne transmettre aucun mot de passe, token, clé privée, accès administrateur ou information sensible.</span>
+            <span>Je confirme ne joindre aucune clé ni aucun accès privé.</span>
           </label>
         </div>
 
         <div class="form-actions">
           <AppButton variant="validate" type="submit" :disabled="!canSubmit || isSubmitting" :loading="isSubmitting">
-            {{ isSubmitting ? 'Transmission...' : 'Prévenir PixelProwlers maintenant' }}
+            {{ isSubmitting ? 'Transmission...' : 'Signaler mon incident' }}
           </AppButton>
         </div>
 
         <p v-if="submitError" class="form-error" role="alert">{{ submitError }}</p>
         <p class="form-note">
-          La prise en compte est immédiate. La réponse humaine dépend du niveau d’impact et du créneau indiqué.
+          Vos coordonnées servent à traiter cet incident. <NuxtLink to="/confidentialite">Confidentialité</NuxtLink>.
         </p>
       </form>
     </div>
@@ -195,6 +184,7 @@ const {
 
 <style scoped>
 @reference "../../assets/css/main.css";
+.urgency-section { @apply scroll-mt-32; }
 
 .urgency-section {
   @apply bg-[#f7f4ea] py-14;

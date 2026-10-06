@@ -155,6 +155,10 @@ export const contextualCtaFor = (rawPath: string): ContextualCta | null => {
     return CTA_SEE_MACHINES;
   }
 
+  if (isWithin(path, '/urgence')) {
+    return { label: 'Signaler un incident', href: '/urgence#urgence-formulaire' };
+  }
+
   if (isWithin(path, '/formations')) {
     /*
      * `formation` présélectionne le besoin public ; le formulaire le traduit

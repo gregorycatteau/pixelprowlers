@@ -5,19 +5,16 @@
         <p class="eyebrow">Formations</p>
 
         <h1 id="formations-title">
-          Comprendre, choisir et reprendre la main sur ses outils
+          Des ateliers pour être plus à l’aise avec vos outils.
         </h1>
 
         <p class="pillar-introduction">
-          Des formations pour décider par vous-même : comprendre ce qu’on
-          vous propose, sécuriser vos usages quotidiens et réduire votre
-          dépendance à un outil ou à une personne. Sans devenir
-          informaticien.
+          Des gestes à pratiquer pour choisir vos logiciels, protéger vos comptes et organiser votre travail.
         </p>
 
         <div class="pillar-actions">
           <AppButton href="/contact?besoin=formation">
-            Nous contacter pour une formation
+            Préparer un atelier
           </AppButton>
         </div>
 
@@ -31,7 +28,7 @@
 
     <section class="pillar-section" aria-labelledby="formations-themes-title">
       <div class="article-container">
-        <h2 id="formations-themes-title">Les thèmes que nous couvrons</h2>
+        <h2 id="formations-themes-title">Ce que vous saurez faire</h2>
 
         <div v-reveal class="pillar-card-grid">
           <article v-for="theme in themes" :key="theme.title" class="pillar-card">
@@ -57,12 +54,7 @@
           </li>
         </ul>
 
-        <p class="pillar-boundary">
-          Une formation transmet des repères et des méthodes. Elle ne
-          remplace pas une intervention technique sur votre installation :
-          si le besoin relève d’une réparation ou d’un audit, nous vous le
-          dirons plutôt que de vous vendre une session.
-        </p>
+
       </div>
     </section>
 
@@ -72,13 +64,12 @@
 
         <p>
           Décrivez qui doit être formé, sur quel sujet et dans quel contexte.
-          Nous vous répondons avec une proposition adaptée, ou nous vous
-          orientons ailleurs si ce n’est pas notre domaine.
+          Nous définissons ensemble un contenu adapté.
         </p>
 
         <div class="pillar-actions">
           <AppButton href="/contact?besoin=formation">
-            Nous contacter pour une formation
+            Préparer un atelier
           </AppButton>
         </div>
       </div>
@@ -95,27 +86,27 @@ const themes = [
   {
     title: 'Logiciel libre et formats ouverts',
     description:
-      'Comprendre ce qu’apporte le libre concrètement, ce qu’il coûte, et pourquoi le format d’un fichier décide de qui garde la main dessus.',
+      'Choisir un logiciel libre et reconnaître un format de fichier réutilisable.',
   },
   {
     title: 'Sécurité informatique',
     description:
-      'Mots de passe, second facteur, sauvegardes, hameçonnage : les gestes qui évitent la majorité des incidents réels.',
+      'Activer un second facteur, vérifier une sauvegarde et reconnaître une tentative d’hameçonnage.',
   },
   {
     title: 'Hygiène numérique',
     description:
-      'Mettre de l’ordre dans les comptes, les accès partagés et les fichiers, pour que l’activité ne repose pas sur la mémoire d’une seule personne.',
+      'Organiser les comptes, les accès partagés et les fichiers pour les retrouver.',
   },
   {
     title: 'Autonomie et choix d’outils',
     description:
-      'Savoir lire une proposition technique, poser les bonnes questions et évaluer ce qu’un outil vous coûtera pour en sortir.',
+      'Lire une proposition technique et poser les questions utiles avant de choisir.',
   },
   {
     title: 'Usages responsables',
     description:
-      'Prolonger la durée de vie du matériel, limiter les dépendances évitables et réduire l’empreinte de son informatique.',
+      'Identifier les possibilités de réemploi et limiter les dépendances évitables.',
   },
 ];
 
@@ -209,7 +200,7 @@ useHead({
 }
 
 .pillar-introduction {
-  @apply max-w-3xl text-lg font-semibold leading-relaxed text-pxp-ink/80;
+  @apply max-w-3xl text-lg font-normal leading-relaxed text-pxp-ink/80;
 }
 
 .pillar-actions {
@@ -217,7 +208,7 @@ useHead({
 }
 
 .cta-note {
-  @apply max-w-3xl text-sm font-semibold leading-relaxed text-pxp-ink/70;
+  @apply max-w-3xl text-sm font-normal leading-relaxed text-pxp-ink/70;
 }
 
 .pillar-section {
@@ -233,7 +224,7 @@ useHead({
 }
 
 .pillar-section-intro {
-  @apply mt-3 max-w-3xl font-semibold leading-relaxed text-pxp-ink/80;
+  @apply mt-3 max-w-3xl font-normal leading-relaxed text-pxp-ink/80;
 }
 
 .pillar-card-grid {
@@ -249,7 +240,7 @@ useHead({
 }
 
 .pillar-card p {
-  @apply font-semibold leading-relaxed text-pxp-ink/80;
+  @apply font-normal leading-relaxed text-pxp-ink/80;
 }
 
 .pillar-principles {
@@ -258,15 +249,15 @@ useHead({
 }
 
 .pillar-principles li {
-  @apply font-semibold leading-relaxed text-pxp-ink/80;
+  @apply font-normal leading-relaxed text-pxp-ink/80;
 }
 
 .pillar-boundary {
-  @apply mt-6 max-w-3xl rounded-lg border-2 border-pxp-orange/50 bg-pxp-orange/10 p-4 font-semibold leading-relaxed text-pxp-ink;
+  @apply mt-6 max-w-3xl rounded-lg border-2 border-pxp-orange/50 bg-pxp-orange/10 p-4 font-normal leading-relaxed text-pxp-ink;
 }
 
 .pillar-final {
-  @apply bg-pxp-blue py-16 text-white md:py-20;
+  @apply bg-pxp-ink py-12 text-white md:py-16;
 }
 
 .pillar-final h2 {
@@ -274,7 +265,7 @@ useHead({
 }
 
 .pillar-final p {
-  @apply mt-3 max-w-3xl font-semibold leading-relaxed text-white/85;
+  @apply mt-3 max-w-3xl font-normal leading-relaxed text-white/85;
 }
 
 .pillar-final .pillar-actions {

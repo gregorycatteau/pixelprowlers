@@ -31,7 +31,6 @@
         <div class="HeaderRight">
           <div class="HeaderActions">
             <NuxtLink class="UrgencyLink" :to="navTransverse.urgency.href">
-              <span class="UrgencyMark" aria-hidden="true">⚡</span>
               {{ navTransverse.urgency.label }}
             </NuxtLink>
 
@@ -73,17 +72,6 @@
           :inert="!isMenuOpen"
         >
           <NuxtLink
-            class="MobileLink MobileUrgencyLink"
-            :to="navTransverse.urgencyLong.href"
-            @click="closeMenu()"
-          >
-            <span class="MobileLinkLabel">
-              <span class="UrgencyMark" aria-hidden="true">⚡</span>
-              {{ navTransverse.urgencyLong.label }}
-            </span>
-          </NuxtLink>
-
-          <NuxtLink
             v-for="pillar in navPillars"
             :key="pillar.href"
             class="MobileLink"
@@ -104,6 +92,16 @@
             @click="closeMenu()"
           >
             <span class="MobileLinkLabel">{{ navTransverse.about.label }}</span>
+          </NuxtLink>
+
+          <NuxtLink
+            class="MobileLink MobileUrgencyLink"
+            :to="navTransverse.urgencyLong.href"
+            @click="closeMenu()"
+          >
+            <span class="MobileLinkLabel">
+              {{ navTransverse.urgencyLong.label }}
+            </span>
           </NuxtLink>
 
           <div class="MobileActions">
@@ -201,6 +199,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 @reference "../assets/css/main.css";
+.MobileUrgencyLink .MobileLinkLabel { @apply text-base font-normal; }
 
 /* --- LAYOUT PRINCIPAL --- */
 .SiteHeader {
@@ -280,12 +279,12 @@ onBeforeUnmount(() => {
 .ActionButton:hover,
 .ActionButton:focus-visible {
   @apply outline-2 outline-offset-2 outline-white;
-  background: #0d9488;
+  background: #17251d;
   color: #ffffff;
 }
 
 .ActionButtonGreen {
-  background: #0f766e;
+  background: #2b7053;
 }
 
 /*
@@ -304,7 +303,7 @@ onBeforeUnmount(() => {
  * est déjà tombé. D'où un traitement distinct, discret mais coloré.
  */
 .UrgencyLink {
-  @apply mr-1 hidden min-h-11 items-center gap-1.5 rounded-md px-3 py-2 text-[0.9rem] font-bold text-white no-underline transition-[background-color,color] duration-(--motion-feedback) ease-(--motion-ease-standard) xl:inline-flex;
+  @apply mr-1 hidden min-h-11 items-center gap-1.5 rounded-md px-3 py-2 text-[0.9rem] font-normal text-white/80 no-underline transition-[background-color,color] duration-(--motion-feedback) ease-(--motion-ease-standard) xl:inline-flex;
   background: transparent;
 }
 

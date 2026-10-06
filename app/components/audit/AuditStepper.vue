@@ -10,8 +10,8 @@
 
     <div v-else-if="showDossierConfirmation" class="DossierConfirmation" role="status" aria-live="polite">
       <span class="ConfirmationCheck" aria-hidden="true"></span>
-      <p class="ConfirmationKicker">Votre demande est prise en charge</p>
-      <p class="ConfirmationText">Première étape vers la reprise de contrôle. Votre site va enfin être clarifié.</p>
+      <p class="ConfirmationKicker">Votre dossier est enregistré</p>
+      <p class="ConfirmationText">Vous pouvez poursuivre le questionnaire pour préciser votre situation.</p>
     </div>
 
     <div v-else class="AuditStepperShell">

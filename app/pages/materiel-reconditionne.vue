@@ -3,10 +3,10 @@
     <section class="container ReuseIntro">
       <div>
         <p class="eyebrow">Réemploi · Matériel reconditionné</p>
-        <h1 class="pxp-font-display">Une seconde vie pour votre prochain ordinateur.</h1>
-        <p>Nous remettons en état du matériel informatique pour prolonger son usage. Décrivez vos besoins et votre budget : nous vous indiquons les possibilités et les disponibilités.</p>
-        <p>Indiquez l’usage prévu et une fourchette de budget dans le formulaire. Les caractéristiques, l’état, les défauts connus, les tests et le prix d’un exemplaire vous sont communiqués avant toute décision. Cette page est une présentation du réemploi, pas un catalogue de machines disponibles.</p>
-        <AppButton href="/contact?besoin=reemploi">Demander les disponibilités</AppButton>
+        <h1 class="pxp-font-display">Un ordinateur adapté à vos usages. Une seconde vie pour le matériel.</h1>
+        <p>Quotidien, études, travail : dites-nous ce que vous voulez faire et votre budget. Nous cherchons avec vous les possibilités de réemploi et les disponibilités.</p>
+        <p>Pour chaque exemplaire proposé, vous disposez des caractéristiques, des tests réalisés, de l’état et des défauts connus, avec son prix et ses photos réelles. Contactez-nous pour connaître les disponibilités.</p>
+        <AppButton href="/contact?besoin=reemploi">Trouver mon ordinateur</AppButton>
       </div>
       <EditorialImage name="reemploi" alt="Illustration d’un ordinateur portable en cours de réparation" caption="réemploi, hors fiche de vente" priority />
     </section>

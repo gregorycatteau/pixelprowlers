@@ -86,6 +86,10 @@ const handleClick = (event: MouseEvent) => {
 </script>
 
 <style scoped>
+@reference "../../assets/css/main.css";
+.ButtonPrimary { @apply bg-pxp-green text-white hover:bg-pxp-ink focus-visible:ring-pxp-green; }
+.ButtonValidate { @apply border-pxp-green text-pxp-green focus-visible:ring-pxp-green; }
+@media (prefers-reduced-motion: reduce) { .loading-icon { animation: none; } }
 .loading-icon {
   width: 1rem;
   height: 1rem;

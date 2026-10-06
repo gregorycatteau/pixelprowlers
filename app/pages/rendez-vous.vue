@@ -16,10 +16,10 @@
       <section v-else-if="bookingUnavailable" class="CalendarPanel FallbackPanel" aria-live="polite">
         <p class="RdvKicker">Rendez-vous</p>
         <h2>On peut quand même vous répondre rapidement</h2>
-        <p>Le calendrier ne charge pas pour le moment. Laissez trois informations : on revient vers vous sous 24h ouvrées.</p>
+        <p>Le calendrier ne charge pas pour le moment. Décrivez votre besoin pour convenir d’un échange.</p>
         <div v-if="fallbackSubmitted" class="FallbackConfirmation" role="status">
           <h3>Demande prête à envoyer.</h3>
-          <p>Votre message est ouvert dans votre messagerie. Dès réception, on vous répond sous 24h ouvrées avec une suite claire.</p>
+          <p>Votre message est ouvert dans votre messagerie. Envoyez-le pour proposer un échange.</p>
           <div class="FallbackActions">
             <NuxtLink class="ButtonBase ButtonSecondary" to="/urgence">C'est urgent</NuxtLink>
             <NuxtLink class="ButtonBase ButtonSecondary" to="/contact">Contact direct</NuxtLink>

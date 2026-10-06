@@ -12,7 +12,7 @@ export const offers = [
     ],
     href: '/audit-site-web',
     cta: 'Faire analyser mon site',
-    ctaNote: 'Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.',
+    ctaNote: 'Une proposition claire, avec votre accord avant intervention.',
   },
   {
     kicker: 'Refonte',
@@ -47,9 +47,9 @@ export const offers = [
 ] as const;
 
 export const credibilityProofs = [
-  'Site bloqué → accès récupéré en 24h',
-  'WordPress piraté → nettoyé + sécurisé',
-  'Refonte mal livrée → reprise complète',
+  'Accès et dépendances examinés',
+  'Risques identifiés et priorisés',
+  'Prochaines actions expliquées',
 ] as const;
 
 export const methodProofs = [
@@ -171,7 +171,7 @@ export const landings: Record<string, Landing> = {
     secondaryCta: "Parlons d'abord",
     primaryHref: '#audit-parcours',
     secondaryHref: '/rendez-vous',
-    heroCtaNote: 'Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.',
+    heroCtaNote: 'Une proposition claire, avec votre accord avant intervention.',
     finalTitle: 'Vous voulez savoir ce qui tient vraiment ?',
     finalText: "On vérifie, on classe les risques, puis on vous dit ce qui mérite d'être traité maintenant. Si tout fonctionne parfaitement, ce ne sera probablement pas utile.",
     finalCta: 'Obtenir un diagnostic clair',
@@ -179,8 +179,8 @@ export const landings: Record<string, Landing> = {
     sections: [
       {
         id: 'audit-preuves',
-        title: 'Des problèmes déjà vus, déjà repris.',
-        intro: 'Le doute est normal : on parle de sécurité, d’accès et de continuité. Voilà le type de situations traitées.',
+        title: 'Les points examinés.',
+        intro: 'Un état des lieux pour décider des prochaines actions.',
         items: [...credibilityProofs],
       },
       {

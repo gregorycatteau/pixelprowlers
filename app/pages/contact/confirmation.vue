@@ -22,7 +22,7 @@
           <h2 id="confirmation-ticket-title">Ticket ID : {{ ticket.ticketId }}</h2>
           <p>{{ contactEmailLabel(ticket) }} : {{ maskEmail(ticket.email) }}</p>
           <p>Vous savez maintenant par où commencer : votre site, vos accès et vos priorités vont être clarifiés.</p>
-          <p>Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
+          <p>Une proposition adaptée, avec votre accord avant intervention.</p>
           <div class="result-actions">
             <AppButton :href="`/ticket/${ticket.secretToken}`">Consulter votre ticket</AppButton>
             <AppButton variant="secondary" href="/">Retour à l'accueil</AppButton>

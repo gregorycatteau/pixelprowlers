@@ -470,7 +470,7 @@ export const useDiagnostic = () => {
     }
 
     if (currentStep.value === 0) {
-      return 'Dossier créé';
+      return 'Votre bilan commence ici';
     }
 
     return `Étape ${currentStep.value} complétée`;

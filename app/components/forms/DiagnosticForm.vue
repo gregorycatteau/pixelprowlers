@@ -57,22 +57,13 @@
             Être accompagné sur mon problème
           </NuxtLink>
         </div>
-        <p class="cta-note">Réponse sous 24h. Sans engagement. Pas d’accès demandé sans validation.</p>
+        <p class="cta-note">Une proposition adaptée, avec votre accord avant intervention.</p>
         <p class="selection-note">{{ immediateResult.selectionMessage }}</p>
 
-        <div class="safety-block" aria-labelledby="diagnostic-safety-title">
-          <h3 id="diagnostic-safety-title">Vos données restent cadrées</h3>
-          <ul class="plain-list good-list">
-            <li>Vous ne partagez jamais vos accès sans cadre clair</li>
-            <li>Confidentialité stricte</li>
-            <li>Aucune modification sans votre accord</li>
-          </ul>
-        </div>
-
         <form class="diagnostic-contact-form" @submit.prevent="submit">
-          <h3>{{ isSubmitting ? 'Votre demande est prise en charge' : 'Recevoir le détail par email' }}</h3>
+          <h3>{{ isSubmitting ? 'Enregistrement en cours' : 'Transmettre mon bilan' }}</h3>
           <p v-if="isSubmitting" class="handoff-line">
-            Vous êtes en train de sécuriser votre situation. Première étape vers la reprise de contrôle.
+            Votre demande est en cours d’enregistrement.
           </p>
           <div class="contact-grid">
             <label class="text-field">
@@ -95,7 +86,9 @@
                 maxlength="240"
                 rows="5"
                 placeholder="Décrivez brièvement ce que vous voulez vérifier."
+                aria-describedby="diagnostic-description-help"
               ></textarea>
+              <small id="diagnostic-description-help">Décrivez votre situation ; aucun mot de passe n’est nécessaire ici.</small>
             </label>
           </div>
           <div class="form-actions">
@@ -109,7 +102,7 @@
         </form>
         <p v-if="submitError" class="form-error">{{ submitError }}</p>
         <p class="form-note">
-          On ne vous demande pas de mot de passe, pas d'accès privé, pas de fichier sensible.
+          <NuxtLink to="/confidentialite">Confidentialité</NuxtLink>.
         </p>
       </div>
     </div>

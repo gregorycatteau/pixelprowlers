@@ -24,6 +24,20 @@ describe('Envoi et conservation du contact', () => {
     expect(request.mock.calls[0]?.[1]).toMatchObject({ privacyConsent: true });
     expect(state.isSubmitting.value).toBe(false);
   });
+  it('envoie le nom sans le dupliquer comme société et ne transmet que les détails actifs', async () => {
+    request.mockResolvedValue({ createContact: { contact: fixture } });
+    const state = filled();
+    state.form.usage = 'Usage conservé localement';
+    state.form.budget = 'Budget conservé localement';
+    await state.submit();
+    expect(request.mock.calls[0]?.[1]).toMatchObject({ name: 'Test contrôlé', company: '' });
+    expect(request.mock.calls[0]?.[1]?.message).not.toContain('Usage conservé localement');
+    state.form.need = 'reemploi';
+    await state.submit();
+    expect(request.mock.calls[1]?.[1]?.message).toContain('Usage conservé localement');
+    expect(request.mock.calls[1]?.[1]?.message).not.toContain('Modèle test');
+    expect(state.form.model).toBe('Modèle test');
+  });
   it('conserve tous les champs après erreur réseau et permet une nouvelle tentative', async () => {
     request.mockRejectedValueOnce(new Error('Network unavailable'));
     const state = filled();

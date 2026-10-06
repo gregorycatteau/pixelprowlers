@@ -164,6 +164,8 @@ const currentYear = new Date().getFullYear();
   @apply text-sm font-black uppercase tracking-[0.14em] text-[#9ed7b9];
 }
 
+.FooterLinkList li { @apply m-0 border-0 bg-transparent p-0; }
+
 .FooterLinkList {
   @apply mt-2 space-y-1;
 }
@@ -173,7 +175,8 @@ const currentYear = new Date().getFullYear();
  * hauteur/marge intérieure plutôt que de dépendre du seul texte.
  */
 .FooterLink {
-  @apply -mx-2 inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-white/75 transition-colors duration-(--motion-feedback) ease-(--motion-ease-standard) hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9ed7b9];
+  @apply border-0 bg-transparent shadow-none;
+  @apply -mx-2 inline-flex min-h-11 items-center rounded-md px-2 text-sm font-normal text-white/75 transition-colors duration-(--motion-feedback) ease-(--motion-ease-standard) hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9ed7b9];
 }
 
 .FooterCommitments {

@@ -6,7 +6,7 @@
       <ol>
         <li><h3>Décrire la panne</h3><p>Indiquez l’appareil, le modèle si connu et le symptôme.</p></li>
         <li><h3>Convenir des modalités</h3><p>Lieu et mode de prise en charge se définissent après contact.</p></li>
-        <li><h3>Attendre la confirmation</h3><p>Ne déposez ni n’expédiez l’appareil avant notre accord sur les modalités.</p></li>
+        <li><h3>Organiser la prise en charge</h3><p>Nous convenons ensemble des modalités pour nous confier votre appareil.</p></li>
       </ol>
       <NuxtLink class="HandoffLink" to="/contact?besoin=reparation">Décrire ma panne <span aria-hidden="true">→</span></NuxtLink>
     </template>

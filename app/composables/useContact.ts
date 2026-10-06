@@ -191,7 +191,7 @@ export const useContactForm = (initialNeed: ContactNeed | '' = '') => {
       const response = await graphqlRequest<{ createContact: { contact: ContactGraphql | null } }>(CREATE_CONTACT_MUTATION, {
         name: form.organization,
         email: form.email,
-        company: form.organization,
+        company: '',
         phone: form.phone,
         ...contactApiMapping[need],
         message,
