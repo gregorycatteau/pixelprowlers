@@ -1,31 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { useRepairJourney } from './useRepairJourney';
-import type { RepairGrid } from '~/utils/repairGrid';
-describe('État du parcours réparation', () => {
-  it('conserve un retour compatible mais invalide un changement de famille', () => {
-    const j = useRepairJourney(); j.chooseFamily('phone'); j.chooseSymptom('battery');
-    j.step.value = 'device'; j.chooseFamily('phone'); expect(j.symptom.value).toBe('battery');
-    j.chooseFamily('desktop'); expect(j.symptom.value).toBe(''); expect(j.model.value).toBe('');
-    expect(j.chooseSymptom('battery')).toBe(false);
+describe('Parcours avec budgets', () => {
+  it('conserve les retours compatibles et invalide le changement de famille', () => {
+    const j=useRepairJourney();j.chooseFamily('controller');j.chooseSymptom('drift');expect(j.step.value).toBe('precision');
+    j.choosePrecision('two');expect(j.result.value.offers[0]?.id).toBe('controller-drift-two');
+    j.step.value='device';j.chooseFamily('controller');expect(j.precision.value).toBe('two');
+    j.chooseFamily('phone');expect(j.symptom.value).toBe('');expect(j.precision.value).toBe('');expect(j.model.value).toBe('');
   });
-  it('recalcule immédiatement et refuse les choix non couverts', () => {
-    const j = useRepairJourney(); expect(j.chooseFamily('console')).toBe(false);
-    j.chooseFamily('phone'); j.chooseSymptom('charge'); expect(j.result.value.estimate.kind).toBe('unavailable');
-    j.chooseModel('inconnu'); expect(j.model.value).toBe('');
-    j.reset(); expect(j.family.value).toBe(''); expect(j.symptom.value).toBe(''); expect(j.step.value).toBe('device');
+  it('recalcule les budgets et invalide les précisions incompatibles', () => {
+    const j=useRepairJourney();j.chooseFamily('phone');j.chooseSymptom('screen');j.choosePrecision('oled');
+    expect(j.result.value.offers[0]?.id).toBe('phone-screen-oled');
+    j.chooseSymptom('battery');expect(j.precision.value).toBe('');expect(j.step.value).toBe('budget');
+    expect(j.result.value.offers[0]?.id).toBe('phone-battery');expect(j.choosePrecision('oled')).toBe(false);
   });
-  it('isole deux visiteurs et ne partage pas les coordonnées', () => {
-    const a = useRepairJourney(), b = useRepairJourney(); a.chooseFamily('laptop');
-    expect(b.family.value).toBe(''); expect(Object.keys(a)).not.toContain('email');
+  it('un modèle inconnu ne masque pas le budget et ne prouve aucune compatibilité', () => {
+    const j=useRepairJourney();j.chooseFamily('laptop');j.chooseSymptom('slow');const ids=j.result.value.offers.map(o=>o.id);
+    j.chooseModel('Modèle inconnu');expect(j.result.value.offers.map(o=>o.id)).toEqual(ids);
+    j.chooseModel('x'.repeat(200));expect(j.model.value.length).toBe(120);
+    j.reset();expect(j.family.value).toBe('');expect(j.model.value).toBe('');expect(j.step.value).toBe('device');
   });
-});
-
-describe('Recalcul avec tarifs synthétiques exclusivement de test', () => {
-  it('remplace le forfait par le diagnostic après changement de symptôme ou de modèle', () => {
-    const grid: RepairGrid = { version: 'TEST', date: '2000-01-01', models: { phone: [{ id: 'fictif', brand: 'Test', label: 'Test' }] }, diagnostic: { kind: 'diagnostic', amount: 12, deduction: '', includes: [], excludes: [] }, rules: [{ family: 'phone', symptom: 'screen', model: 'fictif', service: 'Test', identified: true, estimate: { kind: 'fixed', amount: 72, includes: [], excludes: [] } }] };
-    const j = useRepairJourney(grid); j.chooseFamily('phone'); j.chooseModel('fictif'); j.chooseSymptom('screen');
-    expect(j.result.value.estimate.kind).toBe('fixed');
-    j.chooseModel('inconnu'); expect(j.result.value.estimate.kind).toBe('diagnostic');
-    j.chooseModel('fictif'); j.chooseSymptom('charge'); expect(j.result.value.estimate.kind).toBe('diagnostic');
+  it('isole les visiteurs et refuse les codes incompatibles', () => {
+    const a=useRepairJourney(),b=useRepairJourney();a.chooseFamily('console');expect(b.family.value).toBe('');
+    expect(a.chooseSymptom('battery')).toBe(false);expect(a.chooseFamily('other')).toBe(false);
   });
 });
