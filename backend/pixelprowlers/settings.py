@@ -1,5 +1,6 @@
 import os
 import logging
+import ipaddress
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -89,6 +90,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "pixelprowlers.abuse.TrustedProxyMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -98,6 +100,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+TRUSTED_PROXY_NETWORKS = env_list("DJANGO_TRUSTED_PROXY_NETWORKS")
+for network in TRUSTED_PROXY_NETWORKS:
+    ipaddress.ip_network(network)
+RATE_LIMIT_DATABASE = env("DJANGO_RATE_LIMIT_DATABASE", "/tmp/pixelprowlers-abuse/counters.sqlite3")
 
 ROOT_URLCONF = "pixelprowlers.urls"
 WSGI_APPLICATION = "pixelprowlers.wsgi.application"

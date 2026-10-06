@@ -5,7 +5,6 @@ import time
 
 import graphene
 from django.conf import settings
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
@@ -17,6 +16,8 @@ from audits.dossier_services import attach_client_dossier
 from audits.models import ClientDossier
 from pixelprowlers.notifications import safe_send_mail
 from pixelprowlers.object_access import contact_object, diagnostic_capability, diagnostic_object, public_site_url
+
+from pixelprowlers.abuse import allow, client_ip, require_quota
 
 from .models import Contact, ContactMessage, DiagnosticTicket
 
@@ -59,23 +60,9 @@ def _check_choice(value: str, valid_values: set[str], field: str) -> str:
     return value
 
 
-def _client_ip(info) -> str:
-    request = getattr(getattr(info, "context", None), "request", getattr(info, "context", None))
-    if request is None:
-        return "unknown"
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",", 1)[0].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
-
-
 def _rate_limit(info, action: str, limit: int, window: int) -> bool:
-    key = f"crm:{action}:{_client_ip(info)}"
-    count = cache.get(key, 0)
-    if count >= limit:
-        return False
-    cache.set(key, count + 1, timeout=window)
-    return True
+    request = getattr(getattr(info, "context", None), "request", getattr(info, "context", None))
+    return allow(request, "crm:" + action, limit, window)
 
 
 class ContactMessageType(DjangoObjectType):
@@ -349,6 +336,7 @@ class CreateDiagnosticTicket(graphene.Mutation):
     redirect_to = graphene.String()
 
     def mutate(self, info, **kwargs):
+        require_quota(info.context, "diagnostic-create", 5, 900)
         message = (kwargs.get("message") or "").strip()
         if len(message) < 2 or len(message) > 1000:
             raise GraphQLError("message est invalide.")
@@ -376,9 +364,11 @@ class Query(graphene.ObjectType):
     diagnostic_ticket = graphene.Field(DiagnosticTicketType, ticket_id=graphene.String(required=True))
 
     def resolve_contact_by_token(root, info, token):
+        require_quota(info.context, "contact-lookup")
         return contact_object(token, Contact)
 
     def resolve_diagnostic_ticket(root, info, ticket_id):
+        require_quota(info.context, "diagnostic-lookup")
         return diagnostic_object(ticket_id, DiagnosticTicket)
 
 

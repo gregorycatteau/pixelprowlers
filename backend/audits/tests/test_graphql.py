@@ -1,5 +1,6 @@
 import json
 import time
+import tempfile
 from datetime import timedelta
 from unittest import mock
 
@@ -25,6 +26,8 @@ from urgencies.models import UrgencyRequest
 )
 class GraphQLSmokeTests(TestCase):
     def setUp(self):
+        directory=self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(override_settings(RATE_LIMIT_DATABASE=directory+'/quota.sqlite3'))
         cache.clear()
         self.client = Client(HTTP_HOST="localhost", HTTP_ORIGIN="http://localhost")
 

@@ -10,6 +10,7 @@ from audits.models import (
     RaisonAppel,
     RefonteAudit,
 )
+from pixelprowlers.abuse import require_quota
 from pixelprowlers.object_access import owned_object, request_from_info
 from audits.rdv_services import available_slots, calendar_month
 
@@ -86,6 +87,7 @@ class Query(graphene.ObjectType):
         return RaisonAppel.objects.filter(actif=True)
 
     def resolve_refonte_audit(root, info, reference):
+        require_quota(request_from_info(info), "refonte-lookup")
         return owned_object(request_from_info(info), "refonte", reference, RefonteAudit)
 
     def resolve_creneaux_disponibles(root, info, motif_id, date_debut, date_fin, urgence=False):

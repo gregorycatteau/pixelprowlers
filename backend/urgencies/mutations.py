@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import graphene
-from django.core.cache import cache
+from pixelprowlers.abuse import allow
 from graphql import GraphQLError
 
 from .models import UrgencyRequest
@@ -30,27 +30,8 @@ def _request_from_info(info):
     return getattr(context, "request", context)
 
 
-def _client_ip(request) -> str:
-    if request is None:
-        return "unknown"
-
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",", 1)[0].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
-
-
-def _rate_limit_key(request) -> str:
-    return f"urgency-rate:{_client_ip(request)}"
-
-
 def _check_rate_limit(request) -> bool:
-    key = _rate_limit_key(request)
-    count = cache.get(key, 0)
-    if count >= URGENCY_RATE_LIMIT:
-        return False
-    cache.set(key, count + 1, timeout=URGENCY_RATE_WINDOW_SECONDS)
-    return True
+    return allow(request, "urgency-create", URGENCY_RATE_LIMIT, URGENCY_RATE_WINDOW_SECONDS)
 
 
 class CreateUrgencyRequest(graphene.Mutation):

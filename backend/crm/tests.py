@@ -5,6 +5,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import tempfile
 from django.apps import apps
 from unittest.mock import patch
 from django.contrib.auth import get_user_model
@@ -31,6 +32,8 @@ PRIVATE_MUTATIONS = ['createLead','updateLeadStatus','createFormation','createFo
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',DEFAULT_FROM_EMAIL='qualification@example.invalid',CONTACT_TO='qualification@example.invalid')
 class SecurityBoundaryTests(TestCase):
     def setUp(self):
+        directory=self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(override_settings(RATE_LIMIT_DATABASE=directory+'/quota.sqlite3'))
         cache.clear()
         self.client = Client(HTTP_HOST='localhost',HTTP_ORIGIN='http://localhost')
         self.other = Client(HTTP_HOST='localhost',HTTP_ORIGIN='http://localhost')

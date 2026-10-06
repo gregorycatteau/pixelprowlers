@@ -1,5 +1,5 @@
 import graphene
-from django.core.cache import cache
+from pixelprowlers.abuse import allow, client_ip, require_quota
 from graphql import GraphQLError
 
 from audits.models import AuditDossier
@@ -30,29 +30,13 @@ def _request_from_info(info):
     return getattr(context, "request", context)
 
 
-def _client_ip(request) -> str | None:
-    if request is None:
-        return None
-
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",", 1)[0].strip()
-    return request.META.get("REMOTE_ADDR")
-
-
-def _rate_limit_key(request, action: str) -> str:
-    return f"audit-{action}-rate:{_client_ip(request) or 'unknown'}"
+def _client_ip(request):
+    address = client_ip(request)
+    return None if address == "unknown" else address
 
 
 def _check_rate_limit(request, action: str, limit: int) -> bool:
-    key = _rate_limit_key(request, action)
-    count = cache.get(key, 0)
-
-    if count >= limit:
-        return False
-
-    cache.set(key, count + 1, timeout=15 * 60)
-    return True
+    return allow(request, "audit:" + action, limit, 15 * 60)
 
 
 class CreateAuditDossier(graphene.Mutation):
@@ -177,6 +161,7 @@ class CreateRdvReservation(graphene.Mutation):
     rdv = graphene.Field(RdvType)
 
     def mutate(self, info, **kwargs):
+        require_quota(_request_from_info(info), "reservation-create", 5, 900)
         serializer = RdvReservationSerializer(data=kwargs)
         if not serializer.is_valid():
             raise GraphQLError(_serializer_errors_to_message(serializer.errors))
