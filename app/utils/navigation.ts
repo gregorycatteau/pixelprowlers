@@ -78,7 +78,7 @@ const CTA_DIGITAL_SERVICES: ContextualCta = {
 };
 
 const CTA_DESCRIBE_FAILURE: ContextualCta = {
-  label: 'Décrire ma panne',
+  label: 'Estimer ma réparation',
   href: '/reparation-informatique#parcours-reparation',
 };
 

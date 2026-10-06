@@ -71,11 +71,6 @@
             </div>
 
             <div>
-              <dt>TVA</dt>
-              <dd>{{ publisher.vatStatus }}</dd>
-            </div>
-
-            <div>
               <dt>Adresse électronique</dt>
               <dd>
                 <a :href="`mailto:${publisher.email}`">
@@ -492,7 +487,6 @@ const publisher = {
   siret: "520 890 336 00065",
   registrationRegistry:
     "Registre national des entreprises — RCS de Bordeaux, numéro 520 890 336",
-  vatStatus: "TVA non applicable, article 293 B du Code général des impôts",
   email: "contact@pixelprowlers.io",
   phoneDisplay: "06 68 14 51 52",
   phoneHref: "tel:+33668145152",

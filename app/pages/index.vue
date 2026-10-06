@@ -35,11 +35,11 @@ const description = [
 const heroContent = {
   eyebrow: 'Réparation informatique · Micro-soudure',
   title: 'Avant de remplacer votre appareil, parlons réparation.',
-  subtitle: 'Ordinateur qui ne démarre plus, téléphone qui ne charge plus, carte mère en panne : nous recherchons la cause et proposons une réparation adaptée, jusqu’au composant.',
-  ctaText: 'Décrire ma panne',
+  subtitle: 'Prise de charge endommagée, port HDMI abîmé, circuit électronique en panne : nous recherchons la cause et intervenons au composant lorsque c’est adapté.',
+  ctaText: 'Estimer le budget de ma réparation',
   ctaLink: '/reparation-informatique#parcours-reparation',
-  secondaryCtaText: 'Découvrir nos réparations',
-  secondaryCtaLink: '/reparation-informatique',
+  secondaryCtaText: 'Décrire ma panne directement',
+  secondaryCtaLink: '/contact?besoin=reparation',
   ctaNote: 'Une proposition claire. Votre accord avant intervention.',
 };
 
