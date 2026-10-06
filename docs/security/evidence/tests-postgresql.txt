@@ -1,0 +1,29 @@
+Found 26 test(s).
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+.....Email notification failed (RuntimeError)
+Email notification failed (RuntimeError)
+........Could not reverse url from urgencies.rdv
+JAZZMIN_UI_TWEAKS['dark_mode_theme'] is deprecated and ignored. Use default_theme_mode='auto' (or 'light'/'dark') instead. All themes now support light/dark via data-bs-theme.
+Could not reverse url from urgencies.rdv
+Could not reverse url from urgencies.rdv
+Could not reverse url from urgencies.rdv
+Could not reverse url from urgencies.rdv
+JAZZMIN_UI_TWEAKS['dark_mode_theme'] is deprecated and ignored. Use default_theme_mode='auto' (or 'light'/'dark') instead. All themes now support light/dark via data-bs-theme.
+JAZZMIN_UI_TWEAKS['dark_mode_theme'] is deprecated and ignored. Use default_theme_mode='auto' (or 'light'/'dark') instead. All themes now support light/dark via data-bs-theme.
+Could not reverse url from urgencies.rdv
+JAZZMIN_UI_TWEAKS['dark_mode_theme'] is deprecated and ignored. Use default_theme_mode='auto' (or 'light'/'dark') instead. All themes now support light/dark via data-bs-theme.
+Could not reverse url from urgencies.rdv
+Could not reverse url from urgencies.rdv
+Could not reverse url from urgencies.rdv
+Could not reverse url from urgencies.rdv
+JAZZMIN_UI_TWEAKS['dark_mode_theme'] is deprecated and ignored. Use default_theme_mode='auto' (or 'light'/'dark') instead. All themes now support light/dark via data-bs-theme.
+JAZZMIN_UI_TWEAKS['dark_mode_theme'] is deprecated and ignored. Use default_theme_mode='auto' (or 'light'/'dark') instead. All themes now support light/dark via data-bs-theme.
+.....Email notification failed (RuntimeError)
+Email notification failed (RuntimeError)
+........
+----------------------------------------------------------------------
+Ran 26 tests in 1.189s
+
+OK
+Destroying test database for alias 'default'...
