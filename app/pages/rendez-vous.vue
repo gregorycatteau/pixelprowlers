@@ -88,7 +88,7 @@
           <p class="BookingIntro">
             {{ confirmationDate }} · {{ confirmationSlot }} · {{ confirmation.motif.nom }}
           </p>
-          <p class="ReminderText">Vous recevrez un rappel la veille et 1h avant votre RDV.</p>
+          <p class="ReminderText">Conservez la date et l’heure de votre rendez-vous.</p>
         </div>
 
         <form v-else class="BookingForm" @submit.prevent="submitBooking">

@@ -9,6 +9,8 @@
 import AuditStepper from '~/components/audit/AuditStepper.vue';
 import LandingPageContent from '~/components/sections/LandingPageContent.vue';
 import { landings } from '~/utils/siteContent';
+useSeoMeta({ title: 'Audit de site web : accès, sauvegardes et sécurité | PixelProwlers', description: 'Examiner les accès, la sécurité, les sauvegardes et les performances pour prioriser les actions.', robots: 'index, follow', ogUrl: 'https://pixelprowlers.io/audit-site-web' });
+useHead({ link: [{ rel: 'canonical', href: 'https://pixelprowlers.io/audit-site-web' }] });
 </script>
 
 <style scoped>
