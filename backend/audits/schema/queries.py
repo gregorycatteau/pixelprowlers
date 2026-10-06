@@ -9,9 +9,8 @@ from audits.models import (
     Motif,
     RaisonAppel,
     RefonteAudit,
-    AuditDossier,
-    ClientDossier,
 )
+from pixelprowlers.object_access import owned_object, request_from_info
 from audits.rdv_services import available_slots, calendar_month
 
 from .types import (
@@ -19,8 +18,6 @@ from .types import (
     MotifType,
     RaisonAppelType,
     RefonteAuditType,
-    AuditDossierType,
-    ClientDossierType,
 )
 
 
@@ -42,8 +39,6 @@ class Query(graphene.ObjectType):
     raisons_appel = graphene.List(RaisonAppelType)
 
     refonte_audit = graphene.Field(RefonteAuditType, reference=graphene.String(required=True))
-    audit_dossier = graphene.Field(AuditDossierType, numero_dossier=graphene.String(required=True))
-    client_dossier = graphene.Field(ClientDossierType, dossier_id=graphene.String(required=True))
 
     creneaux_disponibles = graphene.List(
         CreneauDisponibleType,
@@ -91,22 +86,7 @@ class Query(graphene.ObjectType):
         return RaisonAppel.objects.filter(actif=True)
 
     def resolve_refonte_audit(root, info, reference):
-        try:
-            return RefonteAudit.objects.get(reference=reference)
-        except RefonteAudit.DoesNotExist:
-            raise GraphQLError("Audit refonte introuvable.")
-
-    def resolve_audit_dossier(root, info, numero_dossier):
-        try:
-            return AuditDossier.objects.get(numero_dossier=numero_dossier)
-        except AuditDossier.DoesNotExist:
-            raise GraphQLError("Dossier introuvable.")
-
-    def resolve_client_dossier(root, info, dossier_id):
-        try:
-            return ClientDossier.objects.get(dossier_id=dossier_id)
-        except ClientDossier.DoesNotExist:
-            raise GraphQLError("Dossier client introuvable.")
+        return owned_object(request_from_info(info), "refonte", reference, RefonteAudit)
 
     def resolve_creneaux_disponibles(root, info, motif_id, date_debut, date_fin, urgence=False):
         try:

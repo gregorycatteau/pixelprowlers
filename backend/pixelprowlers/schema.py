@@ -2,14 +2,12 @@ import graphene
 
 import audits.schema
 import crm.schema
-import tracking.schema
 import urgencies.schema
 
 
 class Query(
     audits.schema.Query,
     crm.schema.Query,
-    tracking.schema.Query,
     urgencies.schema.Query,
     graphene.ObjectType,
 ):
@@ -19,7 +17,6 @@ class Query(
 class Mutation(
     audits.schema.Mutation,
     crm.schema.Mutation,
-    tracking.schema.Mutation,
     urgencies.schema.Mutation,
     graphene.ObjectType,
 ):

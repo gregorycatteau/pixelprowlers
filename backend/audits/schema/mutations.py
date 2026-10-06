@@ -2,6 +2,8 @@ import graphene
 from django.core.cache import cache
 from graphql import GraphQLError
 
+from audits.models import AuditDossier
+from pixelprowlers.object_access import grant_object, owned_object, require_same_origin
 from audits.rdv_services import reserve_rdv
 from audits.serializers import (
     AuditDossierCreateSerializer,
@@ -70,10 +72,12 @@ class CreateAuditDossier(graphene.Mutation):
         if not _check_rate_limit(request, "create", 8):
             raise GraphQLError("Trop de demandes en peu de temps. Réessayez dans quelques minutes.")
 
+        require_same_origin(request)
         serializer = AuditDossierCreateSerializer(data=kwargs)
         if not serializer.is_valid():
             raise GraphQLError(_serializer_errors_to_message(serializer.errors))
         dossier = serializer.save()
+        grant_object(request, "audit", dossier.numero_dossier, dossier.pk)
         return CreateAuditDossier(dossier=dossier)
 
 
@@ -97,12 +101,14 @@ class SubmitAuditReponses(graphene.Mutation):
         if not _check_rate_limit(request, "submit", 12):
             raise GraphQLError("Trop de soumissions en peu de temps. Réessayez dans quelques minutes.")
 
+        authorized = owned_object(request, "audit", numero_dossier, AuditDossier)
         serializer = AuditSubmitSerializer(
             data={
                 "numero_dossier": numero_dossier,
                 "reponses": reponses,
             },
             context={
+                "authorized_dossier": authorized,
                 "ip_address": _client_ip(request),
                 "user_agent": request.META.get("HTTP_USER_AGENT", "") if request is not None else "",
             },
@@ -145,10 +151,12 @@ class CreateRefonteAudit(graphene.Mutation):
         if not _check_rate_limit(request, "refonte-create", 6):
             raise GraphQLError("Trop de demandes en peu de temps. Réessayez dans quelques minutes.")
 
+        require_same_origin(request)
         serializer = RefonteAuditCreateSerializer(data=kwargs)
         if not serializer.is_valid():
             raise GraphQLError(_serializer_errors_to_message(serializer.errors))
         audit = serializer.save()
+        grant_object(request, "refonte", audit.reference, audit.pk)
         return CreateRefonteAudit(audit=audit)
 
 

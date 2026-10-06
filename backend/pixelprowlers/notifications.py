@@ -15,17 +15,17 @@ def safe_send_mail(*, subject: str, message: str, from_email: str, recipient_lis
     if not from_email or not recipient_list:
         return "not_configured"
 
+    backend = settings.EMAIL_BACKEND
+    smtp = backend == "django.core.mail.backends.smtp.EmailBackend"
+    # In-memory backend is permitted for tests, but is never evidence of delivery.
+    if not smtp and backend != "django.core.mail.backends.locmem.EmailBackend":
+        return "not_configured"
     try:
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=from_email,
-            recipient_list=recipient_list,
-            fail_silently=False,
-        )
-        return "sent"
+        count = send_mail(subject=subject, message=message, from_email=from_email,
+                          recipient_list=recipient_list, fail_silently=False)
+        return ("sent" if count == 1 else "failed") if smtp else "not_configured"
     except Exception as exc:
-        logger.exception("Email notification failed: %s", exc)
+        logger.error("Email notification failed (%s)", type(exc).__name__)
         return "failed"
 
 
@@ -36,7 +36,7 @@ def send_sms_notification(*, to: str, message: str) -> str:
     from_number = getattr(settings, "TWILIO_FROM_NUMBER", "")
 
     if dry_run or not all([account_sid, auth_token, from_number, to]):
-        logger.info("SMS dry-run: to=%s message=%s", to or "not_configured", message)
+        logger.info("SMS disabled or not configured")
         return "dry_run" if to else "not_configured"
 
     payload = parse.urlencode({"From": from_number, "To": to, "Body": message}).encode()
@@ -68,7 +68,7 @@ def send_webhook_notification(*, payload: dict, url: str = "", token: str = "") 
     bearer = token or getattr(settings, "WEBHOOK_TOKEN", "") or getattr(settings, "URGENCY_WEBHOOK_TOKEN", "")
 
     if not endpoint:
-        logger.info("Webhook not configured: %s", payload)
+        logger.info("Webhook not configured")
         return "not_configured"
 
     headers = {"Content-Type": "application/json"}

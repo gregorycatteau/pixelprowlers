@@ -146,10 +146,10 @@ class AuditDossierCreateSerializer(BaseInputValidator):
 
 class AuditSubmitSerializer(BaseInputValidator):
     def validate_numero_dossier(self, value):
-        try:
-            return AuditDossier.objects.get(numero_dossier=value)
-        except AuditDossier.DoesNotExist as exc:
-            raise ValidationError("Dossier introuvable.") from exc
+        dossier = self.context.get("authorized_dossier")
+        if not isinstance(dossier, AuditDossier) or dossier.numero_dossier != value:
+            raise ValidationError("Accès au dossier non autorisé.")
+        return dossier
 
     def validate(self, attrs):
         try:
@@ -161,6 +161,8 @@ class AuditSubmitSerializer(BaseInputValidator):
 
     def save(self, **kwargs):
         dossier = self.validated_data["numero_dossier"]
+        if dossier != self.context.get("authorized_dossier"):
+            raise ValidationError("Accès au dossier non autorisé.")
         calculated = self.validated_data["calculated"]
         ip_address = self.context.get("ip_address")
         user_agent = self.context.get("user_agent", "")
@@ -286,6 +288,7 @@ class RefonteAuditCreateSerializer(BaseInputValidator):
         )
         attach_client_dossier(audit, phase=ClientDossier.Phase.DIAGNOSTIC, source="refonte", metadata={"refonte_reference": audit.reference})
         schedule_refonte_analysis(audit.id)
+        audit.refresh_from_db()
         return audit
 
 

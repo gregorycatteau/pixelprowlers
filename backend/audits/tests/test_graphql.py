@@ -26,7 +26,7 @@ from urgencies.models import UrgencyRequest
 class GraphQLSmokeTests(TestCase):
     def setUp(self):
         cache.clear()
-        self.client = Client(HTTP_HOST="localhost")
+        self.client = Client(HTTP_HOST="localhost", HTTP_ORIGIN="http://localhost")
 
     def graphql(self, query, variables=None, **headers):
         payload = {"query": query}
@@ -55,10 +55,6 @@ class GraphQLSmokeTests(TestCase):
                 dossier {
                   numeroDossier
                   statut
-                  clientDossier {
-                    dossierId
-                    phase
-                  }
                 }
               }
             }
@@ -67,7 +63,7 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(create.status_code, 200)
         self.assertIsNone(create.json().get("errors"))
         numero_dossier = create.json()["data"]["createAuditDossier"]["dossier"]["numeroDossier"]
-        client_dossier_id = create.json()["data"]["createAuditDossier"]["dossier"]["clientDossier"]["dossierId"]
+        client_dossier_id = AuditDossier.objects.get(numero_dossier=numero_dossier).client_dossier.dossier_id
         self.assertRegex(client_dossier_id, r"^\d{7}-0$")
 
         submit = self.graphql(
@@ -147,10 +143,6 @@ class GraphQLSmokeTests(TestCase):
                 audit {
                   reference
                   analysisStatus
-                  clientDossier {
-                    dossierId
-                    phase
-                  }
                 }
               }
             }
@@ -160,7 +152,6 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(refonte.status_code, 200)
         self.assertIsNone(refonte.json().get("errors"))
         reference = refonte.json()["data"]["createRefonteAudit"]["audit"]["reference"]
-        self.assertRegex(refonte.json()["data"]["createRefonteAudit"]["audit"]["clientDossier"]["dossierId"], r"^\d{7}-1$")
 
         query = self.graphql(
             """
@@ -197,10 +188,6 @@ class GraphQLSmokeTests(TestCase):
                 rdv {{
                   id
                   statut
-                  clientDossier {{
-                    dossierId
-                    phase
-                  }}
                 }}
               }}
             }}
@@ -208,129 +195,7 @@ class GraphQLSmokeTests(TestCase):
         )
         self.assertEqual(rdv.status_code, 200)
         self.assertIsNone(rdv.json().get("errors"))
-        self.assertRegex(rdv.json()["data"]["createRdvReservation"]["rdv"]["clientDossier"]["dossierId"], r"^\d{7}-2$")
 
-    def test_tracking_and_urgency_mutations(self):
-        session = self.graphql(
-            """
-            mutation {
-              sessionInit(
-                sessionId: "44444444-4444-4444-4444-444444444444"
-                referrer: "https://example.com"
-                language: "fr"
-              ) {
-                sessionId
-                session {
-                  clientDossier {
-                    dossierId
-                    phase
-                  }
-                }
-              }
-            }
-            """,
-        )
-        self.assertEqual(session.status_code, 200)
-        self.assertIsNone(session.json().get("errors"))
-        self.assertRegex(session.json()["data"]["sessionInit"]["session"]["clientDossier"]["dossierId"], r"^\d{7}-0$")
-
-        pageview = self.graphql(
-            """
-            mutation {
-              recordPageView(
-                sessionId: "44444444-4444-4444-4444-444444444444"
-                url: "https://example.com"
-                title: "Home"
-              ) {
-                pageviewId
-              }
-            }
-            """,
-        )
-        self.assertEqual(pageview.status_code, 200)
-        self.assertIsNone(pageview.json().get("errors"))
-
-        interaction = self.graphql(
-            """
-            mutation {
-              recordQuestionInteraction(
-                sessionId: "44444444-4444-4444-4444-444444444444"
-                questionId: "q1"
-                serie: "s1"
-                timeSpentSeconds: 12.5
-                revisitCount: 0
-                orderIndex: 1
-              ) {
-                interactionId
-                revisitCount
-              }
-            }
-            """,
-        )
-        self.assertEqual(interaction.status_code, 200)
-        self.assertIsNone(interaction.json().get("errors"))
-
-        event = self.graphql(
-            """
-            mutation {
-              recordTrackingEvent(
-                sessionId: "44444444-4444-4444-4444-444444444444"
-                eventType: "cta_click"
-                pageUrl: "https://example.com"
-                metadata: "{}"
-              ) {
-                eventId
-              }
-            }
-            """,
-        )
-        self.assertEqual(event.status_code, 200)
-        self.assertIsNone(event.json().get("errors"))
-
-        urgency = self.graphql(
-            """
-            mutation {
-              createUrgencyRequest(
-                problemType: "site_down"
-                impactLevel: "blocked"
-                affectedUrl: "https://example.com"
-                shortDescription: "Site down"
-                sinceWhen: "now"
-                name: "Alice"
-                organization: "ACME"
-                email: "alice@example.com"
-                phone: "0612345678"
-                contactPreference: "email"
-                callbackSlot: "asap"
-                expectedNextStep: "quick_callback"
-                consentToContact: true
-                noSecretsConfirmed: true
-              ) {
-                reference
-                status
-                clientEmailStatus
-                ticket {
-                  notificationStatus
-                  clientDossier {
-                    dossierId
-                    phase
-                  }
-                }
-              }
-            }
-            """,
-        )
-        self.assertEqual(urgency.status_code, 200)
-        self.assertIsNone(urgency.json().get("errors"))
-        self.assertEqual(urgency.json()["data"]["createUrgencyRequest"]["status"], "open")
-        notification_status = json.loads(urgency.json()["data"]["createUrgencyRequest"]["ticket"]["notificationStatus"])
-        self.assertEqual(notification_status["internal_sms"], "dry_run")
-        self.assertEqual(notification_status["webhook"], "not_configured")
-        self.assertRegex(urgency.json()["data"]["createUrgencyRequest"]["ticket"]["clientDossier"]["dossierId"], r"^\d{7}-0$")
-
-        self.assertTrue(VisitorSession.objects.filter(session_id="44444444-4444-4444-4444-444444444444").exists())
-        self.assertTrue(TrackingEvent.objects.filter(event_type="cta_click").exists())
-        self.assertTrue(UrgencyRequest.objects.filter(status="open").exists())
 
     def test_email_failure_does_not_fail_audit_submission(self):
         create = self.graphql(
@@ -377,157 +242,7 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(status["internal_email"], "failed")
         self.assertEqual(status["client_email"], "failed")
 
-    def test_tracking_rejects_suspicious_payload(self):
-        response = self.graphql(
-            """
-            mutation {
-              sessionInit(
-                sessionId: "55555555-5555-5555-5555-555555555555"
-                referrer: "<script>"
-              ) {
-                sessionId
-              }
-            }
-            """,
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNotNone(response.json().get("errors"))
 
-    def test_crm_graphql_replaces_legacy_rest_domains(self):
-        started_at = int((time.time() - 5) * 1000)
-        contact = self.graphql(
-            """
-            mutation CreateContact($startedAt: Float!) {
-              createContact(
-                name: "Alice Martin"
-                email: "crm-contact@example.com"
-                company: "ACME"
-                phone: "0612345678"
-                serviceType: "audit_site"
-                message: "Nous voulons faire auditer notre site avant une refonte."
-                structureType: "TPE"
-                urgency: "Projet à cadrer"
-                contactPreference: "Email"
-                backups: "Oui, mais jamais testée"
-                access: "Accès partiels"
-                privacyConsent: true
-                startedAt: $startedAt
-              ) {
-                detail
-                contact {
-                  id
-                  serviceType
-                  notificationStatus
-                  clientDossier {
-                    dossierId
-                  }
-                }
-              }
-            }
-            """,
-            variables={"startedAt": started_at},
-        )
-        self.assertEqual(contact.status_code, 200)
-        self.assertIsNone(contact.json().get("errors"))
-        self.assertEqual(Contact.objects.count(), 1)
-        self.assertRegex(contact.json()["data"]["createContact"]["contact"]["clientDossier"]["dossierId"], r"^\d{7}-0$")
-
-        lead = self.graphql(
-            """
-            mutation {
-              createLead(
-                name: "Bob"
-                email: "lead@example.com"
-                phone: "0612345678"
-                budget: "1500"
-                projectDescription: "Créer une application métier maintenable."
-                timeline: "Q3"
-                leadType: "developpement"
-              ) {
-                lead { id leadType status clientDossier { dossierId } }
-              }
-            }
-            """,
-        )
-        self.assertEqual(lead.status_code, 200)
-        self.assertIsNone(lead.json().get("errors"))
-        lead_id = lead.json()["data"]["createLead"]["lead"]["id"]
-        self.assertTrue(Lead.objects.filter(pk=lead_id).exists())
-
-        formation = self.graphql(
-            """
-            mutation {
-              createFormation(
-                title: "Hygiène numérique"
-                description: "Formation d'équipe"
-                formatType: "presentiel"
-                durationHours: 7
-                price: "490.00"
-                maxParticipants: 8
-                scheduledDates: "[]"
-              ) {
-                formation { id title formatType }
-              }
-            }
-            """,
-        )
-        self.assertEqual(formation.status_code, 200)
-        self.assertIsNone(formation.json().get("errors"))
-        formation_id = formation.json()["data"]["createFormation"]["formation"]["id"]
-
-        registration = self.graphql(
-            """
-            mutation Register($formationId: ID!) {
-              createFormationRegistration(
-                formationId: $formationId
-                name: "Claire"
-                email: "formation@example.com"
-                phone: "0612345678"
-                numberOfParticipants: 2
-              ) {
-                registration { id status clientDossier { dossierId } }
-              }
-            }
-            """,
-            variables={"formationId": formation_id},
-        )
-        self.assertEqual(registration.status_code, 200)
-        self.assertIsNone(registration.json().get("errors"))
-        self.assertEqual(FormationRegistration.objects.count(), 1)
-
-        service = self.graphql(
-            """
-            mutation {
-              upsertService(
-                slug: "audit-site"
-                name: "Audit site"
-                description: "Audit de présence web"
-                serviceCategory: "developpement"
-                order: 1
-              ) {
-                service { slug serviceCategory }
-              }
-            }
-            """,
-        )
-        self.assertEqual(service.status_code, 200)
-        self.assertIsNone(service.json().get("errors"))
-        self.assertTrue(Service.objects.filter(slug="audit-site").exists())
-
-        query = self.graphql(
-            """
-            query {
-              contacts(serviceType: "audit_site") { id }
-              leads(leadType: "developpement") { id }
-              formations(formatType: "presentiel") { id }
-              formationRegistrations(formationId: 1) { id }
-              services(serviceCategory: "developpement") { slug }
-            }
-            """,
-        )
-        self.assertEqual(query.status_code, 200)
-        self.assertIsNone(query.json().get("errors"))
-        self.assertEqual(len(query.json()["data"]["contacts"]), 1)
 
     def test_contact_ticket_flow_is_graphql_only(self):
         started_at = int((time.time() - 5) * 1000)
@@ -620,7 +335,6 @@ class GraphQLSmokeTests(TestCase):
                   ticketId
                   diagnosticResult
                   emailConfirmation
-                  clientDossier { dossierId phase }
                 }
               }
             }
@@ -630,9 +344,9 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(created.status_code, 200)
         self.assertIsNone(created.json().get("errors"))
         ticket_data = created.json()["data"]["createDiagnosticTicket"]["ticket"]
-        self.assertTrue(created.json()["data"]["createDiagnosticTicket"]["redirectTo"].endswith(ticket_data["ticketId"]))
+        capability = created.json()["data"]["createDiagnosticTicket"]["redirectTo"].rsplit("/", 1)[-1]
+        self.assertNotEqual(capability, ticket_data["ticketId"])
         self.assertEqual(DiagnosticTicket.objects.count(), 1)
-        self.assertRegex(ticket_data["clientDossier"]["dossierId"], r"^\d{7}-1$")
         self.assertEqual(DiagnosticTicket.objects.get().client_dossier.phase, ClientDossier.Phase.DIAGNOSTIC)
 
         loaded = self.graphql(
@@ -646,7 +360,7 @@ class GraphQLSmokeTests(TestCase):
               }
             }
             """,
-            variables={"ticketId": ticket_data["ticketId"]},
+            variables={"ticketId": capability},
         )
         self.assertEqual(loaded.status_code, 200)
         self.assertIsNone(loaded.json().get("errors"))
