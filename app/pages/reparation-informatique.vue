@@ -2,7 +2,7 @@
   <main class="RepairPage">
     <div class="container"><RepairJourney /></div>
     <div id="prise-en-charge" class="container HandoffSection"><RepairHandoff /></div>
-    <section class="MicroSection" aria-labelledby="micro-title">
+    <section id="micro-soudure" class="MicroSection" aria-labelledby="micro-title">
       <div class="container MicroLayout">
         <EditorialImage name="composant" alt="Illustration d’une intervention sur un composant de carte mère" caption="réparation au composant" />
         <div><p class="eyebrow">La précision au service du réemploi</p><h2 id="micro-title" class="pxp-font-display">Une carte mère en panne peut aussi se réparer.</h2><p>La micro-soudure permet d’intervenir sur certains connecteurs et composants de la carte électronique. Le diagnostic détermine si cette intervention peut prolonger la vie de votre appareil.</p><p>Un travail de précision sous microscope, guidé par la panne identifiée.</p></div>
@@ -46,7 +46,7 @@ p { @apply leading-relaxed; }
 .Note { @apply text-sm; }
 .HandoffSection { @apply pb-4 scroll-mt-32; }
 .RepairSection { @apply py-10 md:py-14; }
-.MicroSection { @apply bg-pxp-ink py-12 text-pxp-paper; }
+.MicroSection { @apply scroll-mt-32 bg-pxp-ink py-12 text-pxp-paper; }
 .MicroLayout { @apply grid items-center gap-10 md:grid-cols-2; }
 .MicroLayout p + p { @apply mt-4; }
 .MicroLayout .eyebrow { @apply text-[#a8d5bd]; }
