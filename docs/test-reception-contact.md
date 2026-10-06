@@ -19,6 +19,10 @@ Inspection limitée aux settings effectifs non secrets du conteneur Django, sans
 
 Cette cause relève d’un lot d’infrastructure/backend distinct. Rien n’est changé dans Django, PostgreSQL, Compose ou les secrets pour cette livraison frontend.
 
+## Recontrôle du 6 octobre 2026
+
+Lecture ciblée des settings effectifs : backend console, hôte d’exemple smtp.example.com, port 587, TLS/SSL désactivés et destinataire interne absent. Le blocage reste confirmé. Aucun secret, demande client ou log de production consulté, aucune notification envoyée. Le correctif et les destinataires autorisés restent à qualifier séparément.
+
 ## Chemin réellement exécuté
 
 ContactForm → useContactForm → POST /graphql/ createContact → validations/anti-abus existants → Contact → ContactMessage → attach_client_dossier → _notify_contact et _notify_contact_client → safe_send_mail → backend Django sélectionné. Le suivi existant utilise un jeton secret ; les preuves ne doivent jamais contenir son URL.
