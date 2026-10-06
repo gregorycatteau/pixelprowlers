@@ -2,6 +2,9 @@
 ARG BASE_IMAGE=pixelprowlers-django:security-base-efd98e84bc44
 FROM ${BASE_IMAGE}
 ARG DELIVERY_SHA
+# Only the writable child-image filesystem is affected: no host path or volume.
+# Remove stale source/tests from the dependency image before copying the reviewed tree.
+RUN python -c "import shutil; from pathlib import Path; shutil.rmtree('/app'); Path('/app').mkdir()"
 WORKDIR /app
 COPY . .
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
