@@ -32,7 +32,7 @@ export type DiagnosticTicket = {
     timestamp: string;
   };
   emailConfirmation?: {
-    status: 'sent' | 'not_configured' | 'failed';
+    status: 'sent' | 'pending' | 'relay_accepted' | 'uncertain' | 'transient_failed' | 'permanent_failed' | 'not_configured' | 'failed';
   };
 };
 
@@ -426,14 +426,17 @@ export const emailConfirmationLabel = (ticket: DiagnosticTicket | null) => {
   const status = ticket?.emailConfirmation?.status;
 
   if (status === 'sent') {
-    return 'Email de confirmation envoyé à';
+    return 'Email accepté par le relais, adresse prévue';
   }
 
-  if (status === 'failed') {
+  if (status === 'pending') return 'Notification en attente, adresse prévue';
+  if (status === 'relay_accepted') return 'Email accepté par le relais, adresse prévue';
+  if (status === 'uncertain') return 'Envoi à vérifier par l’atelier, adresse prévue';
+  if (status === 'transient_failed' || status === 'permanent_failed' || status === 'failed') {
     return "Email de confirmation non envoyé, adresse prévue";
   }
 
-  return 'Email de confirmation prêt pour';
+  return 'Notification email non configurée, adresse prévue';
 };
 
 export const useDiagnostic = () => {

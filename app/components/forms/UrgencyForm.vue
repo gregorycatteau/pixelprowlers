@@ -5,6 +5,7 @@
         <p class="eyebrow">Votre demande est enregistrée</p>
         <h2>Référence : {{ result.reference }}</h2>
         <p>Conservez cette référence pour le suivi. Nous conviendrons des modalités d’intervention après un premier échange.</p>
+        <AppButton v-if="safeFollowupPath(result.followupPath)" :href="result.followupPath">Suivre ma demande</AppButton>
         <AppButton variant="secondary" type="button" @click="reset">Déclarer une autre urgence</AppButton>
       </div>
 
@@ -162,6 +163,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeFollowupPath } from '~/utils/followup';
 import AppButton from '~/components/ui/AppButton.vue';
 import {
   urgencyContactOptions,

@@ -13,7 +13,9 @@ export default defineNuxtConfig({
   },
   routeRules: {
     '/reparation-informatique/decrire-ma-panne': { redirect: '/contact?besoin=reparation' },
-    '/ticket/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+    '/ticket/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } },
+    '/audit-refonte/resultat': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } },
+    '/diagnostic-result/**': { headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } },
   },
   runtimeConfig: {
     graphqlApiUrl: process.env.GRAPHQL_API_URL || defaultGraphqlApiUrl,

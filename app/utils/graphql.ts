@@ -242,6 +242,7 @@ export const SUBMIT_AUDIT_REPONSES_MUTATION = /* GraphQL */ `
       scores_series: scoresSeries
       score_global: scoreGlobal
       pilier_faible: pilierFaible
+      followup_path: followupPath
       notification_status: notificationStatus
     }
   }
@@ -282,6 +283,7 @@ export const REFONTE_AUDIT_QUERY = /* GraphQL */ `
   query RefonteAudit($reference: String!) {
     refonteAudit(reference: $reference) {
       reference
+      followup_path: followupPath
       site_url: siteUrl
       analysis_status: analysisStatus
       technical_report: technicalReport
@@ -371,6 +373,7 @@ export const CREATE_RDV_RESERVATION_MUTATION = /* GraphQL */ `
       urgence: $urgence
     ) {
       rdv {
+        followup_path: followupPath
         motif {
           id
           nom
@@ -425,6 +428,7 @@ export const CREATE_URGENCY_REQUEST_MUTATION = /* GraphQL */ `
       reference
       status
       message
+      followupPath
       clientEmailStatus
       ticket {
         reference

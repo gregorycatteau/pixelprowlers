@@ -28,7 +28,8 @@ export type UrgencyExpectedNextStep =
 export type UrgencyResponse = {
   reference: string;
   status: 'open';
-  clientEmailStatus: 'sent' | 'not_configured' | 'failed';
+  followupPath: string;
+  clientEmailStatus: 'sent' | 'pending' | 'not_configured' | 'failed';
   message: string;
 };
 
@@ -124,6 +125,7 @@ export const useUrgency = () => {
       const response = await graphqlRequest<{
         createUrgencyRequest: {
           reference: string | null;
+          followupPath: string;
           status: string | null;
           message: string | null;
           clientEmailStatus: UrgencyResponse['clientEmailStatus'] | null;
@@ -152,6 +154,7 @@ export const useUrgency = () => {
 
       result.value = {
         reference: response.createUrgencyRequest.reference || '',
+        followupPath: response.createUrgencyRequest.followupPath,
         status: (response.createUrgencyRequest.status || 'open') as 'open',
         clientEmailStatus: response.createUrgencyRequest.clientEmailStatus || 'not_configured',
         message: response.createUrgencyRequest.message || 'Demande urgente enregistrée.',

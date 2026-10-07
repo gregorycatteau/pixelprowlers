@@ -1,13 +1,14 @@
 <template>
   <section class="ResultSummary" aria-labelledby="audit-result-title">
     <div class="ResultHeader">
-      <p class="ResultKicker">Résultat transmis</p>
+      <p class="ResultKicker">Dossier enregistré</p>
       <h2 id="audit-result-title" class="ResultTitle">Votre dossier est complet.</h2>
       <p class="ResultIntro">
-        Un consultant PixelProwlers reprendra votre dossier sous 48h avec une analyse détaillée et des recommandations personnalisées.
+        Votre questionnaire est enregistré pour une prise en charge humaine. Vous pouvez poursuivre l’échange dans votre suivi.
       </p>
     </div>
 
+    <AppButton v-if="safeFollowupPath(result.followup_path)" :href="result.followup_path">Suivre mon dossier</AppButton>
     <div class="ResultScorePanel">
       <span class="ResultScoreLabel">Score global</span>
       <strong class="ResultScoreValue">{{ normalizedGlobalScore }}/10</strong>
@@ -25,6 +26,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import AppButton from '~/components/ui/AppButton.vue';
+import { safeFollowupPath } from '~/utils/followup';
 import type { AuditResult } from '~/composables/useAudit';
 
 const props = defineProps<{

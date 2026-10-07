@@ -3,7 +3,7 @@
     <section class="RdvHero" aria-labelledby="rdv-title">
       <p class="RdvKicker">Prendre rendez-vous</p>
       <h1 id="rdv-title" class="RdvTitle">Choisis le bon moment, on s'occupe du reste.</h1>
-      <p class="RdvIntro">Un créneau clair, un motif précis, et un rappel avant l'échange.</p>
+      <p class="RdvIntro">Un créneau clair et un motif précis pour préparer l’échange.</p>
     </section>
 
     <section class="RdvLayout" aria-label="Réservation de rendez-vous">
@@ -17,33 +17,7 @@
         <p class="RdvKicker">Rendez-vous</p>
         <h2>On peut quand même vous répondre rapidement</h2>
         <p>Le calendrier ne charge pas pour le moment. Décrivez votre besoin pour convenir d’un échange.</p>
-        <div v-if="fallbackSubmitted" class="FallbackConfirmation" role="status">
-          <h3>Demande prête à envoyer.</h3>
-          <p>Votre message est ouvert dans votre messagerie. Envoyez-le pour proposer un échange.</p>
-          <div class="FallbackActions">
-            <NuxtLink class="ButtonBase ButtonSecondary" to="/urgence">C'est urgent</NuxtLink>
-            <NuxtLink class="ButtonBase ButtonSecondary" to="/contact">Contact direct</NuxtLink>
-          </div>
-        </div>
-        <form v-else class="FallbackForm" @submit.prevent="submitFallback">
-          <label class="BookingField">
-            <span class="BookingLabel">Nom</span>
-            <input v-model="fallback.name" required class="BookingInput" type="text" autocomplete="name" placeholder="Votre nom">
-          </label>
-          <label class="BookingField">
-            <span class="BookingLabel">Email</span>
-            <input v-model="fallback.email" required class="BookingInput" type="email" autocomplete="email" placeholder="vous@exemple.fr">
-          </label>
-          <label class="BookingField">
-            <span class="BookingLabel">Message</span>
-            <textarea v-model="fallback.message" required class="BookingTextarea" rows="4" placeholder="Décrivez votre besoin en quelques lignes."></textarea>
-          </label>
-          <div class="FallbackActions">
-            <button class="ButtonBase ButtonPrimary" type="submit" :disabled="!canSubmitFallback">Envoyer la demande</button>
-            <NuxtLink class="ButtonBase ButtonSecondary" to="/contact">Contact</NuxtLink>
-            <NuxtLink class="ButtonBase ButtonSecondary" to="/urgence">Urgence</NuxtLink>
-          </div>
-        </form>
+        <ContactForm initial-need="autre" />
       </section>
 
       <section v-else class="CalendarPanel" aria-labelledby="calendar-title">
@@ -89,6 +63,7 @@
             {{ confirmationDate }} · {{ confirmationSlot }} · {{ confirmation.motif.nom }}
           </p>
           <p class="ReminderText">Conservez la date et l’heure de votre rendez-vous.</p>
+          <AppButton v-if="safeFollowupPath(confirmation.followup_path)" :href="confirmation.followup_path">Suivre ma demande</AppButton>
         </div>
 
         <form v-else class="BookingForm" @submit.prevent="submitBooking">
@@ -176,6 +151,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import AppButton from '~/components/ui/AppButton.vue';
+import { safeFollowupPath } from '~/utils/followup';
+import ContactForm from '~/components/forms/ContactForm.vue';
 import {
   CALENDRIER_MOIS_QUERY,
   CREATE_RDV_RESERVATION_MUTATION,
@@ -192,6 +169,7 @@ type DayState = { date: string; statut: string };
 type Slot = { date: string; heure_debut: string; heure_fin: string; label: string };
 type BookingResponse = {
   motif: Motif;
+  followup_path: string;
   creneaux: Array<{ date: string; heure_debut: string; heure_fin: string }>;
 };
 
@@ -221,6 +199,7 @@ type GraphQLSlot = {
 type GraphQLBookingResponse = {
   createRdvReservation: {
     rdv: {
+      followup_path: string;
       motif: GraphQLMotif;
       creneaux: Array<{
         date: string;
@@ -249,12 +228,6 @@ const isSubmitting = ref(false);
 const bookingError = ref('');
 const loadError = ref('');
 const confirmation = ref<BookingResponse | null>(null);
-const fallbackSubmitted = ref(false);
-const fallback = reactive({
-  name: '',
-  email: '',
-  message: '',
-});
 const form = reactive({
   prenom: '',
   nom: '',
@@ -271,21 +244,6 @@ const daySlots = computed(() => slots.value.filter((slot) => slot.date === selec
 const canSubmit = computed(() => Boolean(selectedMotif.value && selectedSlot.value && form.prenom && form.nom && form.email && form.telephone));
 const isInitialLoading = computed(() => isLoadingMonth.value || isLoadingMotifs.value);
 const bookingUnavailable = computed(() => Boolean(loadError.value) || (!isInitialLoading.value && (motifs.value.length === 0 || monthStates.value.length === 0)));
-const canSubmitFallback = computed(() => Boolean(
-  fallback.name.trim()
-  && fallback.email.includes('@')
-  && fallback.message.trim(),
-));
-const fallbackMailto = computed(() => {
-  const subject = encodeURIComponent('Demande de rendez-vous PixelProwlers');
-  const body = encodeURIComponent([
-    `Nom : ${fallback.name}`,
-    `Email : ${fallback.email}`,
-    '',
-    fallback.message || 'Bonjour, je souhaite être recontacté pour un rendez-vous.',
-  ].join('\n'));
-  return `mailto:contact@pixelprowlers.fr?subject=${subject}&body=${body}`;
-});
 const confirmationDate = computed(() => confirmation.value?.creneaux[0]
   ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(confirmation.value.creneaux[0].date))
   : '');
@@ -378,14 +336,7 @@ function selectDate(iso: string) {
   selectedDate.value = iso;
 }
 
-function submitFallback() {
-  if (!canSubmitFallback.value) {
-    return;
-  }
 
-  fallbackSubmitted.value = true;
-  window.location.href = fallbackMailto.value;
-}
 
 function slotKey(slot: Slot) {
   return `${slot.date}-${slot.heure_debut}-${slot.heure_fin}`;
@@ -478,6 +429,7 @@ async function submitBooking() {
         creneau_type: booking.motif.creneau_type,
       },
       creneaux: booking.creneaux,
+      followup_path: booking.followup_path,
     };
     await loadMonth();
   } catch (error) {

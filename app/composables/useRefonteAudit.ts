@@ -30,6 +30,7 @@ export type RefonteAnswers = Record<string, string | string[] | boolean>;
 export type RefonteAuditResult = {
   reference: string;
   site_url: string;
+  followup_path: string;
   analysis_status: 'en_cours' | 'termine' | 'echec_partiel' | 'non_analysable' | 'echec';
   technical_report: Record<string, any>;
   pagespeed_report: Record<string, any>;

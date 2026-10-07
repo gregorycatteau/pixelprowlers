@@ -24,7 +24,7 @@ export type ContactTicket = {
     createdAt: string;
   }>;
   emailConfirmation: {
-    status: 'sent' | 'not_configured' | 'failed';
+    status: 'sent' | 'pending' | 'relay_accepted' | 'uncertain' | 'transient_failed' | 'permanent_failed' | 'not_configured' | 'failed';
   };
   createdAt: string;
   updatedAt: string;
@@ -81,6 +81,7 @@ const CREATE_CONTACT_MUTATION = /* GraphQL */ `
     $phone: String
     $serviceType: String!
     $demandType: String
+    $need: String
     $message: String!
     $privacyConsent: Boolean
     $startedAt: Float
@@ -92,6 +93,7 @@ const CREATE_CONTACT_MUTATION = /* GraphQL */ `
       phone: $phone
       serviceType: $serviceType
       demandType: $demandType
+      need: $need
       message: $message
       privacyConsent: $privacyConsent
       startedAt: $startedAt
@@ -136,14 +138,17 @@ export const contactEmailLabel = (ticket: ContactTicket | null) => {
   const status = ticket?.emailConfirmation?.status;
 
   if (status === 'sent') {
-    return 'Email de confirmation envoyé à';
+    return 'Email accepté par le relais, adresse prévue';
   }
 
-  if (status === 'failed') {
+  if (status === 'pending') return 'Notification en attente, adresse prévue';
+  if (status === 'relay_accepted') return 'Email accepté par le relais, adresse prévue';
+  if (status === 'uncertain') return 'Envoi à vérifier par l’atelier, adresse prévue';
+  if (status === 'transient_failed' || status === 'permanent_failed' || status === 'failed') {
     return "Email de confirmation non envoyé, adresse prévue";
   }
 
-  return 'Email de confirmation prêt pour';
+  return 'Notification email non configurée, adresse prévue';
 };
 
 export const statusLabel = (status: ContactStatus) => ({
@@ -194,6 +199,7 @@ export const useContactForm = (initialNeed: ContactNeed | '' = '') => {
         company: '',
         phone: form.phone,
         ...contactApiMapping[need],
+        need,
         message,
         privacyConsent: true,
         startedAt: Date.now() - 5000,

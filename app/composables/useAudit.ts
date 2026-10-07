@@ -34,6 +34,7 @@ export type AuditResult = {
   score_global: number | string;
   pilier_faible: string;
   notification_status: Record<string, string>;
+  followup_path: string;
 };
 
 export const auditSeries: AuditSeries[] = [
@@ -138,6 +139,7 @@ export const useAudit = () => {
       score_global: number | string;
       pilier_faible: string;
       notification_status: Record<string, string> | string;
+      followup_path: string;
     };
   };
 
@@ -213,6 +215,7 @@ export const useAudit = () => {
 
       result.value = {
         numero_dossier: response.submitAuditReponses.numero_dossier,
+        followup_path: response.submitAuditReponses.followup_path,
         statut: response.submitAuditReponses.statut,
         scores_series: parseGraphqlJson<AuditScoreSeries>(
           response.submitAuditReponses.scores_series,
