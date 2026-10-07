@@ -1,6 +1,8 @@
 import graphene
 from pixelprowlers.abuse import allow, client_ip, require_quota
 from graphql import GraphQLError
+from django.db import IntegrityError
+from crm.operator_services import followup_path
 
 from audits.models import AuditDossier
 from pixelprowlers.object_access import grant_object, owned_object, require_same_origin
@@ -76,6 +78,7 @@ class SubmitAuditReponses(graphene.Mutation):
     score_global = graphene.String()
     pilier_faible = graphene.String()
     notification_status = graphene.JSONString()
+    followup_path = graphene.String()
 
     def mutate(self, info, numero_dossier, reponses):
         if not isinstance(reponses, dict):
@@ -109,6 +112,7 @@ class SubmitAuditReponses(graphene.Mutation):
             score_global=str(reponse.score_global),
             pilier_faible=reponse.pilier_faible,
             notification_status=dossier.notification_status,
+            followup_path=followup_path(dossier),
         )
 
 
@@ -168,7 +172,9 @@ class CreateRdvReservation(graphene.Mutation):
 
         try:
             rdv = serializer.save()
-        except ValueError as exc:
+        except (ValueError, IntegrityError) as exc:
+            if isinstance(exc, IntegrityError):
+                raise GraphQLError("Ce créneau vient d'être réservé. Merci d'en choisir un autre.") from exc
             raise GraphQLError(str(exc)) from exc
 
         return CreateRdvReservation(rdv=rdv)

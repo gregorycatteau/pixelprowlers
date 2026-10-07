@@ -4,6 +4,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.conf import settings
 from django.db import transaction
 
+from crm.operator_services import followup_path
+from pixelprowlers.object_access import public_site_url
 from pixelprowlers.notifications import safe_send_mail
 
 from .dossier_services import attach_client_dossier
@@ -82,6 +84,7 @@ def notify_completed_audit(dossier: AuditDossier, score_global: Decimal) -> dict
 
     if _email_enabled() and internal_email:
         statuses["internal_email"] = safe_send_mail(
+            event_key=f"audit:{dossier.pk}:finalized:internal",
             subject=f"[AUDIT] {dossier.numero_dossier} - score {score_global}/10",
             message="\n".join(
                 [
@@ -101,6 +104,7 @@ def notify_completed_audit(dossier: AuditDossier, score_global: Decimal) -> dict
 
     if _email_enabled():
         statuses["client_email"] = safe_send_mail(
+            event_key=f"audit:{dossier.pk}:finalized:client",
             subject=f"Audit PixelProwlers reçu - {dossier.numero_dossier}",
             message="\n".join(
                 [
@@ -110,8 +114,10 @@ def notify_completed_audit(dossier: AuditDossier, score_global: Decimal) -> dict
                     f"Numéro de dossier : {dossier.numero_dossier}",
                     f"Dossier client : {dossier.client_dossier.dossier_id if dossier.client_dossier_id else '-'}",
                     "",
-                    "Un consultant PixelProwlers reprendra votre dossier sous 48h avec une analyse détaillée et des recommandations personnalisées.",
+                    "Votre dossier est enregistré pour une prise en charge humaine.",
                     "",
+                    f"Suivi et échange avec l’atelier : {public_site_url()}{followup_path(dossier)}",
+                    "Répondez depuis ce suivi ; les réponses email ne sont pas automatiquement rattachées.",
                     "PixelProwlers",
                 ]
             ),
@@ -119,4 +125,8 @@ def notify_completed_audit(dossier: AuditDossier, score_global: Decimal) -> dict
             recipient_list=[dossier.email],
         )
 
+    if dossier.followup_contact_id:
+        contact = dossier.followup_contact
+        contact.notification_status = {"client_email": statuses.get("client_email", "not_configured"), "client_event": f"audit:{dossier.pk}:finalized:client"}
+        contact.save(update_fields=["notification_status"])
     return statuses

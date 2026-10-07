@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, connection, IntegrityError
 from django.utils import timezone
 
+from crm.operator_services import followup_path
+from pixelprowlers.object_access import public_site_url
 from pixelprowlers.notifications import safe_send_mail
 
 from .dossier_services import get_or_create_client_dossier
@@ -130,6 +132,11 @@ def reserve_rdv(*, motif: Motif, slot: dict, contact_data: dict, raison_ids: lis
     start = datetime.strptime(slot["heure_debut"], "%H:%M").time()
     end = datetime.strptime(slot["heure_fin"], "%H:%M").time()
 
+    # Serialize the empty-day check too; the exclusion constraint also protects
+    # direct/admin writes and overlapping (not only identical) time intervals.
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_advisory_xact_lock(%s, %s)", [816120, day.toordinal()])
+
     blocked = CreneauCalendrier.objects.select_for_update().filter(
         date=day,
         statut__in=RESERVED_STATUSES,
@@ -170,6 +177,10 @@ def reserve_rdv(*, motif: Motif, slot: dict, contact_data: dict, raison_ids: lis
     rdv = Rdv.objects.create(contact=contact, motif=motif, urgence=urgence, message=message, client_dossier=client_dossier)
     rdv.creneaux.add(creneau)
     rdv.raisons.set(RaisonAppel.objects.filter(id__in=raison_ids, actif=True))
+    from crm.operator_services import open_followup
+    followup = open_followup(rdv, name=f"{contact.prenom} {contact.nom}", email=contact.email, phone=contact.telephone, service="autre", demand="partnership", message=message or "Réservation de rendez-vous", context={"rdv": rdv.pk, "date": str(day), "motif": motif.nom})
+    from crm.schema import _notify_contact
+    _notify_contact(followup, {})
     create_reminders(rdv, day, start)
     rdv.notification_status = notify_rdv_confirmation(rdv)
     rdv.save(update_fields=["notification_status", "updated_at"])
@@ -196,6 +207,7 @@ def notify_rdv_confirmation(rdv: Rdv) -> dict[str, str]:
         return status
 
     status["client_email"] = safe_send_mail(
+        event_key=f"rdv:{rdv.pk}:confirmation:client",
         subject="Votre rendez-vous PixelProwlers est confirmé",
         message="\n".join([
             f"Bonjour {rdv.contact.prenom},",
@@ -208,39 +220,45 @@ def notify_rdv_confirmation(rdv: Rdv) -> dict[str, str]:
             "",
             "Vous recevrez un rappel la veille et 1h avant votre RDV.",
             "",
-            "PixelProwlers",
+            f"Suivi et échange avec l’atelier : {public_site_url()}{followup_path(rdv)}",
+                    "Répondez depuis ce suivi ; les réponses email ne sont pas automatiquement rattachées.",
+                    "PixelProwlers",
         ]),
         from_email=getattr(settings, "DEFAULT_FROM_EMAIL"),
         recipient_list=[rdv.contact.email],
     )
+    if rdv.followup_contact_id:
+        contact = rdv.followup_contact
+        contact.notification_status = {"client_email": status.get("client_email", "not_configured"), "client_event": f"rdv:{rdv.pk}:confirmation:client"}
+        contact.save(update_fields=["notification_status"])
     return status
 
 
 def send_due_reminders() -> int:
-    sent = 0
+    queued = 0
     now = timezone.now()
-    for reminder in RdvRappel.objects.select_related("rdv__contact").filter(status="pending", scheduled_at__lte=now):
-        try:
-            notify_rdv_reminder(reminder)
-            reminder.status = "sent"
-            reminder.sent_at = now
-            reminder.last_error = ""
-            reminder.save(update_fields=["status", "sent_at", "last_error"])
-            sent += 1
-        except Exception as exc:
-            reminder.status = "failed"
-            reminder.last_error = str(exc)[:500]
-            reminder.save(update_fields=["status", "last_error"])
-    return sent
+    with transaction.atomic():
+        reminders = RdvRappel.objects.select_for_update(skip_locked=True, of=("self",)).select_related("rdv__contact").filter(status="pending", scheduled_at__lte=now)
+        for reminder in reminders:
+            if reminder.rdv.statut == Rdv.Statut.ANNULE:
+                reminder.status = "cancelled"
+            elif notify_rdv_reminder(reminder) == "pending":
+                reminder.status = "queued"
+                queued += 1
+            else:
+                continue
+            reminder.save(update_fields=["status"])
+    return queued
 
 
-def notify_rdv_reminder(reminder: RdvRappel) -> None:
+def notify_rdv_reminder(reminder: RdvRappel) -> str:
     if not getattr(settings, "DEFAULT_FROM_EMAIL", ""):
         return
     creneau = reminder.rdv.creneaux.order_by("date", "heure_debut").first()
     if not creneau:
         return
     status = safe_send_mail(
+        event_key=f"rdv-reminder:{reminder.pk}:client",
         subject="Rappel de votre rendez-vous PixelProwlers",
         message="\n".join([
             f"Bonjour {reminder.rdv.contact.prenom},",
@@ -253,5 +271,4 @@ def notify_rdv_reminder(reminder: RdvRappel) -> None:
         from_email=getattr(settings, "DEFAULT_FROM_EMAIL"),
         recipient_list=[reminder.rdv.contact.email],
     )
-    if status != "sent":
-        raise RuntimeError(f"Rappel email non envoyé: {status}")
+    return status

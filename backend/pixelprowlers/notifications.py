@@ -11,7 +11,11 @@ from django.core.mail import send_mail
 logger = logging.getLogger(__name__)
 
 
-def safe_send_mail(*, subject: str, message: str, from_email: str, recipient_list: list[str]) -> str:
+def safe_send_mail(*, subject: str, message: str, from_email: str, recipient_list: list[str], event_key: str = "") -> str:
+    if event_key:
+        from crm.outbox import enqueue
+        return enqueue(event_key=event_key, subject=subject, message=message,
+                       from_email=from_email, recipient_list=recipient_list)
     if not from_email or not recipient_list:
         return "not_configured"
 

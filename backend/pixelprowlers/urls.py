@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404
 from django.urls import path
+from pathlib import Path
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
@@ -13,6 +14,17 @@ from .schema import schema
 
 def health_check(_request):
     return JsonResponse({"status": "ok"})
+
+
+def collected_static(_request, asset):
+    root = Path(settings.STATIC_ROOT).resolve()
+    target = (root / asset).resolve()
+    if not target.is_relative_to(root) or not target.is_file():
+        raise Http404
+    response = FileResponse(target.open("rb"))
+    response["Cache-Control"] = "public, max-age=3600"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 class SecureGraphQLView(GraphQLView):
@@ -33,6 +45,7 @@ class SecureGraphQLView(GraphQLView):
 
 
 urlpatterns = [
+    path("static/<path:asset>", collected_static),
     path("admin/", admin.site.urls),
     path("health/", health_check),
     path("graphql/", SecureGraphQLView.as_view(schema=schema)),

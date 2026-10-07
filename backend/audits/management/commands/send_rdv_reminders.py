@@ -8,4 +8,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         sent = send_due_reminders()
-        self.stdout.write(self.style.SUCCESS(f"Rappels RDV envoyés: {sent}"))
+        self.stdout.write(self.style.SUCCESS(f"Rappels RDV mis en file: {sent} ; réception non prouvée"))

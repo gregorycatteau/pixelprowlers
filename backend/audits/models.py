@@ -1,9 +1,13 @@
 import json
 import hmac
 import hashlib
+from decimal import Decimal
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeOperators
+from django.db.models.expressions import RawSQL
 from django.utils import timezone
 
 
@@ -123,6 +127,8 @@ class AuditDossier(models.Model):
         ClientDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="audit_dossiers"
     )
 
+    followup_contact = models.OneToOneField("crm.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="auditdossier_followup")
+
     class Meta:
         ordering = ["-date_creation"]
 
@@ -169,7 +175,7 @@ class AuditReponse(models.Model):
         canonical = json.dumps(
             {
                 "reponses": self.reponses,
-                "score_global": str(self.score_global),
+                "score_global": str(Decimal(str(self.score_global)).quantize(Decimal("0.01"))),
                 "date_soumission": self.date_soumission.isoformat() if self.date_soumission else "",
                 "ip_address": self.ip_address or "",
                 "telephone_signataire": self.telephone_signataire or "",
@@ -180,12 +186,18 @@ class AuditReponse(models.Model):
         return hmac.new(sig_key.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def save(self, *args, **kwargs):
-        if not self.pk and not self.signature_hash:
+        # Reject missing keys before persistence; update signatures with answers.
+        if len(settings.AUDIT_SIGNATURE_KEY) < 32 or len(set(settings.AUDIT_SIGNATURE_KEY)) < 8:
+            raise RuntimeError("AUDIT_SIGNATURE_KEY n'est pas configuré")
+        if not self.date_soumission:
+            self.date_soumission = timezone.now()
+        with transaction.atomic():
             super().save(*args, **kwargs)
-            self.signature_hash = self.compute_signature()
+            self.signature_hash = AuditReponse.objects.get(pk=self.pk).compute_signature()
             AuditReponse.objects.filter(pk=self.pk).update(signature_hash=self.signature_hash)
-        else:
-            super().save(*args, **kwargs)
+
+    def signature_is_valid(self):
+        return hmac.compare_digest(self.signature_hash, self.compute_signature())
 
 
 class RefonteAudit(models.Model):
@@ -221,6 +233,8 @@ class RefonteAudit(models.Model):
     client_dossier = models.ForeignKey(
         ClientDossier, on_delete=models.SET_NULL, blank=True, null=True, related_name="refonte_audits"
     )
+
+    followup_contact = models.OneToOneField("crm.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="refonteaudit_followup")
 
     class Meta:
         ordering = ["-date_creation"]
@@ -348,6 +362,12 @@ class CreneauCalendrier(models.Model):
 
     class Meta:
         ordering = ["date", "heure_debut"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(heure_fin__gt=models.F("heure_debut")), name="creneau_positive_duration"),
+            ExclusionConstraint(name="creneau_no_reserved_overlap",
+                expressions=[(RawSQL("tsrange(date + heure_debut, date + heure_fin, '[)')", []), RangeOperators.OVERLAPS)],
+                condition=models.Q(statut__in=["reserve_audit", "reserve_intervention", "bloque"])),
+        ]
         indexes = [
             models.Index(fields=["date", "statut"], name="creneau_date_statut_idx"),
         ]
@@ -374,6 +394,8 @@ class Rdv(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    followup_contact = models.OneToOneField("crm.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="rdv_followup")
 
     class Meta:
         ordering = ["-created_at"]

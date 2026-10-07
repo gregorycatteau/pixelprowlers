@@ -56,6 +56,8 @@ class UrgencyRequest(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    followup_contact = models.OneToOneField("crm.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="urgencyrequest_followup")
+
     class Meta:
         ordering = ["-created_at"]
 

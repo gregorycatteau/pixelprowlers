@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     "corsheaders",
     "graphene_django",
     "audits",
@@ -96,6 +97,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "pixelprowlers.admin_security.AdminLoginThrottle",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -104,6 +106,12 @@ TRUSTED_PROXY_NETWORKS = env_list("DJANGO_TRUSTED_PROXY_NETWORKS")
 for network in TRUSTED_PROXY_NETWORKS:
     ipaddress.ip_network(network)
 RATE_LIMIT_DATABASE = env("DJANGO_RATE_LIMIT_DATABASE", "/tmp/pixelprowlers-abuse/counters.sqlite3")
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 ROOT_URLCONF = "pixelprowlers.urls"
 WSGI_APPLICATION = "pixelprowlers.wsgi.application"
@@ -215,6 +223,10 @@ EMAIL_PORT = int(env("SMTP_PORT", "25") or "25")
 EMAIL_HOST_USER = env("SMTP_USER")
 EMAIL_HOST_PASSWORD = env("SMTP_PASS")
 EMAIL_USE_TLS = env_bool("SMTP_USE_TLS", env_bool("SMTP_SECURE", False))
+EMAIL_USE_SSL = env_bool("SMTP_USE_SSL", False)
+EMAIL_TIMEOUT = int(env("SMTP_TIMEOUT", "15"))
+NOTIFICATION_REPLY_TO = env("NOTIFICATION_REPLY_TO")
+NOTIFICATION_DELIVERY_ENABLED = env_bool("NOTIFICATION_DELIVERY_ENABLED", False)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", env("CONTACT_FROM"))
 CONTACT_TO = env("CONTACT_TO")
 AUDIT_INTERNAL_EMAIL = env("AUDIT_INTERNAL_EMAIL")
@@ -251,7 +263,7 @@ JAZZMIN_SETTINGS = {
     # Modèles inclus dans la recherche rapide (barre en haut)
     # Ajuste les préfixes d'app selon l'emplacement réel de tes modèles
     "search_model": [
-        "urgencies.Rdv",
+        "audits.Rdv",
         "audits.AuditDossier",
     ],
 
@@ -263,7 +275,7 @@ JAZZMIN_SETTINGS = {
     ],
 
     # Ordre des apps dans la sidebar
-    "order_with_respect_to": ["auth", "audits", "urgencies", "tracking"],
+    "order_with_respect_to": ["crm", "audits", "urgencies"],
 
     # Icônes FontAwesome par modèle
     # Format: "app_label.ModelName": "fa-solid fa-icone"
@@ -273,7 +285,7 @@ JAZZMIN_SETTINGS = {
         "auth.Group": "fas fa-users",
 
         # ajuster selon l'app réelle si différente
-        "urgencies.Rdv": "fas fa-calendar-check",
+        "audits.Rdv": "fas fa-calendar-check",
         "urgencies.RdvRappel": "fas fa-bell",
         "urgencies.RdvContact": "fas fa-address-book",
         "urgencies.CreneauCalendrier": "fas fa-calendar-alt",

@@ -58,7 +58,7 @@ class AuditDossierAdmin(admin.ModelAdmin):
     ordering = ("-date_creation",)
     list_per_page = 30
     inlines = [AuditReponseInline]
-    actions = ("marquer_traite", "marquer_en_attente")
+    actions = () # Historical actions wrote statuses absent from the model.
 
     def statut_badge(self, obj):
         colors = {
@@ -200,7 +200,7 @@ class RdvContactAdmin(admin.ModelAdmin):
     ordering = ("-updated_at",)
 
     def nb_rdv(self, obj):
-        return obj.rdv_set.count() if hasattr(obj, "rdv_set") else "-"
+        return obj.rdvs.count()
     nb_rdv.short_description = "Nb RDV"
 
 
@@ -221,7 +221,8 @@ class CreneauCalendrierAdmin(admin.ModelAdmin):
     def statut_badge(self, obj):
         colors = {
             CreneauCalendrier.Statut.LIBRE: "#5cb85c",
-            CreneauCalendrier.Statut.RESERVE: "#f0ad4e",
+            CreneauCalendrier.Statut.RESERVE_AUDIT: "#f0ad4e",
+            CreneauCalendrier.Statut.RESERVE_INTERVENTION: "#f0ad4e",
             CreneauCalendrier.Statut.BLOQUE: "#d9534f",
         }
         color = colors.get(obj.statut, "#999")

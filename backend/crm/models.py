@@ -50,6 +50,7 @@ class Contact(TimeStampedModel):
     message = models.TextField()
     read = models.BooleanField(default=False)
     notification_status = models.JSONField(default=dict, blank=True)
+    request_context = models.JSONField(default=dict, db_default={}, blank=True)
     client_dossier = models.ForeignKey(
         "audits.ClientDossier",
         on_delete=models.SET_NULL,
@@ -90,6 +91,36 @@ class ContactMessage(TimeStampedModel):
         return f"{self.contact.ticket_id} - {self.author}"
 
 
+class Notification(TimeStampedModel):
+    """Private outbox. No GraphQL type; payload may contain personal links."""
+    class State(models.TextChoices):
+        PENDING = "pending", "En attente"
+        SENDING = "sending", "En cours"
+        ACCEPTED = "relay_accepted", "Accepté par le relais (réception non prouvée)"
+        TEMPORARY = "transient_failed", "Échec temporaire"
+        PERMANENT = "permanent_failed", "Échec définitif"
+        UNCERTAIN = "uncertain", "Soumission incertaine — vérifier avant reprise"
+
+    event_key = models.CharField(max_length=200, unique=True)
+    recipient = models.EmailField()
+    subject = models.CharField(max_length=250)
+    body = models.TextField()
+    sender = models.EmailField(blank=True)
+    reply_to = models.EmailField(blank=True)
+    state = models.CharField(max_length=24, choices=State.choices, default=State.PENDING, db_index=True)
+    attempts = models.PositiveIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(default=timezone.now, db_index=True)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"Notification {self.pk}: {self.state}"
+
+
 class DiagnosticTicket(TimeStampedModel):
     ticket_id = models.CharField(max_length=32, unique=True, blank=True)
     organization = models.CharField(max_length=160)
@@ -107,6 +138,8 @@ class DiagnosticTicket(TimeStampedModel):
         null=True,
         related_name="diagnostic_tickets",
     )
+
+    followup_contact = models.OneToOneField("crm.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="diagnosticticket_followup")
 
     class Meta:
         ordering = ["-created_at"]

@@ -242,8 +242,8 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(submit.status_code, 200)
         self.assertIsNone(submit.json().get("errors"))
         status = json.loads(submit.json()["data"]["submitAuditReponses"]["notificationStatus"])
-        self.assertEqual(status["internal_email"], "failed")
-        self.assertEqual(status["client_email"], "failed")
+        self.assertEqual(status["internal_email"], "pending")
+        self.assertEqual(status["client_email"], "pending")
 
 
 
@@ -319,7 +319,7 @@ class GraphQLSmokeTests(TestCase):
         self.assertEqual(replied.status_code, 200)
         self.assertIsNone(replied.json().get("errors"))
         self.assertEqual(ContactMessage.objects.count(), 2)
-        self.assertEqual(replied.json()["data"]["addContactMessage"]["contact"]["status"], "WAITING_CUSTOMER")
+        self.assertEqual(replied.json()["data"]["addContactMessage"]["contact"]["status"], "OPEN")
 
     def test_diagnostic_ticket_flow_is_graphql_only(self):
         created = self.graphql(
@@ -371,7 +371,7 @@ class GraphQLSmokeTests(TestCase):
 
     def test_top_level_urls_are_admin_health_graphql_only(self):
         patterns = {str(pattern.pattern) for pattern in get_resolver().url_patterns}
-        self.assertEqual(patterns, {"admin/", "health/", "graphql/"})
+        self.assertEqual(patterns, {"admin/", "health/", "graphql/", "static/<path:asset>"})
         self.assertEqual(self.client.get("/health/").json(), {"status": "ok"})
 
     def test_graphql_preflight_allows_configured_origin(self):

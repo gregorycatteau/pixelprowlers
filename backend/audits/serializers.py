@@ -5,6 +5,7 @@ from secrets import token_hex
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.utils.dateparse import parse_date, parse_time
@@ -160,6 +161,7 @@ class AuditSubmitSerializer(BaseInputValidator):
 
         return attrs
 
+    @transaction.atomic
     def save(self, **kwargs):
         dossier = self.validated_data["numero_dossier"]
         if dossier != self.context.get("authorized_dossier"):
@@ -181,6 +183,8 @@ class AuditSubmitSerializer(BaseInputValidator):
                 "user_agent": user_agent,
             },
         )
+        from crm.operator_services import open_followup
+        open_followup(dossier, name=f"{dossier.prenom} {dossier.nom}", email=dossier.email, phone=dossier.telephone, service="audit_site", demand="audit", message=f"Audit finalisé — {dossier.numero_dossier}", context={"audit": dossier.numero_dossier, "reponses": reponse.reponses, "score_global": str(reponse.score_global)})
         dossier.statut = AuditDossier.Status.QUESTIONNAIRE_COMPLETE
         dossier.notification_status = notify_completed_audit(dossier, calculated["score_global"])
         dossier.save(update_fields=["statut", "notification_status"])
@@ -284,6 +288,7 @@ class RefonteAuditCreateSerializer(BaseInputValidator):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         audit = RefonteAudit.objects.create(
             reference=create_refonte_reference(),
@@ -293,6 +298,12 @@ class RefonteAuditCreateSerializer(BaseInputValidator):
         attach_client_dossier(audit, phase=ClientDossier.Phase.DIAGNOSTIC, source="refonte", metadata={"refonte_reference": audit.reference})
         schedule_refonte_analysis(audit.id)
         audit.refresh_from_db()
+        from crm.operator_services import open_followup
+        from crm.schema import _notify_contact, _notify_contact_client
+        contact = open_followup(audit, name=f"{audit.prenom} {audit.nom}", email=audit.email, phone=audit.telephone, service="site_maintenable", demand="refonte", message=f"Demande de refonte manuelle — {audit.reference} — {audit.site_url}", context={"refonte": audit.reference, "site_url": audit.site_url, "reponses": audit.reponses})
+        contact.notification_status = _notify_contact(contact, {})
+        contact.notification_status["client_email"] = _notify_contact_client(contact)
+        contact.save(update_fields=["notification_status"])
         return audit
 
 

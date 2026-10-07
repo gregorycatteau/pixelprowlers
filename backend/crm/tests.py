@@ -18,7 +18,7 @@ from audits.questions import QUESTION_IDS
 from audits.refonte_questions import REFONTE_QUESTION_IDS
 from audits.serializers import AuditSubmitSerializer
 from audits import refonte_analysis as analysis
-from crm.models import Contact, ContactMessage, DiagnosticTicket
+from crm.models import Contact, ContactMessage, DiagnosticTicket, Notification
 from pixelprowlers.object_access import diagnostic_capability
 from pixelprowlers.notifications import safe_send_mail
 from pixelprowlers.schema import schema
@@ -88,7 +88,7 @@ class SecurityBoundaryTests(TestCase):
         self.assertNotEqual(a['secretToken'],b['secretToken'])
         for t in (a['ticketId'],'1','B'*43):self.assert_denied(self.gql(q,{'t':t}))
         self.assert_denied(self.gql('query($t:String!){contactByToken(token:$t){clientDossier{email} messages{contact{email}}}}',{'t':a['secretToken']}))
-        self.assertEqual(json.loads(a['emailConfirmation'])['status'],'not_configured')
+        self.assertEqual(json.loads(a['emailConfirmation'])['status'],'pending')
     def test_reply_requires_token_and_author_is_server_owned(self):
         a=self.created_contact()
         b=self.created_contact()
@@ -106,19 +106,21 @@ class SecurityBoundaryTests(TestCase):
         self.assertEqual(other.messages.count(),1)
         self.assertEqual(list(Contact.objects.filter(pk=other.pk).values()),other_before)
     def test_notification_failure_keeps_contact_and_initial_message(self):
-        with patch('pixelprowlers.notifications.send_mail',side_effect=RuntimeError('synthetic failure')):
+        with patch('pixelprowlers.notifications.send_mail',side_effect=RuntimeError('synthetic failure')) as send:
             a=self.created_contact()
+            send.assert_not_called()
         self.assertEqual(Contact.objects.count(),1);self.assertEqual(ContactMessage.objects.count(),1)
-        self.assertEqual(json.loads(a['emailConfirmation'])['status'],'failed')
+        self.assertEqual(json.loads(a['emailConfirmation'])['status'],'pending')
+        self.assertEqual(Notification.objects.filter(state='pending').count(),2)
     def test_invalid_metadata_does_not_create_partial_contact(self):
         q=CREATE.replace('privacyConsent:true','privacyConsent:true,cms:"<invalid>"')
         self.assert_denied(self.gql(q,{'s':(time.time()-5)*1000}))
         self.assertEqual(Contact.objects.count(),0);self.assertEqual(ContactMessage.objects.count(),0)
     def test_email_links_ignore_untrusted_origin(self):
         self.gql(CREATE,{'s':(time.time()-5)*1000},HTTP_ORIGIN='https://attacker.invalid')
-        self.assertTrue(mail.outbox)
-        self.assertIn('https://pixelprowlers.io/ticket/',mail.outbox[-1].body)
-        self.assertNotIn('attacker.invalid',mail.outbox[-1].body)
+        item = Notification.objects.get(event_key__contains='created:client')
+        self.assertIn('https://pixelprowlers.io/ticket/',item.body)
+        self.assertNotIn('attacker.invalid',item.body)
     def test_diagnostic_requires_signed_capability_and_rejects_expired_wrong_scope(self):
         ticket=DiagnosticTicket.objects.create(organization='Synthetic',email='owner@example.invalid',message='Test',answers={},diagnostic_result={})
         q='query($t:String!){diagnosticTicket(ticketId:$t){ticketId organization}}'
@@ -206,7 +208,7 @@ class SecurityBoundaryTests(TestCase):
         args=','.join(camel(k)+':'+json.dumps(v) for k,v in data.items())
         response=self.gql('mutation{createUrgencyRequest('+args+'){reference status clientEmailStatus ticket{reference status}}}').json()
         self.assertFalse(response.get('errors'),response)
-        self.assertEqual(response['data']['createUrgencyRequest']['clientEmailStatus'],'not_configured')
+        self.assertEqual(response['data']['createUrgencyRequest']['clientEmailStatus'],'pending')
         from pixelprowlers.schema import schema
         self.assertEqual(set(schema.graphql_schema.get_type('UrgencyRequestType').fields),{'reference','status'})
 
@@ -214,19 +216,19 @@ class SecurityBoundaryTests(TestCase):
         expected = {
             'ContactType': {'ticketId','secretToken','name','email','phone','company','demandType','status','message','createdAt','updatedAt','demandLabel','emailConfirmation','messages'},
             'ContactMessageType': {'id','author','authorName','message','createdAt'},
-            'DiagnosticTicketType': {'id','ticketId','organization','email','phone','message','answers','diagnosticResult','emailConfirmation'},
+            'DiagnosticTicketType': {'followupPath','id','ticketId','organization','email','phone','message','answers','diagnosticResult','emailConfirmation'},
             'AuditDossierType': {'numeroDossier','statut'},
-            'RefonteAuditType': {'reference','siteUrl','analysisStatus','technicalReport','pagespeedReport','heuristicReport','analysisError','dateCreation','dateMaj'},
+            'RefonteAuditType': {'followupPath','reference','siteUrl','analysisStatus','technicalReport','pagespeedReport','heuristicReport','analysisError','dateCreation','dateMaj'},
             'CitationType': {'id','texte','auteur','source'},
             'MotifType': {'id','nom','dureeMinutes','creneauType'},
             'RaisonAppelType': {'id','nom'},
             'CreneauCalendrierType': {'date','heureDebut','heureFin','statut'},
-            'RdvType': {'id','motif','creneaux','statut'},
+            'RdvType': {'followupPath','id','motif','creneaux','statut'},
             'UrgencyRequestType': {'reference','status'},
         }
         for name, fields in expected.items():
             self.assertEqual(set(schema.graphql_schema.get_type(name).fields), fields, name)
-        for name in ('ClientDossierType','DossierLogType','LeadType','FormationRegistrationType','VisitorSessionType','TrackingEventType'):
+        for name in ('NotificationType','ClientDossierType','DossierLogType','LeadType','FormationRegistrationType','VisitorSessionType','TrackingEventType'):
             self.assertIsNone(schema.graphql_schema.get_type(name),name)
 
     def test_settings_reject_missing_or_invalid_secrets_without_public_fallback(self):

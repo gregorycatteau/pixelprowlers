@@ -3,6 +3,8 @@ from __future__ import annotations
 import graphene
 from pixelprowlers.abuse import allow
 from graphql import GraphQLError
+from django.db import transaction
+from crm.operator_services import followup_path
 
 from .models import UrgencyRequest
 from .serializers import UrgencyRequestSerializer
@@ -56,8 +58,10 @@ class CreateUrgencyRequest(graphene.Mutation):
     status = graphene.String()
     message = graphene.String()
     client_email_status = graphene.String()
+    followup_path = graphene.String()
     ticket = graphene.Field(UrgencyRequestType)
 
+    @transaction.atomic
     def mutate(self, info, **kwargs):
         request = _request_from_info(info)
         if not _check_rate_limit(request):
@@ -68,6 +72,8 @@ class CreateUrgencyRequest(graphene.Mutation):
             raise GraphQLError(_serializer_errors_to_message(serializer.errors))
 
         ticket = serializer.save()
+        from crm.operator_services import open_followup
+        open_followup(ticket, name=ticket.name, email=ticket.email, phone=ticket.phone, service="urgence", demand="urgency", message=ticket.short_description, context={"urgence": ticket.reference, "affected_url": ticket.affected_url, "impact_level": ticket.impact_level, "since_when": ticket.since_when, "callback_slot": ticket.callback_slot, "expected_next_step": ticket.expected_next_step})
         ticket.notification_status = notify_urgency(ticket)
         ticket.save(update_fields=["notification_status"])
 
@@ -76,6 +82,7 @@ class CreateUrgencyRequest(graphene.Mutation):
             status=ticket.status,
             message="Demande urgente enregistrée.",
             client_email_status=ticket.notification_status.get("client_email", "not_configured"),
+            followup_path=followup_path(ticket),
             ticket=ticket,
         )
 

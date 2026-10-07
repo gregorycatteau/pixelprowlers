@@ -3,6 +3,8 @@ from random import SystemRandom
 
 from django.conf import settings
 
+from crm.operator_services import followup_path
+from pixelprowlers.object_access import public_site_url
 from pixelprowlers.notifications import safe_send_mail, send_sms_notification, send_webhook_notification
 
 from .models import UrgencyRequest
@@ -40,6 +42,7 @@ def notify_urgency(ticket: UrgencyRequest) -> dict[str, str]:
 
     if _email_enabled() and internal_email:
         statuses["internal_email"] = safe_send_mail(
+            event_key=f"urgency:{ticket.pk}:created:internal",
             subject=f"[URGENT] {ticket.reference} - {ticket.get_problem_type_display()}",
             message="\n".join(
                 [
@@ -65,6 +68,7 @@ def notify_urgency(ticket: UrgencyRequest) -> dict[str, str]:
 
     if _email_enabled():
         statuses["client_email"] = safe_send_mail(
+            event_key=f"urgency:{ticket.pk}:created:client",
             subject=f"Demande urgence reçue - {ticket.reference}",
             message="\n".join(
                 [
@@ -79,6 +83,8 @@ def notify_urgency(ticket: UrgencyRequest) -> dict[str, str]:
                     "Les modalités d'intervention seront vues après un premier échange humain.",
                     "Conservez les preuves utiles de votre côté : captures d'écran, messages d'erreur, horaires.",
                     "",
+                    f"Suivi et échange avec l’atelier : {public_site_url()}{followup_path(ticket)}",
+                    "Répondez depuis ce suivi ; les réponses email ne sont pas automatiquement rattachées.",
                     "PixelProwlers",
                     "https://pixelprowlers.io",
                 ]
@@ -105,4 +111,8 @@ def notify_urgency(ticket: UrgencyRequest) -> dict[str, str]:
         },
     )
 
+    if ticket.followup_contact_id:
+        contact = ticket.followup_contact
+        contact.notification_status = {"client_email": statuses.get("client_email", "not_configured"), "client_event": f"urgency:{ticket.pk}:created:client"}
+        contact.save(update_fields=["notification_status"])
     return statuses

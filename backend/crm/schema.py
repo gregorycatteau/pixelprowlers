@@ -84,8 +84,11 @@ class ContactType(DjangoObjectType):
         return self.get_demand_type_display() if self.demand_type else self.get_service_type_display()
 
     def resolve_email_confirmation(self, info):
+        from .models import Notification
+        event = self.notification_status.get("client_event", f"contact:{self.pk}:created:client")
+        item = Notification.objects.filter(event_key__startswith=event + ":").first()
         return {
-            "status": self.notification_status.get("client_email", "not_configured"),
+            "status": item.state if item else self.notification_status.get("client_email", "not_configured"),
         }
 
     def resolve_messages(self, info):
@@ -94,6 +97,16 @@ class ContactType(DjangoObjectType):
 
 class DiagnosticTicketType(DjangoObjectType):
     id = graphene.String()
+    followup_path = graphene.String()
+
+    def resolve_followup_path(self, info):
+        from .operator_services import followup_path
+        return followup_path(self)
+
+    def resolve_email_confirmation(self, info):
+        from .models import Notification
+        item = Notification.objects.filter(event_key__startswith=f"diagnostic:{self.pk}:created:client:").first()
+        return {"status": item.state if item else self.email_confirmation.get("status", "not_configured")}
 
     class Meta:
         model = DiagnosticTicket
@@ -110,6 +123,7 @@ def _notify_contact(contact: Contact, detail_fields: dict) -> dict[str, str]:
 
     if internal_to and from_email:
         status["internal_email"] = safe_send_mail(
+            event_key=f"contact:{contact.pk}:created:internal",
             subject=f"[PixelProwlers] Nouvelle demande - {contact.service_type}",
             message="\n".join(
                 [
@@ -143,6 +157,7 @@ def _notify_contact_client(contact: Contact, origin: str | None = None) -> str:
 
     confirmation_url = f"{public_site_url()}/ticket/{contact.secret_token}"
     return safe_send_mail(
+        event_key=f"contact:{contact.pk}:created:client",
         subject=f"Votre demande PixelProwlers - Ticket {contact.ticket_id}",
         message="\n".join(
             [
@@ -204,6 +219,7 @@ def _notify_diagnostic_client(ticket: DiagnosticTicket, origin: str | None = Non
 
     result_url = f"{public_site_url()}/diagnostic-result/{diagnostic_capability(ticket)}"
     status = safe_send_mail(
+        event_key=f"diagnostic:{ticket.pk}:created:client",
         subject=f"Votre diagnostic PixelProwlers - Ticket {ticket.ticket_id}",
         message="\n".join(
             [
@@ -230,6 +246,7 @@ class CreateContact(graphene.Mutation):
         phone = graphene.String(required=False)
         service_type = graphene.String(required=True)
         demand_type = graphene.String(required=False)
+        need = graphene.String(required=False)
         message = graphene.String(required=True)
         structure_type = graphene.String(required=False)
         urgency = graphene.String(required=False)
@@ -266,6 +283,7 @@ class CreateContact(graphene.Mutation):
         service_type = _check_choice(kwargs["service_type"], {choice.value for choice in Contact.ServiceType}, "serviceType")
         demand_type = kwargs.get("demand_type") or ""
         detail_fields = {
+            "need": _check_choice(kwargs["need"], {"reparation", "reemploi", "conseil", "developpement", "formation", "autre"}, "need") if kwargs.get("need") else "",
             "structure_type": _clean(kwargs.get("structure_type"), 80, "structureType"),
             "urgency": _clean(kwargs.get("urgency"), 80, "urgency"),
             "contact_preference": _clean(kwargs.get("contact_preference"), 80, "contactPreference"),
@@ -286,14 +304,13 @@ class CreateContact(graphene.Mutation):
                 service_type=service_type,
                 demand_type=demand_type if demand_type in {choice.value for choice in Contact.DemandType} else "",
                 message=message,
+                request_context=detail_fields,
             )
             ContactMessage.objects.create(contact=contact, author=ContactMessage.Author.CUSTOMER, author_name=contact.name, message=message)
             attach_client_dossier(contact, phase=ClientDossier.Phase.CONTACT, source="contact", metadata={"contact_id": contact.id})
-        contact.notification_status = _notify_contact(contact, detail_fields)
-        request = getattr(getattr(info, "context", None), "request", getattr(info, "context", None))
-        origin = request.headers.get("origin") if request is not None and hasattr(request, "headers") else None
-        contact.notification_status["client_email"] = _notify_contact_client(contact, origin=origin)
-        contact.save(update_fields=["notification_status"])
+            contact.notification_status = _notify_contact(contact, detail_fields)
+            contact.notification_status["client_email"] = _notify_contact_client(contact)
+            contact.save(update_fields=["notification_status"])
         return CreateContact(contact=contact, detail="Merci. Votre demande a bien été reçue.")
 
 
@@ -313,14 +330,17 @@ class AddContactMessage(graphene.Mutation):
             raise GraphQLError("Trop de demandes rapprochées.")
         contact = contact_object(token, Contact)
         with transaction.atomic():
-            ContactMessage.objects.create(
+            reply = ContactMessage.objects.create(
                 contact=contact,
                 author=ContactMessage.Author.CUSTOMER,
                 author_name=contact.name,
                 message=cleaned_message,
             )
-            contact.status = Contact.Status.WAITING_CUSTOMER
-            contact.save(update_fields=["status", "updated_at"])
+            contact.status = Contact.Status.OPEN
+            contact.read = False
+            contact.save(update_fields=["status", "read", "updated_at"])
+            from .operator_services import notify_client_message
+            notify_client_message(reply)
         return AddContactMessage(contact=contact)
 
 
@@ -335,6 +355,7 @@ class CreateDiagnosticTicket(graphene.Mutation):
     ticket = graphene.Field(DiagnosticTicketType)
     redirect_to = graphene.String()
 
+    @transaction.atomic
     def mutate(self, info, **kwargs):
         require_quota(info.context, "diagnostic-create", 5, 900)
         message = (kwargs.get("message") or "").strip()
@@ -354,7 +375,12 @@ class CreateDiagnosticTicket(graphene.Mutation):
         attach_client_dossier(ticket, phase=ClientDossier.Phase.DIAGNOSTIC, source="diagnostic", metadata={"ticket_id": ticket.ticket_id})
         request = getattr(getattr(info, "context", None), "request", getattr(info, "context", None))
         origin = request.headers.get("origin") if request is not None and hasattr(request, "headers") else None
+        from .operator_services import open_followup
+        contact = open_followup(ticket, name=ticket.organization, email=ticket.email, phone=ticket.phone, service="autre", demand="diagnostic", message=ticket.message, context={"diagnostic": ticket.ticket_id, "answers": ticket.answers})
         ticket.email_confirmation = _notify_diagnostic_client(ticket, origin=origin)
+        contact.notification_status = _notify_contact(contact, {})
+        contact.notification_status.update(client_email=ticket.email_confirmation["status"], client_event=f"diagnostic:{ticket.pk}:created:client")
+        contact.save(update_fields=["notification_status"])
         ticket.save(update_fields=["email_confirmation"])
         return CreateDiagnosticTicket(ticket=ticket, redirect_to=f"/diagnostic-result/{diagnostic_capability(ticket)}")
 
