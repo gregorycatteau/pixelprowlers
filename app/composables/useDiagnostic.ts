@@ -16,6 +16,7 @@ export type DiagnosticStep = DiagnosticRadioStep;
 
 export type DiagnosticTicket = {
   id: string;
+  followupPath?: string;
   organization: string;
   email: string;
   phone?: string;
@@ -69,6 +70,7 @@ export type ImmediateDiagnosticResult = {
 
 type DiagnosticTicketGraphql = {
   id: string;
+  followupPath?: string;
   ticketId: string;
   organization: string;
   email: string;
@@ -83,6 +85,7 @@ const DIAGNOSTIC_TICKET_FIELDS = /* GraphQL */ `
   {
     id
     ticketId
+    followupPath
     organization
     email
     phone
@@ -122,6 +125,7 @@ const DIAGNOSTIC_TICKET_QUERY = /* GraphQL */ `
 
 const mapDiagnosticTicket = (ticket: DiagnosticTicketGraphql): DiagnosticTicket => ({
   id: ticket.ticketId || ticket.id,
+  followupPath: ticket.followupPath,
   organization: ticket.organization,
   email: ticket.email,
   phone: ticket.phone || '',

@@ -62,6 +62,7 @@ import { statusLabel, useContactTicket } from '~/composables/useContact';
 import { formatDate } from '~/utils/formatDate';
 
 const route = useRoute();
+useHead({ meta: [{ name: 'robots', content: 'noindex, nofollow' }, { name: 'referrer', content: 'no-referrer' }] });
 const { ticket, error, isLoading, reply, replyError, isAddingReply, load, addMessage } = useContactTicket();
 
 onMounted(() => {

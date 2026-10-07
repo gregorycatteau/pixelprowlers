@@ -60,6 +60,7 @@
           <footer class="result-footer">
             <h2>Vous voulez avancer ?</h2>
             <div class="result-actions">
+              <AppButton v-if="safeFollowupPath(ticket.followupPath)" :href="ticket.followupPath">Suivre ma demande et échanger</AppButton>
               <AppButton :href="content.ctaHref">{{ content.cta }}</AppButton>
               <AppButton variant="secondary" href="/contact">Être accompagné sur mon problème</AppButton>
             </div>
@@ -78,10 +79,12 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
+import { safeFollowupPath } from '~/utils/followup';
 import AppButton from '~/components/ui/AppButton.vue';
 import { emailConfirmationLabel, useDiagnosticResult } from '~/composables/useDiagnostic';
 
 const route = useRoute();
+useHead({ meta: [{ name: 'robots', content: 'noindex, nofollow' }, { name: 'referrer', content: 'no-referrer' }] });
 const { ticket, isLoading, error, content, maskedEmail, load } = useDiagnosticResult();
 
 onMounted(() => {
