@@ -1,5 +1,5 @@
 import os,sys,socket
-if os.getenv("QUAL_DB_HOST", "pixelprowlers-security-db-20261006") not in {"pixelprowlers-security-db-20261006", "pixelprowlers-security-restore-20261006"}:
+if os.getenv("QUAL_DB_HOST", "pixelprowlers-security-db-20261006") not in {"pixelprowlers-security-db-20261006", "pixelprowlers-security-restore-20261006", "pixelprowlers-exploitation-db-20261007"}:
     raise RuntimeError("Only dedicated qualification databases are allowed")
 if os.getenv("QUAL_DB_USER", "qualification_owner") not in {"qualification_owner", "pixelprowlers_app"}:
     raise RuntimeError("Unknown qualification account")
