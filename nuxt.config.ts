@@ -10,6 +10,14 @@ export default defineNuxtConfig({
   css: [mainCssPath],
   app: {
     pageTransition: { name: 'page', mode: 'out-in' },
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', sizes: 'any', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/x-icon', sizes: '16x16 32x32 48x48', href: '/favicon.ico' },
+        { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/favicon-96x96.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+      ],
+    },
   },
   routeRules: {
     '/reparation-informatique/decrire-ma-panne': { redirect: '/contact?besoin=reparation' },

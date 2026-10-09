@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Pixelprowlers — renard complice</title>
+  <path fill="#e95f24" stroke="#17251d" stroke-width="3" stroke-linejoin="round" d="M10 5Q8 4 8 8L9 25L4 38L13 39L10 45Q20 51 32 59Q44 51 54 45L51 39L60 38L55 25L56 8Q56 4 53 5L40 18Q32 15 24 18Z"/>
+  <path fill="#f7f4ea" stroke="#17251d" stroke-width="2.5" stroke-linejoin="round" d="M13 12L14 26L23 21ZM51 12L41 21L50 26Z"/>
+  <path fill="#f7f4ea" d="M7 38Q17 35 24 41Q28 43 32 43Q36 43 40 41Q47 35 57 38L52 44Q42 51 32 56Q22 51 12 44Z"/>
+  <ellipse cx="22" cy="32.5" rx="3.2" ry="4" fill="#17251d"/>
+  <path fill="none" stroke="#17251d" stroke-width="3.5" stroke-linecap="round" d="M39 33Q43 29 47 33"/>
+  <path fill="#17251d" d="M27 43Q32 40 37 43Q36 48 32 49Q28 48 27 43Z"/>
+  <path fill="none" stroke="#17251d" stroke-width="2.8" stroke-linecap="round" d="M24 49Q32 56 40 49"/>
+</svg>

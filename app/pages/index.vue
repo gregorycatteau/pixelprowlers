@@ -17,20 +17,12 @@ const siteUrl = String(
 
 const canonicalUrl = `${siteUrl}/`;
 
-/*
- * Le titre nomme d'abord le métier d'atelier — réparer, vendre du
- * reconditionné — puis le volet numérique. L'ordre n'est pas cosmétique :
- * c'est la requête qui amène réellement les visiteurs, et le libellé
- * qu'ils reconnaissent dans une page de résultats.
- */
+// Les métadonnées de l’accueil donnent la priorité à la réparation et à la micro-soudure.
 const title =
-  'Réparation au composant, micro-soudure et réemploi | PixelProwlers';
+  'Pixelprowlers | Réparation informatique et micro-soudure';
 
-const description = [
-  'Diagnostic, réparation au composant et micro-soudure. Matériel',
-  'reconditionné, conseil, cybersécurité, développement et formation',
-  'pour prolonger les usages et garder la main sur vos outils.',
-].join(' ');
+const description =
+  'Réparation informatique et micro-soudure : un atelier passionné pour sauver vos appareils. Matériel reconditionné, conseil, développement et formation.';
 
 const heroContent = {
   eyebrow: 'Réparation informatique · Micro-soudure',
