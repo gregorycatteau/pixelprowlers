@@ -1,7 +1,7 @@
 <template>
   <main class="RepairPage">
     <div class="container"><RepairJourney /></div>
-    <div id="prise-en-charge" class="container HandoffSection"><RepairHandoff /></div>
+    <div id="prise-en-charge" class="container HandoffSection"><p class="LocalNote">Une demande depuis le Médoc ? Décrivez votre panne : nous préciserons ensemble les modalités de prise en charge.</p><RepairHandoff /></div>
     <section id="micro-soudure" class="MicroSection" aria-labelledby="micro-title">
       <div class="container MicroLayout">
         <EditorialImage name="composant" alt="Illustration d’une intervention sur un composant de carte mère" caption="réparation au composant" />
@@ -30,7 +30,7 @@
 import RepairJourney from '~/components/repair/RepairJourney.vue';
 import EditorialImage from '~/components/sections/EditorialImage.vue';
 import RepairHandoff from '~/components/sections/RepairHandoff.vue';
-useSeoMeta({ title: 'Réparation informatique et micro-soudure | PixelProwlers', description: 'Diagnostic d’ordinateurs, téléphones et tablettes, réparation au composant et micro-soudure lorsque la panne le justifie.', robots: 'index, follow', ogUrl: 'https://pixelprowlers.io/reparation-informatique' });
+useSeoMeta({ title: 'Réparation informatique et micro-soudure en Médoc | PixelProwlers', description: 'Réparation informatique dans le Médoc : estimez votre budget pour un ordinateur, téléphone, tablette ou console. Diagnostic et micro-soudure selon la panne.', robots: 'index, follow', ogUrl: 'https://pixelprowlers.io/reparation-informatique' });
 useHead({ link: [{ rel: 'canonical', href: 'https://pixelprowlers.io/reparation-informatique' }] });
 </script>
 
@@ -44,6 +44,7 @@ h2 { @apply mb-5 text-3xl font-bold; }
 h3 { @apply mb-3 text-xl font-bold; }
 p { @apply leading-relaxed; }
 .Note { @apply text-sm; }
+.LocalNote { @apply mb-6 max-w-3xl text-lg leading-relaxed; }
 .HandoffSection { @apply pb-4 scroll-mt-32; }
 .RepairSection { @apply py-10 md:py-14; }
 .MicroSection { @apply scroll-mt-32 bg-pxp-ink py-12 text-pxp-paper; }

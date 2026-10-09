@@ -51,8 +51,8 @@
             </div>
 
             <div>
-              <dt>Adresse postale professionnelle</dt>
-              <dd>{{ publisher.postalAddress }}</dd>
+              <dt>Adresse administrative et postale</dt>
+              <dd>{{ publisher.postalAddress }}<br>Cette adresse administrative ne désigne pas un lieu de dépôt ou d’accueil. Les modalités de prise en charge sont à convenir après contact.</dd>
             </div>
 
             <div>

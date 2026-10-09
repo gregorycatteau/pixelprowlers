@@ -1,8 +1,8 @@
 <template>
   <section id="parcours-reparation" class="Journey" aria-labelledby="repair-title">
-    <p class="eyebrow">Diagnostic · Micro-soudure</p>
+    <p class="eyebrow">Réparation informatique · Micro-soudure · Médoc</p>
     <h1 id="repair-title" tabindex="-1" class="pxp-font-display">Quel budget pour votre réparation ?</h1>
-    <p class="Intro">Choisissez votre appareil et ce que vous constatez.</p>
+    <p class="Intro">Ordinateur, téléphone, tablette, console ou manette : choisissez votre appareil et ce que vous constatez pour estimer votre budget.</p>
     <nav class="Progress" aria-label="Étapes de la réparation">
       <button type="button" :disabled="pending" :aria-current="step === 'device' ? 'step' : undefined" @click="go('device')">1. Appareil</button>
       <span aria-hidden="true">→</span>

@@ -38,7 +38,7 @@ defineProps<{
 .HeroSection { @apply bg-pxp-ink text-pxp-paper; }
 .HeroInner { @apply mx-auto grid max-w-[1600px] lg:grid-cols-[0.9fr_1.2fr]; }
 .HeroContent { @apply relative grid content-center gap-6 px-6 py-12 md:px-12 md:py-16 lg:px-14; }
-.HeroEyebrow { @apply text-xs font-bold uppercase tracking-[0.18em] text-[#a8d5bd]; }
+.HeroEyebrow { @apply max-w-lg text-base font-bold leading-relaxed text-[#a8d5bd] md:text-lg; }
 h1 { @apply max-w-xl font-bold; font-size: clamp(3.3rem, 5.1vw, 6rem); line-height: 0.96; overflow-wrap: normal; }
 .HeroSubtitle { @apply max-w-lg text-base leading-relaxed text-pxp-paper/90 md:text-lg; }
 .HeroActions { @apply flex flex-wrap gap-3; }

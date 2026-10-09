@@ -19,16 +19,16 @@ const canonicalUrl = `${siteUrl}/`;
 
 // Les métadonnées de l’accueil donnent la priorité à la réparation et à la micro-soudure.
 const title =
-  'Pixelprowlers | Réparation informatique et micro-soudure';
+  'Pixelprowlers | Réparation informatique et micro-soudure en Médoc';
 
 const description =
-  'Réparation informatique et micro-soudure : un atelier passionné pour sauver vos appareils. Matériel reconditionné, conseil, développement et formation.';
+  'Réparation informatique et micro-soudure dans le Médoc. Estimez votre budget et échangez avec un atelier passionné. Matériel reconditionné et Linux.';
 
 const heroContent = {
-  eyebrow: 'Réparation informatique · Micro-soudure',
+  eyebrow: 'Réparation informatique et micro-soudure dans le Médoc.',
   title: 'Avant de remplacer votre appareil, parlons réparation.',
   subtitle: 'Prise de charge endommagée, port HDMI abîmé, circuit électronique en panne : nous recherchons la cause et intervenons au composant lorsque c’est adapté.',
-  ctaText: 'Estimer le budget de ma réparation',
+  ctaText: 'Estimer ma réparation',
   ctaLink: '/reparation-informatique#parcours-reparation',
   secondaryCtaText: 'Décrire ma panne directement',
   secondaryCtaLink: '/contact?besoin=reparation',
@@ -63,7 +63,7 @@ const structuredData = {
     },
 
     {
-      '@type': 'ProfessionalService',
+      '@type': 'Organization',
       '@id': `${siteUrl}/#organization`,
       name: 'PixelProwlers',
       legalName:
@@ -72,13 +72,9 @@ const structuredData = {
       url: canonicalUrl,
       telephone: '+33668145152',
 
-      areaServed: {
-        '@type': 'Country',
-        name: 'France',
-      },
-
       address: {
         '@type': 'PostalAddress',
+        name: 'Adresse administrative — modalités de prise en charge à convenir après contact',
         streetAddress:
           'BP 10023, 102 rue Joseph et François Connord',
 
@@ -92,26 +88,38 @@ const structuredData = {
         propertyID: 'SIREN',
         value: '520890336',
       },
-
-      /*
-       * L'ordre reflète l'activité : le matériel d'abord. La liste
-       * annonçait jusqu'ici cinq prestations web et aucune réparation
-       * physique, ce que contredisait déjà le contenu du site.
-       */
-      serviceType: [
-        'Réparation d’ordinateurs',
-        'Réparation de téléphones et tablettes',
-        'Vente de matériel informatique reconditionné',
-        'Reconditionnement et réemploi de matériel',
-        'Migration vers Linux',
-        'Conseil et assistance informatique',
-        'Cybersécurité dans un périmètre autorisé',
-        'Audit et réparation de sites web',
-        'Développement de sites, applications et outils métier',
-        'Sécurisation des accès',
-        'Documentation et transmission',
-        'Formation et ateliers numériques',
-      ],
+    },
+    {
+      '@type': 'Service',
+      '@id': `${siteUrl}/#reparation-medoc`,
+      name: 'Réparation informatique et micro-soudure dans le Médoc',
+      serviceType: 'Diagnostic et réparation informatique, réparation au composant et micro-soudure',
+      url: `${siteUrl}/reparation-informatique`,
+      provider: { '@id': `${siteUrl}/#organization` },
+      areaServed: { '@type': 'Place', name: 'Médoc' },
+    },
+    {
+      '@type': 'Service',
+      '@id': `${siteUrl}/#reemploi-medoc`,
+      name: 'Matériel informatique reconditionné et réemploi dans le Médoc',
+      serviceType: 'Matériel informatique reconditionné selon disponibilités',
+      url: `${siteUrl}/materiel-reconditionne`,
+      provider: { '@id': `${siteUrl}/#organization` },
+      areaServed: { '@type': 'Place', name: 'Médoc' },
+    },
+    {
+      '@type': 'Service',
+      '@id': `${siteUrl}/#services-numeriques`,
+      name: 'Conseil, cybersécurité et développement',
+      url: `${siteUrl}/services-numeriques`,
+      provider: { '@id': `${siteUrl}/#organization` },
+    },
+    {
+      '@type': 'Service',
+      '@id': `${siteUrl}/#formation`,
+      name: 'Formation et transmission numériques',
+      url: `${siteUrl}/formations`,
+      provider: { '@id': `${siteUrl}/#organization` },
     },
   ],
 };
